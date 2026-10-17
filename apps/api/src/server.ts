@@ -1,5 +1,6 @@
 import {config as loadEnv} from "dotenv";
-loadEnv({path:new URL("../../../.env",import.meta.url).pathname,quiet:true});
+import {fileURLToPath} from "node:url";
+loadEnv({path:fileURLToPath(new URL("../../../.env",import.meta.url)),quiet:true});
 import {buildApp} from "./app";
 import {connectDatabase} from "@amlaklink/database";
 const port=Number(process.env.API_PORT||4000);
