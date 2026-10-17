@@ -36,7 +36,7 @@ export function buildApp(options:{db?:Database;mailer?:SendCode}={}){
  app.setNotFoundHandler((request,reply)=>reply.code(404).send({error:"ROUTE_NOT_FOUND",requestId:request.id}));
  app.setErrorHandler((error,request,reply)=>{
   if(error instanceof HttpProblem)return reply.code(error.status).send({error:error.code,requestId:request.id});
-  if(error.statusCode===429)return reply.code(429).send({error:"RATE_LIMITED",requestId:request.id});
+  if(error && typeof error==="object" && "statusCode" in error && error.statusCode===429)return reply.code(429).send({error:"RATE_LIMITED",requestId:request.id});
   if(error instanceof Error && /duplicate key value violates unique constraint/i.test(error.message))
     return reply.code(409).send({error:"DUPLICATE_RECORD",requestId:request.id});
   if(error instanceof Error && /invalid input syntax for type uuid/i.test(error.message))
