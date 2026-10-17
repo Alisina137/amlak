@@ -51,7 +51,7 @@ export function registerAgencyRoutes(app:FastifyInstance,db:Database){
   await requireAgencyMember(db,actor,id,["owner","manager","agent"]);
   const members=await db.select({id:schema.memberships.id,userId:schema.memberships.userId,role:schema.memberships.role,status:schema.memberships.status,displayName:schema.users.displayName})
   .from(schema.memberships).innerJoin(schema.users,eq(schema.users.id,schema.memberships.userId))
-  .where(and(eq(schema.memberships.agencyId,id),eq(schema.memberships.status,"active")));
+  .where(and(eq(schema.memberships.agencyId,id),ne(schema.memberships.status,"revoked")));
   return {items:members};
  });
  // Restricted admin association; self-enrollment never grants access.
@@ -64,10 +64,10 @@ export function registerAgencyRoutes(app:FastifyInstance,db:Database){
   if(!person || !person.emailVerifiedAt || person.status!=="active")throw new HttpProblem(404,"VERIFIED_MEMBER_NOT_FOUND");
   const [existing]=await db.select().from(schema.memberships).where(and(eq(schema.memberships.agencyId,id),eq(schema.memberships.userId,person.id))).limit(1);
   if(existing && existing.status==="active")throw new HttpProblem(409,"MEMBER_ALREADY_ACTIVE");
-  if(existing)await db.update(schema.memberships).set({role:values.role,status:"active",updatedAt:new Date()}).where(eq(schema.memberships.id,existing.id));
-  else await db.insert(schema.memberships).values({agencyId:id,userId:person.id,role:values.role,status:"active"});
-  await db.insert(schema.audit).values({actorType:"user",actorId:actor.id,action:"agency_member_added",targetType:"agency",targetId:id,reason:person.id});
-  return {success:true,userId:person.id,role:values.role};
+  if(existing)await db.update(schema.memberships).set({role:values.role,status:"pending",updatedAt:new Date()}).where(eq(schema.memberships.id,existing.id));
+  else await db.insert(schema.memberships).values({agencyId:id,userId:person.id,role:values.role,status:"pending"});
+  await db.insert(schema.audit).values({actorType:"user",actorId:actor.id,action:"agency_member_invited",targetType:"agency",targetId:id,reason:person.id});
+  return {success:true,userId:person.id,role:values.role,status:"pending"};
  });
  app.post<{Params:{id:string;memberId:string}}>("/v1/agencies/:id/members/:memberId/revoke",async request=>{
   const actor=await requireActor(db,request,"user");
@@ -75,13 +75,27 @@ export function registerAgencyRoutes(app:FastifyInstance,db:Database){
   const manager=await requireAgencyMember(db,actor,id,["owner","manager"]);
   const memberId=getId(request.params.memberId);
   const [member]=await db.select().from(schema.memberships).where(and(eq(schema.memberships.id,memberId),eq(schema.memberships.agencyId,id))).limit(1);
-  if(!member || member.status!=="active")throw new HttpProblem(404,"MEMBER_NOT_ACTIVE");
+  if(!member || member.status==="revoked")throw new HttpProblem(404,"MEMBER_NOT_ACTIVE");
   // Owner transfer requires an audited dedicated workflow. Disallow revoking any owner here.
   if(member.role==="owner" || (member.role==="manager" && manager.role!=="owner"))throw new HttpProblem(403,"OWNER_APPROVAL_REQUIRED");
   await db.update(schema.memberships).set({status:"revoked",updatedAt:new Date()})
      .where(and(eq(schema.memberships.id,memberId),eq(schema.memberships.agencyId,id)));
   await db.insert(schema.audit).values({actorType:"user",actorId:actor.id,action:"agency_member_revoked",targetType:"agency",targetId:id,reason:member.userId});
   return {success:true};
+ });
+ app.post<{Params:{id:string}}>("/v1/agencies/:id/invitation/accept",async request=>{
+  const actor=await requireActor(db,request,"user");
+  await requireVerified(db,actor);
+  const id=getId(request.params.id);
+  const [org]=await db.select().from(schema.agencies).where(eq(schema.agencies.id,id)).limit(1);
+  if(!org || org.status!=="active")throw new HttpProblem(403,"AGENCY_INACTIVE");
+  const changed=await db.update(schema.memberships).set({status:"active",updatedAt:new Date()})
+    .where(and(eq(schema.memberships.agencyId,id),eq(schema.memberships.userId,actor.id),
+      eq(schema.memberships.status,"pending"),ne(schema.memberships.role,"owner")))
+    .returning({id:schema.memberships.id,role:schema.memberships.role});
+  if(!changed.length)throw new HttpProblem(404,"INVITATION_NOT_FOUND");
+  await db.insert(schema.audit).values({actorType:"user",actorId:actor.id,action:"agency_invitation_accepted",targetType:"agency",targetId:id});
+  return {success:true,role:changed[0].role};
  });
  app.get("/v1/admin/agencies",async request=>{
   const actor=await requireActor(db,request,"staff");
