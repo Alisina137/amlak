@@ -43,7 +43,7 @@ export async function canShowPublic(db:Database,l:Listing):Promise<boolean>{
 }
 export function listingDTO(l:Listing,r:Revision,publicView:boolean){
  const value=listingDraftSchema.parse(r.data),data=publicView?publicListingPayload(value):value;
- return {id:l.id,status:l.status,version:l.version,publisher:l.publisher,agencyId:l.agencyId,revisionId:r.id,
+ return {id:l.id,status:l.status,version:l.version,publisher:l.publisher,authorId:l.authorId,agencyId:l.agencyId,revisionId:r.id,
   revisionStatus:publicView?undefined:r.status,revisionReason:publicView?undefined:r.reason,currentRevisionId:publicView?undefined:l.currentRevisionId,
   approvedRevisionId:l.approvedRevisionId,lastConfirmedAt:l.lastConfirmedAt,publishedAt:l.publishedAt,
   data,photos:data.photoIds.map(id=>({id,url:"/v1/photos/"+id}))};

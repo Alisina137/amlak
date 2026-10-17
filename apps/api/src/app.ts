@@ -12,6 +12,7 @@ import {sendCode,type SendCode} from "./mail";
 import multipart from "@fastify/multipart";
 import {registerListingRoutes} from "./listings";
 import {registerPhotoRoutes} from "./photos";
+import {registerDiscoveryRoutes} from "./discovery";
 export function buildApp(options:{db?:Database;mailer?:SendCode}={}){
  const app=Fastify({logger:true,bodyLimit:256*1024,trustProxy:false});
  app.register(rateLimit,{global:true,max:120,timeWindow:"1 minute"});
@@ -37,7 +38,7 @@ export function buildApp(options:{db?:Database;mailer?:SendCode}={}){
   if(!province){reply.code(404);return {error:"PROVINCE_NOT_FOUND",requestId:request.id};}
   return province;
  });
- if(options.db){registerAuthRoutes(app,options.db,options.mailer||sendCode);registerAgencyRoutes(app,options.db);registerAgentRoutes(app,options.db);registerListingRoutes(app,options.db);registerPhotoRoutes(app,options.db);}
+ if(options.db){registerAuthRoutes(app,options.db,options.mailer||sendCode);registerAgencyRoutes(app,options.db);registerAgentRoutes(app,options.db);registerListingRoutes(app,options.db);registerPhotoRoutes(app,options.db);registerDiscoveryRoutes(app,options.db);}
  app.setNotFoundHandler((request,reply)=>reply.code(404).send({error:"ROUTE_NOT_FOUND",requestId:request.id}));
  app.setErrorHandler((error,request,reply)=>{
   if(error instanceof HttpProblem)return reply.code(error.status).send({error:error.code,requestId:request.id});

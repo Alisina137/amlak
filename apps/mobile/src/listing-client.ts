@@ -2,7 +2,7 @@ import type {ListingDraft} from "@amlaklink/contracts";
 import {requestJson,ApiError} from "./auth";
 export const API_ROOT=(process.env.EXPO_PUBLIC_API_URL||"").replace(/\/+$/,"");
 export type ListingDTO={
- id:string;status:string;version:number;publisher:string;agencyId:string|null;
+ id:string;status:string;version:number;publisher:string;authorId:string;agencyId:string|null;
  revisionId:string;revisionStatus?:string;revisionReason?:string|null;approvedRevisionId:string|null;currentRevisionId?:string|null;
  lastConfirmedAt:string|null;publishedAt:string|null;data:ListingDraft;approvedData?:ListingDraft|null;
  photos:{id:string;url:string}[];available?:boolean;

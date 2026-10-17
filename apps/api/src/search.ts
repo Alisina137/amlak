@@ -41,9 +41,6 @@ function top(name:string):SQL{return sql.raw("(listing_revisions.data->>'"+name+
 function numeric(section:string,key:string):SQL<number>{
  return sql.raw("nullif((listing_revisions.data->'"+section+"'->>'"+key+"'),'')::numeric");
 }
-function normalized(expr:SQL){
- return sql.raw("lower(replace(replace("+expr.queryChunks.map(x=>typeof x==="string"?x:"").join("")+",'ي','ی'),'ك','ک'))");
-}
 export function parseDiscovery(raw:unknown):DiscoveryFilters{
  const result=qschema.safeParse(raw);
  if(!result.success)throw new HttpProblem(422,"INVALID_SEARCH_FILTERS");
@@ -93,8 +90,11 @@ export function searchConditions(q:DiscoveryFilters):SQL[]{
  if(q.q){
   const term="%"+escapeLike(normalizeText(q.q))+"%";
   // Kaf and Yeh character variants are normalized in searchable public text.
-  const fields=[top("title"),top("description"),column("location","city"),column("location","district"),column("location","neighborhood")];
-  conditions.push(or(...fields.map(f=>ilike(sql.raw("replace(replace("+f.queryChunks.map(x=>typeof x==="string"?x:"").join("")+",'ي','ی'),'ك','ک')"),term)))!);
+  const fields=["(listing_revisions.data->>'title')","(listing_revisions.data->>'description')",
+    "(listing_revisions.data->'location'->>'city')",
+    "(listing_revisions.data->'location'->>'district')",
+    "(listing_revisions.data->'location'->>'neighborhood')"];
+  conditions.push(or(...fields.map(f=>ilike(sql.raw("replace(replace("+f+",'ي','ی'),'ك','ک')"),term)))!);
  }
  if(q.minArea!==undefined)conditions.push(gte(numeric("attributes","areaM2"),q.minArea));
  if(q.maxArea!==undefined)conditions.push(lte(numeric("attributes","areaM2"),q.maxArea));
