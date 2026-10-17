@@ -1,7 +1,7 @@
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 DO $$ BEGIN CREATE TYPE user_status AS ENUM ('active','suspended','deleted'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $ BEGIN CREATE TYPE agent_status AS ENUM ('none','pending','approved','rejected'); EXCEPTION WHEN duplicate_object THEN NULL; END $;
-DO $ BEGIN CREATE TYPE agency_status AS ENUM ('pending','active','rejected','suspended'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE agent_status AS ENUM ('none','pending','approved','rejected'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE agency_status AS ENUM ('pending','active','rejected','suspended'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN CREATE TYPE agency_role AS ENUM ('owner','manager','agent'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN CREATE TYPE membership_status AS ENUM ('pending','active','revoked'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN CREATE TYPE staff_role AS ENUM ('moderator','verification','billing','support','admin','super_admin'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
