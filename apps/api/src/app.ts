@@ -3,6 +3,7 @@ import rateLimit from "@fastify/rate-limit";
 import {DEFAULT_PROVINCE_ID,findProvince,searchProvinces} from "@amlaklink/catalog";
 import {healthSchema,provinceListSchema,provinceQuerySchema} from "@amlaklink/contracts";
 import {type Database} from "@amlaklink/database";
+import {sql} from "drizzle-orm";
 import {HttpProblem} from "./access";
 import {registerAuthRoutes} from "./auth";
 import {registerAgencyRoutes} from "./agencies";
@@ -17,7 +18,7 @@ export function buildApp(options:{db?:Database;mailer?:SendCode}={}){
  app.get("/health",async()=>healthSchema.parse({status:"ok",service:"amlaklink-api"}));
  app.get("/ready",async(_request,reply)=>{
   if(!options.db){reply.code(503);return {status:"unavailable",reason:"DATABASE_NOT_CONFIGURED"};}
-  try{await options.db.execute("SELECT 1");return {status:"ok",phase:"identity"};}
+  try{await options.db.execute(sql`SELECT 1`);return {status:"ok",phase:"identity"};}
   catch{reply.code(503);return {status:"unavailable",reason:"DATABASE_UNREACHABLE"};}
  });
  app.get("/v1/catalog/provinces",async(request,reply)=>{
