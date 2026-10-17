@@ -91,6 +91,15 @@ export default function ListingEditor(){
   try{await requestJson("/v1/listings/"+id+"/withdraw",{method:"POST",token});await refresh();}
   catch(e){setError((e as Error).message);}finally{setBusy(false);}
  }
+ async function listingAction(action:"pause"|"resume"|"close"|"confirm-availability",outcome?:"sold"|"rented"){
+  if(!token||busy)return;
+  setBusy(true);setError("");setNotice("");
+  try{
+   await requestJson("/v1/listings/"+id+"/"+action,{method:"POST",token,body:outcome?{outcome}:undefined});
+   await refresh();
+  }catch(err){setError((err as Error).message);}
+  finally{setBusy(false);}
+ }
  async function transmitPhoto(asset:{uri:string;mime:string;bytes?:number}){
   if(!token||busy)return;
   setBusy(true);setError("");setNotice("");
@@ -183,6 +192,15 @@ export default function ListingEditor(){
  return <Page>
   <ScreenHeading title={locale==="en"?"Property editor":"مدیریت نشر ملک"} subtitle={steps[locale][step]+" · "+(step+1)+"/8"}/>
   <Label muted>{locale==="en"?"Status":"وضعیت"}: {status} · v{version}</Label>
+  {status==="published"?<SectionCard>
+   <Label weight="bold">{locale==="en"?"Availability controls":"مدیریت موجودی ملک"}</Label>
+   <Action kind="secondary" disabled={busy} label={locale==="en"?"Confirm still available":"تأیید موجودی ملک"} onPress={()=>void listingAction("confirm-availability")}/>
+   <Action kind="secondary" disabled={busy} label={locale==="en"?"Pause public listing":"توقف نشر ملک"} onPress={()=>void listingAction("pause")}/>
+   <Action kind="secondary" disabled={busy} label={locale==="en"?(data.transactionType==="sale"?"Mark as sold":"Mark as rented"):(data.transactionType==="sale"?"علامت فروخته‌شده":"علامت به‌کرایه‌داده‌شده")} onPress={()=>void listingAction("close",data.transactionType==="sale"?"sold":"rented")}/>
+  </SectionCard>:null}
+  {status==="paused"?<SectionCard><Label muted>{locale==="en"?"Paused listings are hidden from active discovery.":"ملک متوقف از جستجوی عمومی پنهان است."}</Label>
+   <Action disabled={busy} label={locale==="en"?"Resume public listing":"ادامه نشر ملک"} onPress={()=>void listingAction("resume")}/>
+  </SectionCard>:null}
   {revisionStatus==="submitted"?<SectionCard><Label>{tx("review")}</Label><Action kind="secondary" label={tx("withdraw")} disabled={busy} onPress={()=>void withdraw()}/></SectionCard>:null}
   {revisionStatus==="rejected"?<SectionCard><Label>{tx("rejected")}</Label><Label muted>{revisionReason}</Label></SectionCard>:null}
   {status==="published"&&revisionStatus!=="submitted"?<SectionCard><Label style={{color:colors.success}}>{tx("approval")}</Label></SectionCard>:null}
