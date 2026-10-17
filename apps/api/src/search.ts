@@ -122,10 +122,15 @@ export async function searchProperties(db:Database,q:DiscoveryFilters){
   if(q.sort.startsWith("price")){
    if(typeof cursor.value!=="number"||!Number.isFinite(cursor.value))throw new HttpProblem(422,"INVALID_CURSOR");
   }else if(typeof cursor.value!=="string"||Number.isNaN(Date.parse(cursor.value)))throw new HttpProblem(422,"INVALID_CURSOR");
-  const key=q.sort.startsWith("price")?cursor.value:new Date(cursor.value as string);
-  clauses.push(q.sort==="price_asc"?
-    or(gt(sort,key),and(eq(sort,key),gt(schema.listings.id,cursor.id)))!:
-    or(lt(sort,key),and(eq(sort,key),lt(schema.listings.id,cursor.id)))!);
+  if(q.sort.startsWith("price")){
+   const key=cursor.value as number,term=numeric("price",priceKey(q));
+   clauses.push(q.sort==="price_asc"?
+    or(gt(term,key),and(eq(term,key),gt(schema.listings.id,cursor.id)))!:
+    or(lt(term,key),and(eq(term,key),lt(schema.listings.id,cursor.id)))!);
+  }else{
+   const key=new Date(cursor.value as string),term=q.sort==="recent_confirmed"?schema.listings.lastConfirmedAt:schema.listings.publishedAt;
+   clauses.push(or(lt(term,key),and(eq(term,key),lt(schema.listings.id,cursor.id)))!);
+  }
  }
  const rows=await db.select({listing:schema.listings,revision:schema.revisions}).from(schema.listings)
   .innerJoin(schema.revisions,eq(schema.revisions.id,schema.listings.approvedRevisionId))
