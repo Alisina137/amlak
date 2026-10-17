@@ -49,6 +49,8 @@ export default function Account(){
     <Label weight="bold">{copy("agency")}</Label>
     {agencies.map(a=><View key={a.agencyId} style={{gap:6}}>
       <Label weight="bold">{a.name}</Label><Label muted>{copy("status")}: {a.agencyStatus==="active"?copy("agencyActive"):copy("agencyPending")} · {a.role}</Label>
+      {a.agencyStatus==="active"&&a.membershipStatus==="pending"&&a.role!=="owner"?
+       <Action kind="secondary" label={copy("acceptInvite")} onPress={()=>void requestJson("/v1/agencies/"+a.agencyId+"/invitation/accept",{method:"POST",token}).then(()=>requestJson<{items:Membership[]}>("/v1/agencies/mine",{token}).then(r=>setAgencies(r.items))).catch(()=>setMessage(copy("attempt")))} />:null}
       {a.agencyStatus==="active"&&a.membershipStatus==="active"?
        <Action kind="secondary" label={copy("workspace")} onPress={()=>router.push({pathname:"/agency/[id]",params:{id:a.agencyId}})}/>:null}
     </View>)}
