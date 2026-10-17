@@ -1,13 +1,12 @@
 # AmlakLink — Project State
 
-- Product authority: docs/PRODUCT-SPECIFICATION.md, v1.0 (17 Oct 2026).
-- Implementation process: docs/SOFTWARE-WORKFLOW-V4.md.
-- Repository: Alisina137/amlak, main. Afghanistan only, Kabul-first, Android-first, Dari/Pashto/English.
-- **Current phase: 2 — Identity & scoped roles.**
-- Implementation: PostgreSQL identity schema and safe idempotent migration; email verification/recovery; user session lifecycle; seller activation; independent-agent applications; agency applications, scoped verified membership with explicit acceptance; staff MFA and staff-only reviews; mobile auth and professional account screens; separate protected admin panel.
-- Verified locally in GitHub CI: TypeScript workspaces, API/domain and PostgreSQL tests, Next admin build, Android Expo export (consult latest workflow run for final commit result).
-- Limitations: No production database credentials, SMTP provider or real-user network/device validations supplied. No SMS OTP provider validated, so registration currently uses email, consistent with specification conditional requirement. Agency document evidence workflows are in Phase 6.
-- Explicit Phase 2 exclusion: money transfer, property listings or image publishing; those arrive in later phases.
-- Next phase: **3 — Property inventory**, including photo uploads, structured gharawi pricing, listing wizard and moderation.
-- API port: **4000**. Ngrok inspector 4040 is unrelated.
-- Security: never print real OTPs on a public tunnel, never commit secrets, never grant cross-agency membership implicitly; staff logins require MFA.
+- **Authority:** docs/PRODUCT-SPECIFICATION.md v1.0 (17 October 2026); docs/SOFTWARE-WORKFLOW-V4.md.
+- Repository: Alisina137/amlak, main; Afghanistan-only / Kabul-first, mobile Android-first, Dari/Pashto/English.
+- **Current delivery: Phase 3 — Property inventory.**
+- **Phase 1 completed:** workspaces, localizations/RTL, 34 Afghan provinces, API, staff admin shell.
+- **Phase 2 completed:** email verified auth, secure sessions, seller/independent agent activation, reviewed agencies, scoped memberships, staff MFA.
+- **Phase 3 delivered:** structured listing schema+revisions+photos, genuine image upload with local/S3 storage, type-dependent prices/gharawi, 8-step mobile wizard, draft autosave+resume, staff moderation queue, public details/initial feed, pause/resume/close, review-safe edits, audit, database integration tests.
+- **Verification:** GitHub Actions: PostgreSQL migrations, unit/API/database auth and inventory tests, TypeScript, Next.js production build, Android export; refer to latest successful workflow run for exact hash.
+- **External work still required:** Configure own Neon DB, SMTP and photo bucket in .env; run migration locally; verify actual Android photo picker and physical-device network; provision moderator in admin; evaluate media provider + safe backups. No production environment was changed.
+- **Next documented milestone: Phase 4 — Discovery & seeker experience** (filters, map/list, favorites, calls/WhatsApp, professional profiles and badge scopes).
+- Constraints: API port 4000, ngrok inspector 4040 is not backend; private exact addresses/documents must not leak; no property payments or ownership promises.

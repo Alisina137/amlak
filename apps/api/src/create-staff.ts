@@ -8,8 +8,8 @@ async function main(){
  const email=process.env.STAFF_EMAIL,password=process.env.STAFF_PASSWORD,name=process.env.STAFF_NAME||"Platform Administrator";
  if(!email||!password||password.length<12)throw new Error("Set STAFF_EMAIL and a random STAFF_PASSWORD of at least 12 characters");
  if(process.env.NODE_ENV==="production" && process.env.STAFF_ALLOW_PROVISION!=="true")throw new Error("Production provisioning needs STAFF_ALLOW_PROVISION=true");
- const role=process.env.STAFF_ROLE==="super_admin"?"super_admin":process.env.STAFF_ROLE==="verification"?"verification":undefined;
- if(!role)throw new Error("Set STAFF_ROLE=super_admin or verification");
+ const role=process.env.STAFF_ROLE==="super_admin"?"super_admin":process.env.STAFF_ROLE==="verification"?"verification":process.env.STAFF_ROLE==="moderator"?"moderator":undefined;
+ if(!role)throw new Error("Set STAFF_ROLE=super_admin, verification, or moderator");
  const {db,sql}=connectDatabase();
  try{
   const existing=await db.select({id:schema.staff.id}).from(schema.staff).where(eq(schema.staff.email,normalizeEmail(email))).limit(1);

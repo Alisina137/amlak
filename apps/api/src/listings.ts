@@ -114,6 +114,7 @@ export function registerListingRoutes(app:FastifyInstance,db:Database){
    const p=await tx.select({id:schema.photos.id}).from(schema.photos).where(and(eq(schema.photos.listingId,l.id),inArray(schema.photos.id,v.data.photoIds)));
    if(p.length!==v.data.photoIds.length||new Set(v.data.photoIds).size!==p.length)throw new HttpProblem(422,"PHOTO_OWNERSHIP_MISMATCH");
    if(!lock.approvedRevisionId&&!lock.agencyId){
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${actor.id}::text))`);
     const [num]=await tx.select({count:sql.raw("count(*)::integer")}).from(schema.listings)
      .where(and(eq(schema.listings.authorId,actor.id),inArray(schema.listings.status,["pending_review","published","paused"])));
     if(Number(num?.count||0)>=3)throw new HttpProblem(409,"FREE_LISTING_LIMIT_REACHED");

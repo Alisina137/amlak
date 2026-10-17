@@ -19,3 +19,5 @@ To run admin: in a second terminal run corepack pnpm dev:admin, and open http://
 Backend port 4000 is mandatory; ngrok port 4040 is the inspector only. Email account verification requires SMTP or explicitly approved local-only dev OTP logging.
 
 CI tests do not configure, migrate, or validate your Neon environment: they run against a dedicated temporary PostgreSQL container.
+
+Phase 3 listing setup, S3-compatible photo storage and the moderator panel are documented in docs/PHASE-3-INVENTORY.md.

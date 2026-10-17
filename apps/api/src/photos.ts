@@ -4,7 +4,7 @@ import {type Database,schema} from "@amlaklink/database";
 import {listingDraftSchema} from "@amlaklink/contracts";
 import {HttpProblem,requireActor,requireStaffRole} from "./access";
 import {getListing,getRevision,requireEditor,validId} from "./listings";
-import {storePhoto,retrievePhoto} from "./media-storage";
+import {storePhoto,retrievePhoto,removePhoto} from "./media-storage";
 export function registerPhotoRoutes(app:FastifyInstance,db:Database){
  app.post<{Params:{id:string}}>("/v1/listings/:id/photos",async request=>{
   const l=await getListing(db,request.params.id),actor=await requireEditor(db,request,l);
@@ -20,6 +20,21 @@ export function registerPhotoRoutes(app:FastifyInstance,db:Database){
   const [photo]=await db.insert(schema.photos).values({listingId:l.id,uploaderId:actor.id,storageKey:result.key,
    storageMode:result.mode,bytes:result.bytes,width:result.width,height:result.height,fingerprint:result.fingerprint}).returning();
   return {id:photo.id,bytes:photo.bytes,width:photo.width,height:photo.height,url:"/v1/photos/"+photo.id};
+ });
+ app.delete<{Params:{id:string;photoId:string}}>("/v1/listings/:id/photos/:photoId",async request=>{
+  const l=await getListing(db,request.params.id);
+  await requireEditor(db,request,l);
+  const [photo]=await db.select().from(schema.photos).where(and(eq(schema.photos.listingId,l.id),eq(schema.photos.id,validId(request.params.photoId)))).limit(1);
+  if(!photo)throw new HttpProblem(404,"PHOTO_NOT_FOUND");
+  for(const revisionId of [l.approvedRevisionId,l.currentRevisionId]){
+   if(!revisionId)continue;
+   const rev=await getRevision(db,revisionId);
+   if((rev.status==="approved"||rev.status==="submitted") && listingDraftSchema.parse(rev.data).photoIds.includes(photo.id))
+    throw new HttpProblem(409,"PHOTO_IN_APPROVED_OR_REVIEW_VERSION");
+  }
+  await removePhoto(photo.storageKey,photo.storageMode);
+  await db.delete(schema.photos).where(and(eq(schema.photos.id,photo.id),eq(schema.photos.listingId,l.id)));
+  return {success:true};
  });
  app.get<{Params:{id:string}}>("/v1/photos/:id",async(request,reply)=>{
   const [photo]=await db.select().from(schema.photos).where(eq(schema.photos.id,validId(request.params.id))).limit(1);

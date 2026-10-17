@@ -150,6 +150,7 @@ export default function ListingEditor(){
    <View style={{flexDirection:"row",flexWrap:"wrap",gap:8}}>{data.photoIds.map((photoId,i)=><View key={photoId} style={{width:"47%",gap:4}}>
     <Image source={photoSource(photoId,token)} style={{width:"100%",height:125,backgroundColor:colors.border,borderRadius:12}}/>
     <Label muted style={{fontSize:12}}>{i===0?(locale==="en"?"Cover":"عکس اصلی"):"#"+(i+1)}</Label>
+    {i>0?<Action kind="secondary" label={locale==="en"?"Set as cover":"تعیین به‌عنوان عکس اصلی"} onPress={()=>change({...latest.current,photoIds:[photoId,...latest.current.photoIds.filter(p=>p!==photoId)]})}/>:null}
     <Action kind="secondary" label={locale==="en"?"Remove":"حذف"} onPress={()=>change({...latest.current,photoIds:latest.current.photoIds.filter(p=>p!==photoId)})}/>
    </View>)}</View>
   </SectionCard>;
