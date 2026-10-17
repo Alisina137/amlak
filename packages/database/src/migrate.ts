@@ -2,7 +2,6 @@ import {config as loadEnv} from "dotenv";
 import {fileURLToPath} from "node:url";
 loadEnv({path:fileURLToPath(new URL("../../../.env",import.meta.url)),quiet:true});
 import {readFileSync} from "node:fs";
-import {fileURLToPath} from "node:url";
 import {connectDatabase} from "./index";
 const {sql}=connectDatabase();
 const path=fileURLToPath(new URL("../migrations/0001_identity.sql",import.meta.url));
