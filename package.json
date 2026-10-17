@@ -1,6 +1,6 @@
 {
   "name": "amlaklink",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "packageManager": "pnpm@10.27.0",
   "engines": {
@@ -10,6 +10,8 @@
     "dev:api": "pnpm --filter @amlaklink/api dev",
     "dev:mobile": "pnpm --filter @amlaklink/mobile start",
     "dev:admin": "pnpm --filter @amlaklink/admin dev",
+    "db:migrate": "pnpm --filter @amlaklink/database migrate",
+    "staff:create": "pnpm --filter @amlaklink/api staff:create",
     "typecheck": "pnpm -r --if-present typecheck",
     "test": "pnpm -r --if-present test",
     "check": "pnpm typecheck && pnpm test"

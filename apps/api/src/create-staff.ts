@@ -1,3 +1,5 @@
+import {config as loadEnv} from "dotenv";
+loadEnv({path:new URL("../../../.env",import.meta.url).pathname,quiet:true});
 import {eq} from "drizzle-orm";
 import {connectDatabase,schema} from "@amlaklink/database";
 import {encryptTotp,newTotpSecret,normalizeEmail,passwordHash,totpUri} from "./security";
