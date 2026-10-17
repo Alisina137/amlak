@@ -1,33 +1,27 @@
 # AmlakLink / املاک لینک
 
-Android-first Afghanistan-only real estate marketplace (Dari, Pashto, English), with separate staff administration. Kabul is the default province; all 34 provinces are searchable.
+Afghanistan-only, Android-first real estate marketplace. Kabul first. Localized Dari (default), Pashto, English. Product behavior is governed by docs/PRODUCT-SPECIFICATION.md; delivery by docs/SOFTWARE-WORKFLOW-V4.md.
 
-**Current milestone:** Phase 1 — Foundations. Property listing, accounts and live search have not been activated. No pretend listings or working sign-in forms.
+## Current milestone — Phase 2: Identity and scoped roles
 
-## Apps
+- Mobile: Expo SDK 57 + Expo Router. Five public marketplace tabs, offline 34-province catalog, and real email/password auth + verification/recovery/advertiser/agency/agent applications.
+- API: Fastify on **port 4000** with PostgreSQL identity persistence, email challenges, hashed sessions, protected agency memberships, staff MFA and audit.
+- Admin: Separate Next.js staff portal at http://localhost:3000/admin/login. Provisioned staff can review agency and independent-agent applications; ordinary mobile accounts cannot access staff routes.
+- Shared: localization, province catalog, contracts, design tokens and PostgreSQL/Drizzle schema.
 
-- apps/mobile — Expo SDK 57 + Expo Router, five-tab foundation with persistent language/province, and offline province search.
-- apps/api — Fastify API, live health/readiness and province catalog endpoints on **port 4000**.
-- apps/admin — Next.js separate staff login shell; authentication securely deferred to Phase 2.
+**Phase 3 adds real property listings**; Phase 2 deliberately does not show fake properties or accept real property submissions.
 
-## Shared packages
-
-- packages/catalog — 34 Afghanistan provinces with localized names, aliases and search.
-- packages/localization — Dari (default), Pashto, English and RTL helpers.
-- packages/contracts — validated API data contracts.
-- packages/design-tokens — shared spacing, colors and typography.
-
-## Run on Windows
-
-From the existing local amlak folder (clone here only if it is empty):
+## Local setup (PowerShell)
 
     corepack enable
     corepack pnpm install
+    Copy-Item .env.example .env
+    # Edit root .env: DATABASE_URL, AUTH_CODE_PEPPER, STAFF_TOTP_ENCRYPTION_KEY_HEX and SMTP settings.
+    corepack pnpm db:migrate
     corepack pnpm dev:api
 
-Use separate terminals for corepack pnpm dev:mobile and corepack pnpm dev:admin.
-For Android Expo Go, configure apps/mobile/.env with EXPO_PUBLIC_API_URL pointing to an HTTPS ngrok tunnel to localhost:4000. **4040 is ngrok's inspector, not the backend port.**
+In other terminals: `corepack pnpm dev:mobile` and `corepack pnpm dev:admin`. Before physical phone testing, copy apps/mobile/.env.example to apps/mobile/.env and set EXPO_PUBLIC_API_URL to an HTTPS tunnel forwarding port 4000 (not ngrok inspector 4040).
 
-See docs/GETTING-STARTED.md and docs/PROJECT-STATE.md.
+Read docs/PHASE-2-IDENTITY.md for the complete local email and staff MFA setup. Run `corepack pnpm check` to execute typechecks and tests; GitHub CI additionally runs PostgreSQL integration tests, admin build and Android Expo export.
 
-No private keys, passwords, payment receipts or identity documents belong in the repository.
+Never commit identity records, actual credentials, MFA secrets, user uploads or payments.

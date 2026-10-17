@@ -8,7 +8,7 @@
 - Verify code to activate login. Sign in only after verification. Email-based password recovery revokes old sessions.
 - Store password as adaptive bcrypt hash; store only session token hash in DB; mobile token goes to OS SecureStore.
 - Activate a private seller only after verified email and acceptance of advertiser rules. Live listing submission is Phase 3.
-- Verified member applies for an agency. Staff approval is mandatory; agency owner is activated only after review.
+- Verified independent agents may submit professional applications that require an explicit staff decision. Verified member applies for an agency. Staff approval is mandatory; agency owner is activated only after review.
 - Agency managers and owners invite verified members to their agency. Invitees must explicitly accept. Memberships are agency-scoped; revoked agents lose access.
 - Standalone Next.js admin with provisioned staff, mandatory TOTP MFA, encrypted MFA seeds, anti-replay, dedicated audience, secure HTTP-only cookie, and staff-only agency approval queue.
 - Audit log records agency approvals, member changes, password resets and staff authentication.
@@ -23,7 +23,7 @@
 6. Start admin with corepack pnpm dev:admin. If API is not on localhost:4000, set AMLAK_API_INTERNAL_URL in apps/admin/.env.local.
 7. Provision staff only if authorized: in your PowerShell session set STAFF_EMAIL, STAFF_PASSWORD (12+ chars), STAFF_ROLE=super_admin (or verification) and STAFF_NAME, then run corepack pnpm staff:create. The tool prints a one-time TOTP enrollment URI. Store its secret securely; it cannot be recovered from the printed URI after closing terminal. On production also set STAFF_ALLOW_PROVISION=true.
 8. Open http://localhost:3000/admin/login; use the staff account and six-digit authenticator code. Verify agency requests at /admin/agencies.
-9. Run corepack pnpm check; GitHub CI also uses isolated PostgreSQL to test login, verified seller activation, separate staff sessions, MFA and cross-agency restrictions, builds admin and exports Android.
+9. Run corepack pnpm check; GitHub CI also uses isolated PostgreSQL to test login, verified seller activation, separate staff sessions, MFA and cross-agency restrictions as well as agent approval, builds admin and exports Android.
 
 ## Limitations and safety
 
