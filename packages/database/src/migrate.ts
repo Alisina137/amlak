@@ -1,5 +1,6 @@
 import {config as loadEnv} from "dotenv";
-loadEnv({path:new URL("../../../.env",import.meta.url).pathname,quiet:true});
+import {fileURLToPath} from "node:url";
+loadEnv({path:fileURLToPath(new URL("../../../.env",import.meta.url)),quiet:true});
 import {readFileSync} from "node:fs";
 import {fileURLToPath} from "node:url";
 import {connectDatabase} from "./index";
