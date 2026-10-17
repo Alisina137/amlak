@@ -24,7 +24,7 @@ const labels={
 type Key=keyof typeof labels.en;
 export default function ListingEditor(){
  const {id}=useLocalSearchParams<{id:string}>(),{locale}=usePreferences(),{token}=useAuth();
- const [data,setData]=useState<ListingDraft>(listingDraftSchema.parse({})),[status,setStatus]=useState("draft"),[revisionStatus,setRevisionStatus]=useState("draft");
+ const [data,setData]=useState<ListingDraft>(listingDraftSchema.parse({})),[status,setStatus]=useState("draft"),[revisionStatus,setRevisionStatus]=useState("draft"),[revisionReason,setRevisionReason]=useState("");
  const [version,setVersion]=useState(1),[step,setStep]=useState(0),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),
  [error,setError]=useState(""),[notice,setNotice]=useState(""),[provinceQuery,setProvinceQuery]=useState("");
  const latest=useRef(data),versionRef=useRef(1),saveChain=useRef<Promise<void>>(Promise.resolve()),loaded=useRef(false);
@@ -49,7 +49,7 @@ export default function ListingEditor(){
     }catch{}
    }
    change(doc);versionRef.current=response.version;setVersion(response.version);
-   setStatus(response.status);setRevisionStatus(response.revisionStatus||"approved");loaded.current=true;
+   setStatus(response.status);setRevisionStatus(response.revisionStatus||"approved");setRevisionReason(response.revisionReason||"");loaded.current=true;
   }catch{setError(tx("offline"));}
   finally{setLoading(false);}
  }
@@ -176,7 +176,7 @@ export default function ListingEditor(){
   <ScreenHeading title={locale==="en"?"Property editor":"مدیریت نشر ملک"} subtitle={steps[locale][step]+" · "+(step+1)+"/8"}/>
   <Label muted>{locale==="en"?"Status":"وضعیت"}: {status} · v{version}</Label>
   {revisionStatus==="submitted"?<SectionCard><Label>{tx("review")}</Label><Action kind="secondary" label={tx("withdraw")} disabled={busy} onPress={()=>void withdraw()}/></SectionCard>:null}
-  {status==="rejected"?<SectionCard><Label>{tx("rejected")}</Label></SectionCard>:null}
+  {revisionStatus==="rejected"?<SectionCard><Label>{tx("rejected")}</Label><Label muted>{revisionReason}</Label></SectionCard>:null}
   {status==="published"&&revisionStatus!=="submitted"?<SectionCard><Label style={{color:colors.success}}>{tx("approval")}</Label></SectionCard>:null}
   {mutable?form():null}
   {error?<SectionCard><Label style={{color:colors.error}}>{error}</Label></SectionCard>:null}

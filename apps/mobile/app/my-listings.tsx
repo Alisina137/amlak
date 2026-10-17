@@ -19,7 +19,7 @@ export default function MyListings(){
  {loading?<SectionCard><Label muted>{locale==="en"?"Loading…":"در حال بارگیری…"}</Label></SectionCard>:null}
  {error?<SectionCard><Label style={{color:colors.error}}>{error}</Label></SectionCard>:null}
  {!loading && items.length===0?<SectionCard><Label muted>{locale==="en"?"No listings yet":"هنوز ملکی ثبت نکرده‌اید"}</Label></SectionCard>:null}
- {items.map(l=><SectionCard key={l.id}><Label weight="bold">{locale==="en"?"Property":"ملک"} #{l.id.slice(0,8)}</Label>
+ {items.map(l=><SectionCard key={l.id}><Label weight="bold">{l.title||((locale==="en"?"Property":"ملک")+" #"+l.id.slice(0,8))}</Label>
  <Label muted>{l.status} · {new Date(l.updatedAt).toLocaleDateString(locale==="en"?"en-US":"fa-AF")}</Label>
  <Action kind="secondary" label={locale==="en"?"Open / edit":"بازکردن / ویرایش"} onPress={()=>router.push({pathname:"/listings/[id]/edit",params:{id:l.id}})}/>
  </SectionCard>)}

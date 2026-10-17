@@ -3,11 +3,11 @@ import {requestJson,ApiError} from "./auth";
 export const API_ROOT=(process.env.EXPO_PUBLIC_API_URL||"").replace(/\/+$/,"");
 export type ListingDTO={
  id:string;status:string;version:number;publisher:string;agencyId:string|null;
- revisionId:string;revisionStatus?:string;approvedRevisionId:string|null;currentRevisionId?:string|null;
+ revisionId:string;revisionStatus?:string;revisionReason?:string|null;approvedRevisionId:string|null;currentRevisionId?:string|null;
  lastConfirmedAt:string|null;publishedAt:string|null;data:ListingDraft;approvedData?:ListingDraft|null;
  photos:{id:string;url:string}[];available?:boolean;
 };
-export type InventoryItem={id:string;status:string;version:number;agencyId:string|null;updatedAt:string};
+export type InventoryItem={id:string;status:string;version:number;agencyId:string|null;title?:string;updatedAt:string};
 export async function listPublic(provinceId?:string){return requestJson<{items:ListingDTO[]}>("/v1/properties"+(provinceId?"?provinceId="+encodeURIComponent(provinceId):""));}
 export async function getPublic(id:string){return requestJson<ListingDTO>("/v1/properties/"+id);}
 export async function getOwned(id:string,token:string){return requestJson<ListingDTO>("/v1/listings/"+id,{token});}

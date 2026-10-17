@@ -35,7 +35,7 @@ export async function requireEditor(db:Database,request:FastifyRequest,l:Listing
 export function listingDTO(l:Listing,r:Revision,publicView:boolean){
  const value=listingDraftSchema.parse(r.data),data=publicView?publicListingPayload(value):value;
  return {id:l.id,status:l.status,version:l.version,publisher:l.publisher,agencyId:l.agencyId,revisionId:r.id,
-  revisionStatus:publicView?undefined:r.status,currentRevisionId:publicView?undefined:l.currentRevisionId,
+  revisionStatus:publicView?undefined:r.status,revisionReason:publicView?undefined:r.reason,currentRevisionId:publicView?undefined:l.currentRevisionId,
   approvedRevisionId:l.approvedRevisionId,lastConfirmedAt:l.lastConfirmedAt,publishedAt:l.publishedAt,
   data,photos:data.photoIds.map(id=>({id,url:"/v1/photos/"+id}))};
 }
@@ -65,7 +65,7 @@ export function registerListingRoutes(app:FastifyInstance,db:Database){
  app.get("/v1/listings/mine",async request=>{
   const actor=await requireActor(db,request,"user");
   const rows=await db.select().from(schema.listings).where(eq(schema.listings.authorId,actor.id)).orderBy(desc(schema.listings.updatedAt)).limit(100);
-  return {items:rows.map(l=>({id:l.id,status:l.status,version:l.version,agencyId:l.agencyId,updatedAt:l.updatedAt}))};
+  const items=[];for(const l of rows){const revId=l.currentRevisionId||l.approvedRevisionId;const rev=revId?await getRevision(db,revId):null;items.push({id:l.id,status:l.status,version:l.version,agencyId:l.agencyId,updatedAt:l.updatedAt,title:rev?listingDraftSchema.parse(rev.data).title:""});}return {items};
  });
  app.get<{Params:{agencyId:string}}>("/v1/agencies/:agencyId/listings",async request=>{
   const actor=await requireActor(db,request,"user"),agencyId=validId(request.params.agencyId);
