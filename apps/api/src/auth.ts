@@ -63,7 +63,7 @@ async function revoke(db:Database,token:string,audience:"user"|"staff"){
 }
 const userProjection=(u:typeof schema.users.$inferSelect)=>({
  id:u.id,displayName:u.displayName,email:u.email,verified:!!u.emailVerifiedAt,
- advertiserEnabled:u.advertiserEnabled,locale:u.locale,status:u.status,
+ advertiserEnabled:u.advertiserEnabled,independentAgentStatus:u.independentAgentStatus,locale:u.locale,status:u.status,
 });
 export function registerAuthRoutes(app:FastifyInstance,db:Database,notify:SendCode) {
  app.post("/v1/auth/register",{config:{rateLimit:{max:5,timeWindow:"15 minutes"}}},async request=>{
@@ -165,7 +165,7 @@ export function registerAuthRoutes(app:FastifyInstance,db:Database,notify:SendCo
  app.get("/v1/advertiser/capabilities",async request=>{
   const actor=await requireActor(db,request,"user");
   const [user]=await db.select().from(schema.users).where(eq(schema.users.id,actor.id)).limit(1);
-  return {verified:!!user?.emailVerifiedAt,advertiserEnabled:!!user?.advertiserEnabled,canCreatePrivateDraft:!!user?.emailVerifiedAt && !!user?.advertiserEnabled,canSubmitListing:!!user?.emailVerifiedAt && !!user?.advertiserEnabled};
+  return {verified:!!user?.emailVerifiedAt,advertiserEnabled:!!user?.advertiserEnabled,independentAgentStatus:user?.independentAgentStatus??"none",canCreatePrivateDraft:!!user?.emailVerifiedAt && !!user?.advertiserEnabled,canSubmitListing:!!user?.emailVerifiedAt && (!!user?.advertiserEnabled || user?.independentAgentStatus==="approved")};
  });
  app.post("/v1/staff/auth/login",{config:{rateLimit:{max:6,timeWindow:"15 minutes"}}},async request=>{
   const values=parse(staffLoginBody,request.body);

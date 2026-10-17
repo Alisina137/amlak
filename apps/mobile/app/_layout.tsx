@@ -8,5 +8,6 @@ export default function RootLayout(){
   <Stack.Screen name="locations" />
   <Stack.Screen name="auth" />
   <Stack.Screen name="agency" />
+  <Stack.Screen name="agent" />
  </Stack></AuthProvider></PreferencesProvider></SafeAreaProvider>;
 }

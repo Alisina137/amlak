@@ -1,5 +1,6 @@
 import { pgTable, uuid, varchar, text, timestamp, integer, boolean, uniqueIndex, index, pgEnum } from "drizzle-orm/pg-core";
 export const userStatus = pgEnum("user_status", ["active","suspended","deleted"]);
+export const agentStatus = pgEnum("agent_status", ["none","pending","approved","rejected"]);
 export const agencyStatus = pgEnum("agency_status", ["pending","active","rejected","suspended"]);
 export const memberRole = pgEnum("agency_role", ["owner","manager","agent"]);
 export const memberStatus = pgEnum("membership_status", ["pending","active","revoked"]);
@@ -13,6 +14,7 @@ export const users=pgTable("users", {
  status:userStatus("status").notNull().default("active"),
  locale:varchar("locale",{length:2}).notNull().default("fa"),
  advertiserEnabled:boolean("advertiser_enabled").notNull().default(false),
+ independentAgentStatus:agentStatus("agent_status").notNull().default("none"),
  createdAt:timestamp("created_at",{withTimezone:true}).notNull().defaultNow(),
  updatedAt:timestamp("updated_at",{withTimezone:true}).notNull().defaultNow(),
 },table=>[uniqueIndex("users_email_unique").on(table.email)]);

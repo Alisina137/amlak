@@ -45,6 +45,9 @@ export default function Account(){
      <Action disabled={busy||!accept||!user.verified} label={copy("sellerActivate")} onPress={()=>void activate()}/>
     </>}
    </SectionCard>
+   <SectionCard><Label weight="bold">{copy("agent")}</Label>
+    {user.independentAgentStatus==="approved"?<Label style={{color:colors.success}}>{copy("agentApproved")}</Label>:user.independentAgentStatus==="pending"?<Label muted>{copy("agentPending")}</Label>:<Action kind="secondary" label={copy("agentApplication")} onPress={()=>router.push("/agent/apply")}/>}
+   </SectionCard>
    <SectionCard>
     <Label weight="bold">{copy("agency")}</Label>
     {agencies.map(a=><View key={a.agencyId} style={{gap:6}}>

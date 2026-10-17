@@ -45,6 +45,8 @@ test("PostgreSQL identity lifecycle, MFA, and cross-agency revocation", {skip:!p
   const ownerToken=await verify(ownerEmail);
   assert.equal((await call("GET","/v1/me",undefined,ownerToken)).data.user.verified,true);
   assert.equal((await call("GET","/v1/advertiser/capabilities",undefined,ownerToken)).data.canSubmitListing,false);
+  assert.equal((await call("POST","/v1/agents/apply",{acceptedProfessionalRules:true},ownerToken)).status,200);
+  assert.equal((await call("GET","/v1/advertiser/capabilities",undefined,ownerToken)).data.independentAgentStatus,"pending");
   assert.equal((await call("POST","/v1/advertiser/activate",{acceptedRules:true},ownerToken)).status,200);
   assert.equal((await call("GET","/v1/advertiser/capabilities",undefined,ownerToken)).data.canSubmitListing,true);
   await register(agentEmail);
@@ -60,6 +62,9 @@ test("PostgreSQL identity lifecycle, MFA, and cross-agency revocation", {skip:!p
   const loginStaff=await call("POST","/v1/staff/auth/login",{email:staffEmail,password:"SecureStaffPassword123!",totp:authenticator.generate(staffSecret)});
   assert.equal(loginStaff.status,200);
   const staffToken=loginStaff.data.token as string;
+  assert.equal((await call("GET","/v1/admin/agents",undefined,staffToken)).data.items.some((p:{email:string})=>p.email===ownerEmail),true);
+  assert.equal((await call("POST","/v1/admin/agents/"+(await call("GET","/v1/me",undefined,ownerToken)).data.user.id+"/decision",{decision:"approve",reason:"Reviewed professional credentials offline"},staffToken)).status,200);
+  assert.equal((await call("GET","/v1/advertiser/capabilities",undefined,ownerToken)).data.independentAgentStatus,"approved");
   assert.equal((await call("GET","/v1/me",undefined,staffToken)).status,401);
   assert.equal((await call("GET","/v1/staff/me",undefined,ownerToken)).status,401);
   assert.equal((await call("GET","/v1/admin/agencies",undefined,agentToken)).status,401);

@@ -34,8 +34,8 @@ export async function requireVerified(db:Database,actor:Actor){
  if(!user || user.status!=="active")throw new HttpProblem(403,"ACCOUNT_DISABLED");
  return user;
 }
-export function canSubmitListing(actor:{verified:boolean;advertiserEnabled:boolean;memberRole?:string;agencyActive?:boolean},publisher:"private"|"agency") {
- return !!actor.verified && (publisher==="private"?actor.advertiserEnabled:!!actor.agencyActive && ["owner","manager","agent"].includes(actor.memberRole||""));
+export function canSubmitListing(actor:{verified:boolean;advertiserEnabled:boolean;memberRole?:string;agencyActive?:boolean;independentAgentApproved?:boolean},publisher:"private"|"agency"|"independent_agent") {
+ return !!actor.verified && (publisher==="private"?actor.advertiserEnabled:publisher==="independent_agent"?!!actor.independentAgentApproved:!!actor.agencyActive && ["owner","manager","agent"].includes(actor.memberRole||""));
 }
 export async function requireAgencyMember(db:Database,actor:Actor,agencyId:string,allowed:("owner"|"manager"|"agent")[]){
  await requireVerified(db,actor);

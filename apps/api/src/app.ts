@@ -7,6 +7,7 @@ import {sql} from "drizzle-orm";
 import {HttpProblem} from "./access";
 import {registerAuthRoutes} from "./auth";
 import {registerAgencyRoutes} from "./agencies";
+import {registerAgentRoutes} from "./agents";
 import {sendCode,type SendCode} from "./mail";
 export function buildApp(options:{db?:Database;mailer?:SendCode}={}){
  const app=Fastify({logger:true,bodyLimit:256*1024,trustProxy:false});
@@ -32,7 +33,7 @@ export function buildApp(options:{db?:Database;mailer?:SendCode}={}){
   if(!province){reply.code(404);return {error:"PROVINCE_NOT_FOUND",requestId:request.id};}
   return province;
  });
- if(options.db){registerAuthRoutes(app,options.db,options.mailer||sendCode);registerAgencyRoutes(app,options.db);}
+ if(options.db){registerAuthRoutes(app,options.db,options.mailer||sendCode);registerAgencyRoutes(app,options.db);registerAgentRoutes(app,options.db);}
  app.setNotFoundHandler((request,reply)=>reply.code(404).send({error:"ROUTE_NOT_FOUND",requestId:request.id}));
  app.setErrorHandler((error,request,reply)=>{
   if(error instanceof HttpProblem)return reply.code(error.status).send({error:error.code,requestId:request.id});

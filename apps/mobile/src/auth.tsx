@@ -2,7 +2,7 @@ import * as SecureStore from "expo-secure-store";
 import {createContext,useCallback,useContext,useEffect,useMemo,useState,type ReactNode} from "react";
 const BASE_URL=(process.env.EXPO_PUBLIC_API_URL||"").replace(/\/+$/,"");
 const KEY="amlaklink:user-session:v1";
-export type Account={id:string;displayName:string;email:string;verified:boolean;advertiserEnabled:boolean;locale:string;status:string};
+export type Account={id:string;displayName:string;email:string;verified:boolean;advertiserEnabled:boolean;independentAgentStatus:"none"|"pending"|"approved"|"rejected";locale:string;status:string};
 type AuthContext={user:Account|null;token:string|null;loading:boolean;signIn:(email:string,password:string)=>Promise<void>;
  verify:(email:string,code:string)=>Promise<void>;signOut:()=>Promise<void>;refresh:()=>Promise<void>};
 const Context=createContext<AuthContext|null>(null);

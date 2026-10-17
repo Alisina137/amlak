@@ -8,7 +8,7 @@ export default async function AdminHome(){
   <header><h1>املاک لینک — مدیریت</h1><p>{staff.displayName} · {staff.role}</p><LogoutButton/></header>
   <section className="admin-card"><h2>مرکز کاری کارمندان</h2><p>ورود دو مرحله‌ای و نقش کارمند بررسی شده است.</p>
    {["verification","admin","super_admin"].includes(staff.role)?
-    <Link href="/admin/agencies">بررسی درخواست‌های ثبت دفتر ←</Link>:
+    <div style={{display:"flex",gap:24,flexWrap:"wrap"}}><Link href="/admin/agencies">بررسی درخواست‌های ثبت دفتر ←</Link><Link href="/admin/agents">درخواست‌های رهنمای معاملات مستقل ←</Link></div>:
     <p>ماژول‌های بیشتر طبق صلاحیت شما در مراحل بعدی فعال می‌شوند.</p>}
   </section>
  </main>;

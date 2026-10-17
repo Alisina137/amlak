@@ -1,6 +1,7 @@
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 DO $$ BEGIN CREATE TYPE user_status AS ENUM ('active','suspended','deleted'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN CREATE TYPE agency_status AS ENUM ('pending','active','rejected','suspended'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $ BEGIN CREATE TYPE agent_status AS ENUM ('none','pending','approved','rejected'); EXCEPTION WHEN duplicate_object THEN NULL; END $;
+DO $ BEGIN CREATE TYPE agency_status AS ENUM ('pending','active','rejected','suspended'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN CREATE TYPE agency_role AS ENUM ('owner','manager','agent'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN CREATE TYPE membership_status AS ENUM ('pending','active','revoked'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN CREATE TYPE staff_role AS ENUM ('moderator','verification','billing','support','admin','super_admin'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -9,8 +10,10 @@ CREATE TABLE IF NOT EXISTS users (
  email varchar(254) NOT NULL UNIQUE, password_hash text NOT NULL,
  email_verified_at timestamptz, status user_status NOT NULL DEFAULT 'active',
  locale varchar(2) NOT NULL DEFAULT 'fa', advertiser_enabled boolean NOT NULL DEFAULT false,
- created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now()
+ created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
+ agent_status agent_status NOT NULL DEFAULT 'none'
 );
+ALTER TABLE users ADD COLUMN IF NOT EXISTS agent_status agent_status NOT NULL DEFAULT 'none';
 CREATE TABLE IF NOT EXISTS staff (
  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), email varchar(254) NOT NULL UNIQUE,
  display_name varchar(100) NOT NULL, password_hash text NOT NULL,
