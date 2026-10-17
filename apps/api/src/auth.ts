@@ -1,4 +1,4 @@
-import {and,desc,eq,gt,isNull,lt,or} from "drizzle-orm";
+import {and,desc,eq,gt,isNull,lt,sql} from "drizzle-orm";
 import {type FastifyInstance} from "fastify";
 import {z} from "zod";
 import {type Database,schema} from "@amlaklink/database";
@@ -36,7 +36,7 @@ async function validateCode(db:Database,mail:string,purpose:Purpose,code:string)
    throw new HttpProblem(422,"CODE_INVALID_OR_EXPIRED");
  // Count failed guesses using DB-side atomic increment.
  if(!verifyCode(mail,purpose,code,latest.secretHash)){
-   await db.update(schema.challenges).set({attempts:latest.attempts+1}).where(eq(schema.challenges.id,latest.id));
+   await db.update(schema.challenges).set({attempts:sql`${schema.challenges.attempts}+1`}).where(and(eq(schema.challenges.id,latest.id),isNull(schema.challenges.consumedAt),lt(schema.challenges.attempts,5)));
    throw new HttpProblem(422,"CODE_INVALID_OR_EXPIRED");
  }
  const success=await db.update(schema.challenges).set({consumedAt:new Date()}).where(and(eq(schema.challenges.id,latest.id),isNull(schema.challenges.consumedAt),lt(schema.challenges.attempts,5))).returning({id:schema.challenges.id});
