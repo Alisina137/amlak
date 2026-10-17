@@ -5,7 +5,7 @@ import {readFileSync} from "node:fs";
 import {connectDatabase} from "./index";
 const {sql}=connectDatabase();
 async function migrate(){
- for(const name of ["0001_identity.sql","0002_inventory.sql"]){
+ for(const name of ["0001_identity.sql","0002_inventory.sql","0003_discovery.sql"]){
   const path=fileURLToPath(new URL("../migrations/"+name,import.meta.url));
   await sql.unsafe(readFileSync(path,"utf8"),[],{prepare:false});
   console.log("Applied "+name);
