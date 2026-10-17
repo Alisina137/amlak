@@ -9,9 +9,13 @@ import {registerAuthRoutes} from "./auth";
 import {registerAgencyRoutes} from "./agencies";
 import {registerAgentRoutes} from "./agents";
 import {sendCode,type SendCode} from "./mail";
+import multipart from "@fastify/multipart";
+import {registerListingRoutes} from "./listings";
+import {registerPhotoRoutes} from "./photos";
 export function buildApp(options:{db?:Database;mailer?:SendCode}={}){
  const app=Fastify({logger:true,bodyLimit:256*1024,trustProxy:false});
  app.register(rateLimit,{global:true,max:120,timeWindow:"1 minute"});
+ app.register(multipart,{limits:{fileSize:6_000_000,files:1}});
  app.addHook("onSend",async(_request,reply,payload)=>{
    reply.header("X-Content-Type-Options","nosniff");reply.header("Referrer-Policy","no-referrer");
    reply.header("Cache-Control","no-store");return payload;
@@ -19,7 +23,7 @@ export function buildApp(options:{db?:Database;mailer?:SendCode}={}){
  app.get("/health",async()=>healthSchema.parse({status:"ok",service:"amlaklink-api"}));
  app.get("/ready",async(_request,reply)=>{
   if(!options.db){reply.code(503);return {status:"unavailable",reason:"DATABASE_NOT_CONFIGURED"};}
-  try{await options.db.execute(sql`SELECT 1`);return {status:"ok",phase:"identity"};}
+  try{await options.db.execute(sql`SELECT 1`);return {status:"ok",phase:"inventory"};}
   catch{reply.code(503);return {status:"unavailable",reason:"DATABASE_UNREACHABLE"};}
  });
  app.get("/v1/catalog/provinces",async(request,reply)=>{
@@ -33,7 +37,7 @@ export function buildApp(options:{db?:Database;mailer?:SendCode}={}){
   if(!province){reply.code(404);return {error:"PROVINCE_NOT_FOUND",requestId:request.id};}
   return province;
  });
- if(options.db){registerAuthRoutes(app,options.db,options.mailer||sendCode);registerAgencyRoutes(app,options.db);registerAgentRoutes(app,options.db);}
+ if(options.db){registerAuthRoutes(app,options.db,options.mailer||sendCode);registerAgencyRoutes(app,options.db);registerAgentRoutes(app,options.db);registerListingRoutes(app,options.db);registerPhotoRoutes(app,options.db);}
  app.setNotFoundHandler((request,reply)=>reply.code(404).send({error:"ROUTE_NOT_FOUND",requestId:request.id}));
  app.setErrorHandler((error,request,reply)=>{
   if(error instanceof HttpProblem)return reply.code(error.status).send({error:error.code,requestId:request.id});

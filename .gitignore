@@ -11,3 +11,5 @@ coverage/
 !.env.local.example
 .DS_Store
 *.tsbuildinfo
+
+.amlak-media/

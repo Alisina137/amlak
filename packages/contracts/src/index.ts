@@ -19,3 +19,5 @@ export const healthSchema = z.object({ status:z.literal("ok"), service:z.literal
 export const apiErrorSchema = z.object({ error:z.string(), requestId:z.string().optional() });
 export type ProvinceDTO=z.infer<typeof provinceSchema>;
 export type ProvinceListDTO=z.infer<typeof provinceListSchema>;
+
+export * from "./listings";
