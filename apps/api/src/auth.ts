@@ -1,6 +1,7 @@
 import {and,desc,eq,gt,isNull,lt,sql} from "drizzle-orm";
 import {type FastifyInstance} from "fastify";
 import {z} from "zod";
+import {authenticator} from "otplib";
 import {type Database,schema} from "@amlaklink/database";
 import {HttpProblem,parseBearer,requireActor,requireVerified} from "./access";
 import {checkTotp,decryptTotp,hashCode,hashToken,newToken,normalizeEmail,passwordCheck,passwordHash,randomCode,verifyCode} from "./security";
