@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS staff (
  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), email varchar(254) NOT NULL UNIQUE,
  display_name varchar(100) NOT NULL, password_hash text NOT NULL,
- role staff_role NOT NULL, totp_secret_encrypted text NOT NULL,
+ role staff_role NOT NULL, totp_secret_encrypted text NOT NULL, last_totp_step integer NOT NULL DEFAULT 0,
  active boolean NOT NULL DEFAULT true, created_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE TABLE IF NOT EXISTS verification_challenges (
