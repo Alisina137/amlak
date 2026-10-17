@@ -14,7 +14,7 @@ export default function AuthAction(){
  const [displayName,setName]=useState(""),[email,setEmail]=useState(params.email||""),
  [password,setPassword]=useState(""),[code,setCode]=useState(""),[busy,setBusy]=useState(false),[error,setError]=useState("");
  const [notice,setNotice]=useState("");
- const to=(action:ActionType,emailValue=email)=>router.replace({pathname:"/auth/[action]",params:{action,email:emailValue}});
+ const to=(action:ActionType,emailValue=email)=>router.replace({pathname:"/auth/[action]",params:{action,email:emailValue,returnPropertyId:params.returnPropertyId}});
  const copy=(key:Parameters<typeof authT>[1])=>authT(locale,key);
  async function submit(){
   if(!email.trim() || (["register","login","reset"].includes(mode)&&!password) || (mode==="register"&&!displayName.trim())||(["verify","reset"].includes(mode)&&!code)){
@@ -32,7 +32,9 @@ export default function AuthAction(){
     router.replace("/(tabs)/account");return;
    }
    if(mode==="verify"){
-    await verify(email.trim(),code);router.replace("/(tabs)/account");return;
+    await verify(email.trim(),code);
+    if(params.returnPropertyId){router.replace({pathname:"/property/[id]",params:{id:params.returnPropertyId}});return;}
+    router.replace("/(tabs)/account");return;
    }
    if(mode==="recover"){
     await requestJson("/v1/auth/recover",{method:"POST",body:{email:email.trim()}});
