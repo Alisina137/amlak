@@ -3,7 +3,7 @@ import type {FastifyInstance} from "fastify";
 import {type Database,schema} from "@amlaklink/database";
 import {listingDraftSchema} from "@amlaklink/contracts";
 import {HttpProblem,requireActor,requireStaffRole} from "./access";
-import {getListing,getRevision,requireEditor,validId} from "./listings";
+import {getListing,getRevision,requireEditor,validId,canShowPublic} from "./listings";
 import {storePhoto,retrievePhoto,removePhoto} from "./media-storage";
 export function registerPhotoRoutes(app:FastifyInstance,db:Database){
  app.post<{Params:{id:string}}>("/v1/listings/:id/photos",async request=>{
@@ -41,7 +41,7 @@ export function registerPhotoRoutes(app:FastifyInstance,db:Database){
   if(!photo)throw new HttpProblem(404,"PHOTO_NOT_FOUND");
   const listing=await getListing(db,photo.listingId);
   let allowed=false;
-  if(listing.approvedRevisionId && ["published","paused","sold","rented"].includes(listing.status)){
+  if(listing.approvedRevisionId && ["published","paused","sold","rented"].includes(listing.status) && await canShowPublic(db,listing)){
    const r=await getRevision(db,listing.approvedRevisionId);
    allowed=listingDraftSchema.parse(r.data).photoIds.includes(photo.id);
   }

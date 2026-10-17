@@ -32,6 +32,15 @@ export async function requireEditor(db:Database,request:FastifyRequest,l:Listing
  }
  return actor;
 }
+export async function canShowPublic(db:Database,l:Listing):Promise<boolean>{
+ const [author]=await db.select({status:schema.users.status}).from(schema.users).where(eq(schema.users.id,l.authorId)).limit(1);
+ if(!author||author.status!=="active")return false;
+ if(l.agencyId){
+  const [agency]=await db.select({status:schema.agencies.status}).from(schema.agencies).where(eq(schema.agencies.id,l.agencyId)).limit(1);
+  if(!agency||agency.status!=="active")return false;
+ }
+ return true;
+}
 export function listingDTO(l:Listing,r:Revision,publicView:boolean){
  const value=listingDraftSchema.parse(r.data),data=publicView?publicListingPayload(value):value;
  return {id:l.id,status:l.status,version:l.version,publisher:l.publisher,agencyId:l.agencyId,revisionId:r.id,
@@ -175,7 +184,7 @@ export function registerListingRoutes(app:FastifyInstance,db:Database){
     .orderBy(desc(schema.listings.publishedAt),desc(schema.listings.id)).limit(150);
   const items=[];
   for(const l of rows){
-   if(!l.approvedRevisionId)continue;
+   if(!l.approvedRevisionId || !await canShowPublic(db,l))continue;
    const r=await getRevision(db,l.approvedRevisionId),data=listingDraftSchema.parse(r.data);
    if(q.provinceId && data.location.provinceId!==q.provinceId)continue;
    items.push(listingDTO(l,r,true));if(items.length>=q.limit)break;
@@ -184,7 +193,7 @@ export function registerListingRoutes(app:FastifyInstance,db:Database){
  });
  app.get<{Params:{id:string}}>("/v1/properties/:id",async request=>{
   const l=await getListing(db,request.params.id);
-  if(!l.approvedRevisionId||!["published","paused","sold","rented"].includes(l.status))throw new HttpProblem(404,"PROPERTY_NOT_PUBLIC");
+  if(!l.approvedRevisionId||!["published","paused","sold","rented"].includes(l.status)||!await canShowPublic(db,l))throw new HttpProblem(404,"PROPERTY_NOT_PUBLIC");
   const r=await getRevision(db,l.approvedRevisionId);
   return {...listingDTO(l,r,true),available:l.status==="published"&&!!l.lastConfirmedAt&&Date.now()-l.lastConfirmedAt.getTime()<30*86400_000};
  });
