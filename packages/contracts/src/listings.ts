@@ -60,8 +60,11 @@ export const listingSubmissionSchema=listingDraftSchema.superRefine((v,ctx)=>{
  if(v.description.length<25)bad(["description"],"Description must contain at least 25 characters");
  if(!findProvince(v.location.provinceId))bad(["location","provinceId"],"Invalid Afghanistan province");
  if(v.location.city.length<2 || v.location.district.length<2)bad(["location"],"City and district are required");
- if(v.location.precision==="exact" && ((v.location.latitude===undefined)!==(v.location.longitude===undefined)))
+ if((v.location.latitude===undefined)!==(v.location.longitude===undefined))
   bad(["location"],"Both coordinates must be supplied together");
+ if(v.location.latitude!==undefined && v.location.longitude!==undefined &&
+   (v.location.latitude<29||v.location.latitude>39||v.location.longitude<60||v.location.longitude>75))
+  bad(["location"],"Property map coordinates must be in Afghanistan");
  if(v.attributes.areaM2<=0)bad(["attributes","areaM2"],"Area must be greater than zero");
  if(v.propertyType==="land" && v.attributes.bedrooms!==undefined)
   bad(["attributes","bedrooms"],"Land does not have bedrooms");

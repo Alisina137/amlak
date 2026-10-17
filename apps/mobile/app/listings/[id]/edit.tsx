@@ -8,6 +8,7 @@ import {findProvince,searchProvinces} from "@amlaklink/catalog";
 import {listingDraftSchema,type ListingDraft} from "@amlaklink/contracts";
 import {useAuth,requestJson} from "../../../src/auth";
 import {usePreferences} from "../../../src/context";
+import {PropertyLocationPicker} from "../../../src/location-picker";
 import {lt,priceSummary} from "../../../src/listing-ui";
 import {getOwned,photoSource,uploadPhoto,type ListingDTO} from "../../../src/listing-client";
 import {Action,Label,Page,ScreenHeading,SectionCard} from "../../../src/ui";
@@ -144,6 +145,13 @@ export default function ListingEditor(){
    <Field label={tx("neighborhood")} value={data.location.neighborhood} onChange={v=>field("location","neighborhood",v)}/>
    <Field label={tx("address")} value={data.location.streetAddress||""} onChange={v=>field("location","streetAddress",v)}/>
    <Action kind="secondary" label={data.location.precision==="approximate"?"✓ "+(locale==="en"?"Approximate map location":"موقعیت تقریبی"):(locale==="en"?"Exact position":"موقعیت دقیق")} onPress={()=>field("location","precision",data.location.precision==="approximate"?"exact":"approximate")}/>
+   {data.location.precision==="exact"?<PropertyLocationPicker locale={locale}
+    latitude={data.location.latitude} longitude={data.location.longitude}
+    onChange={(latitude,longitude)=>change({...latest.current,location:{...latest.current.location,latitude,longitude}})}/>:<Label muted>{
+      locale==="en"?"For privacy, your exact address and coordinates will not be shown.":
+      locale==="fa"?"برای حفظ حریم خصوصی، آدرس و مختصات دقیق نمایش داده نمی‌شود.":
+      "د محرمیت لپاره، دقیقه پته او همغږي نه ښکاري."
+    }</Label>}
   </SectionCard>;
   if(step===3)return <SectionCard>
    <Field label={tx("title")} value={data.title} onChange={v=>chooseItem("title",v)}/>
