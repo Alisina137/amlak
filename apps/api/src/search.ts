@@ -39,7 +39,7 @@ function column(section:string,key:string):SQL{
 }
 function top(name:string):SQL{return sql.raw("(listing_revisions.data->>'"+name+"')");}
 function numeric(section:string,key:string):SQL<number>{
- return sql.raw("nullif((listing_revisions.data->'"+section+"'->>'"+key+"'),'')::numeric");
+ return sql.raw("nullif((listing_revisions.data->'"+section+"'->>'"+key+"'),'')::numeric") as SQL<number>;
 }
 export function parseDiscovery(raw:unknown):DiscoveryFilters{
  const result=qschema.safeParse(raw);
@@ -72,7 +72,7 @@ function cursorDecode(cursor:string|undefined,hash:string){
  }catch{throw new HttpProblem(422,"INVALID_CURSOR");}
 }
 function priceKey(q:DiscoveryFilters){return q.intent==="sale"?"askingPrice":q.intent==="rent"?"monthlyRent":"refundablePrincipal";}
-function sortColumn(q:DiscoveryFilters):SQL{
+function sortColumn(q:DiscoveryFilters){
  return q.sort==="newest"?schema.listings.publishedAt:q.sort==="recent_confirmed"?schema.listings.lastConfirmedAt:numeric("price",priceKey(q));
 }
 export function searchConditions(q:DiscoveryFilters):SQL[]{
