@@ -24,6 +24,7 @@ const labels={
 type Key=keyof typeof labels.en;
 export default function ListingEditor(){
  const {id}=useLocalSearchParams<{id:string}>(),{locale}=usePreferences(),{token}=useAuth();
+ const [pendingImage,setPendingImage]=useState<{uri:string;mime:string;bytes?:number}|null>(null);
  const [data,setData]=useState<ListingDraft>(listingDraftSchema.parse({})),[status,setStatus]=useState("draft"),[revisionStatus,setRevisionStatus]=useState("draft"),[revisionReason,setRevisionReason]=useState("");
  const [version,setVersion]=useState(1),[step,setStep]=useState(0),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),
  [error,setError]=useState(""),[notice,setNotice]=useState(""),[provinceQuery,setProvinceQuery]=useState("");
@@ -90,19 +91,25 @@ export default function ListingEditor(){
   try{await requestJson("/v1/listings/"+id+"/withdraw",{method:"POST",token});await refresh();}
   catch(e){setError((e as Error).message);}finally{setBusy(false);}
  }
+ async function transmitPhoto(asset:{uri:string;mime:string;bytes?:number}){
+  if(!token||busy)return;
+  setBusy(true);setError("");setNotice("");
+  try{
+   const response=await uploadPhoto(id,token,asset.uri,asset.mime);
+   change({...latest.current,photoIds:[...latest.current.photoIds,response.id]});
+   await save();setNotice(locale==="en"?"Photo uploaded":"عکس بارگذاری شد");
+   setPendingImage(null);
+  }catch(err){
+   setPendingImage(asset);setError((err as Error).message);
+  }finally{setBusy(false);}
+ }
  async function choosePhoto(){
   if(!token||busy)return;
-  setError("");
   const selection=await ImagePicker.launchImageLibraryAsync({mediaTypes:["images"],quality:0.8,allowsMultipleSelection:false});
   if(selection.canceled||!selection.assets[0])return;
-  const asset=selection.assets[0];
-  setBusy(true);
-  try{
-   const result=await uploadPhoto(id,token,asset.uri,asset.mimeType||"image/jpeg");
-   change({...latest.current,photoIds:[...latest.current.photoIds,result.id]});
-   await save();setNotice(locale==="en"?"Photo uploaded":"عکس بارگذاری شد");
-  }catch(e){setError((e as Error).message);}
-  finally{setBusy(false);}
+  const a=selection.assets[0];
+  const asset={uri:a.uri,mime:a.mimeType||"image/jpeg",bytes:a.fileSize};
+  setPendingImage(asset);await transmitPhoto(asset);
  }
  function chooseItem<S extends keyof ListingDraft>(key:S,value:ListingDraft[S]){change({...latest.current,[key]:value});}
  const numeric=(section:"attributes"|"price",key:string,lab:string,opt=false)=>
@@ -147,6 +154,7 @@ export default function ListingEditor(){
   </SectionCard>;
   if(step===5)return <SectionCard><Label muted>{locale==="en"?"At least one photo. Maximum 20; images are re-encoded to remove metadata.":"حداقل یک عکس، حداکثر ۲۰ عکس؛ معلومات مخفی عکس حذف می‌شود."}</Label>
    <Action label={busy?"…":tx("photo")} disabled={busy||data.photoIds.length>=20} onPress={()=>void choosePhoto()}/>
+   {pendingImage?<View style={{gap:8}}><Label muted>{(pendingImage.bytes?Math.round(pendingImage.bytes/1024):"?")+" KB"} · {busy?"Uploading…":error}</Label><Action kind="secondary" disabled={busy} label={locale==="en"?"Retry this photo":"تلاش دوباره برای این عکس"} onPress={()=>void transmitPhoto(pendingImage)}/></View>:null}
    <View style={{flexDirection:"row",flexWrap:"wrap",gap:8}}>{data.photoIds.map((photoId,i)=><View key={photoId} style={{width:"47%",gap:4}}>
     <Image source={photoSource(photoId,token)} style={{width:"100%",height:125,backgroundColor:colors.border,borderRadius:12}}/>
     <Label muted style={{fontSize:12}}>{i===0?(locale==="en"?"Cover":"عکس اصلی"):"#"+(i+1)}</Label>
