@@ -212,7 +212,7 @@ export function registerListingRoutes(app:FastifyInstance,db:Database){
    const [r]=await tx.update(schema.revisions).set({status:input.decision==="approve"?"approved":"rejected",moderatorId:actor.id,reason:input.reason,reviewedAt:new Date()})
     .where(and(eq(schema.revisions.id,input.revisionId),eq(schema.revisions.listingId,listingId),eq(schema.revisions.status,"submitted"))).returning();
    if(!r)throw new HttpProblem(409,"REVIEW_CONFLICT");
-   const status:Listing["status"]=input.decision==="reject"?(l.approvedRevisionId?l.status:"rejected"):(l.status==="paused"?"paused":"published");
+   const status:Listing["status"]=input.decision==="reject"?(l.approvedRevisionId?l.status:"rejected"):(["paused","sold","rented"].includes(l.status)?l.status:"published");
    await tx.update(schema.listings).set({status,version:l.version+1,updatedAt:new Date(),
     currentRevisionId:input.decision==="approve"?null:r.id,approvedRevisionId:input.decision==="approve"?r.id:l.approvedRevisionId,
     publishedAt:input.decision==="approve"?(l.publishedAt||new Date()):l.publishedAt,
