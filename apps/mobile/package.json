@@ -27,7 +27,7 @@
     "@amlaklink/contracts": "workspace:*",
     "expo-image-picker": "~57.0.20",
     "expo-crypto": "~57.0.3",
-    "react-native-maps": "1.29.11"
+    "react-native-maps": "1.27.2"
   },
   "devDependencies": {
     "@react-native/metro-config": "0.86.3",
