@@ -5,6 +5,7 @@ import { useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, TextInput, View } from "react-native";
 import { usePreferences } from "../../src/context";
+import {ListingFeed} from "../../src/listing-ui";
 import { EmptyMessage, Label, Page, ScreenHeading, SectionCard } from "../../src/ui";
 export default function Search(){
  const {locale,provinceId,setProvinceId}=usePreferences(),params=useLocalSearchParams<{intent?:string}>();
@@ -30,6 +31,6 @@ export default function Search(){
        <Label style={{color:colors.primary}}>{province.id===provinceId?"✓":""}</Label>
     </Pressable>):<Label muted>{t(locale,"noResults")}</Label>}
   </SectionCard>
-  <EmptyMessage icon="⌕" title={t(locale,"properties")} body={t(locale,"phaseNotice")}/>
+  <ListingFeed provinceId={provinceId}/>
  </Page>;
 }

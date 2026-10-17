@@ -34,6 +34,12 @@ export default function Account(){
     <Label weight="bold">{user.displayName}</Label><Label muted>{user.email}</Label>
     <Label style={{color:user.verified?colors.success:colors.warning}}>{user.verified?copy("verified"):copy("notVerified")}</Label>
    </SectionCard>
+   {user.advertiserEnabled||user.independentAgentStatus==="approved"?
+   <SectionCard>
+    <Label weight="bold">{locale==="en"?"My property workspace":"مدیریت ملک‌ها"}</Label>
+    <Action label={locale==="en"?"Manage my listings":"مدیریت آگهی‌های من"} onPress={()=>router.push("/my-listings")}/>
+    <Action kind="secondary" label={locale==="en"?"Create new listing":"ثبت ملک جدید"} onPress={()=>router.push("/listings/new")}/>
+   </SectionCard>:null}
    <SectionCard>
     <Label weight="bold">{copy("seller")}</Label>
     <Label muted>{copy("listingLater")}</Label>

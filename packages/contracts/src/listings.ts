@@ -20,7 +20,7 @@ export const listingDraftSchema=z.object({
   precision:z.enum(["approximate","exact"]).default("approximate"),
   latitude:z.number().min(-90).max(90).optional(),
   longitude:z.number().min(-180).max(180).optional(),
- }).strict().default({}),
+ }).strict().prefault({}),
  attributes:z.object({
   areaM2:z.number().nonnegative().max(100_000_000).default(0),
   bedrooms:z.number().int().min(0).max(99).optional(),
@@ -33,7 +33,7 @@ export const listingDraftSchema=z.object({
   parking:z.boolean().optional(),
   water:z.boolean().optional(),
   electricity:z.boolean().optional(),
- }).strict().default({}),
+ }).strict().prefault({}),
  price:z.object({
   currency:z.enum(currencyTypes).default("AFN"),
   askingPrice:z.number().positive().max(1e15).optional(),
@@ -44,14 +44,14 @@ export const listingDraftSchema=z.object({
   durationMonths:z.number().int().positive().max(1200).optional(),
   refundTerms:z.string().trim().max(2000).optional(),
   negotiable:z.boolean().default(false)
- }).strict().default({}),
+ }).strict().prefault({}),
  photoIds:z.array(photoId).max(20).default([]),
  contact:z.object({
   phone:z.string().trim().regex(/^\+?[0-9]{7,16}$/).optional(),
   allowPhone:z.boolean().default(false),
   whatsapp:z.string().trim().regex(/^\+?[0-9]{7,16}$/).optional(),
   allowWhatsApp:z.boolean().default(false),
- }).strict().default({}),
+ }).strict().prefault({}),
 }).strict();
 export type ListingDraft=z.infer<typeof listingDraftSchema>;
 export const listingSubmissionSchema=listingDraftSchema.superRefine((v,ctx)=>{

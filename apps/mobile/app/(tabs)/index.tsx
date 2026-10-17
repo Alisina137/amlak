@@ -4,6 +4,7 @@ import { isRTL, t } from "@amlaklink/localization";
 import { router } from "expo-router";
 import { Pressable, View } from "react-native";
 import { usePreferences } from "../../src/context";
+import {ListingFeed} from "../../src/listing-ui";
 import { useApiStatus } from "../../src/api";
 import { Action, EmptyMessage, Label, LanguagePicker, Page, ScreenHeading, SectionCard } from "../../src/ui";
 export default function Explore(){
@@ -28,7 +29,8 @@ export default function Explore(){
    </View>
    <Action label={t(locale,"searchProvince")} onPress={()=>router.push("/locations")} />
   </SectionCard>
-  <EmptyMessage icon="⌂" title={t(locale,"properties")} body={t(locale,"noListings")} />
+  <Label weight="bold" style={{fontSize:20}}>{locale==="en"?"Recently published":"تازه‌ترین ملک‌ها"}</Label>
+  <ListingFeed provinceId={provinceId}/>
   <SectionCard>
    <Label weight="medium">{t(locale,"changeLanguage")}</Label><LanguagePicker/>
   </SectionCard>

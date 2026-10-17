@@ -9,5 +9,8 @@ export default function RootLayout(){
   <Stack.Screen name="auth" />
   <Stack.Screen name="agency" />
   <Stack.Screen name="agent" />
+  <Stack.Screen name="listings" />
+  <Stack.Screen name="my-listings" />
+  <Stack.Screen name="property" />
  </Stack></AuthProvider></PreferencesProvider></SafeAreaProvider>;
 }

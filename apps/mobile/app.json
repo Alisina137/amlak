@@ -18,7 +18,15 @@
       "supportsTablet": true
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "AmlakLink needs permission to select property photos for listings.",
+          "cameraPermission": "AmlakLink needs permission to take property photos.",
+          "microphonePermission": false
+        }
+      ]
     ],
     "extra": {
       "country": "AF",
