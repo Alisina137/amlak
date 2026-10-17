@@ -9,7 +9,7 @@ import {authT} from "../../src/auth-copy";
 import {Action,Label,Page,ScreenHeading,SectionCard} from "../../src/ui";
 type ActionType="register"|"login"|"verify"|"recover"|"reset";
 export default function AuthAction(){
- const params=useLocalSearchParams<{action:string;email?:string}>(),mode=(["register","login","verify","recover","reset"].includes(params.action)?params.action:"login") as ActionType;
+ const params=useLocalSearchParams<{action:string;email?:string;returnPropertyId?:string}>(),mode=(["register","login","verify","recover","reset"].includes(params.action)?params.action:"login") as ActionType;
  const {locale}=usePreferences(),{signIn,verify}=useAuth(),rtl=isRTL(locale);
  const [displayName,setName]=useState(""),[email,setEmail]=useState(params.email||""),
  [password,setPassword]=useState(""),[code,setCode]=useState(""),[busy,setBusy]=useState(false),[error,setError]=useState("");
@@ -27,7 +27,9 @@ export default function AuthAction(){
     to("verify",email.trim());return;
    }
    if(mode==="login"){
-    await signIn(email.trim(),password);router.replace("/(tabs)/account");return;
+    await signIn(email.trim(),password);
+    if(params.returnPropertyId){router.replace({pathname:"/property/[id]",params:{id:params.returnPropertyId}});return;}
+    router.replace("/(tabs)/account");return;
    }
    if(mode==="verify"){
     await verify(email.trim(),code);router.replace("/(tabs)/account");return;

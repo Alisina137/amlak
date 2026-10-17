@@ -6,6 +6,9 @@ import type {ListingDTO} from "./listing-client";
 import {photoSource} from "./listing-client";
 import {usePreferences} from "./context";
 import {Label,SectionCard} from "./ui";
+import {useFavorites} from "./favorites";
+import {dt} from "./discovery-copy";
+import {Action} from "./ui";
 import type {Locale} from "@amlaklink/localization";
 import {findProvince} from "@amlaklink/catalog";
 const labels={
@@ -26,14 +29,21 @@ export function priceSummary(d:ListingDTO["data"],locale:Locale){
 }
 export function ListingCard({item}:{item:ListingDTO}){
  const {locale}=usePreferences(),d=item.data,photo=item.photos[0]?.id;
+ const {isSaved,toggle}=useFavorites();const [error,setError]=useState("");
  return <Pressable accessibilityRole="button" onPress={()=>router.push({pathname:"/property/[id]",params:{id:item.id}})}>
   <View style={{backgroundColor:colors.surface,borderColor:colors.border,borderWidth:1,borderRadius:18,overflow:"hidden",marginBottom:14}}>
    {photo?<Image source={photoSource(photo)} style={{width:"100%",aspectRatio:4/3,backgroundColor:colors.border}} resizeMode="cover"/>:
     <View style={{height:160,backgroundColor:colors.border,justifyContent:"center",alignItems:"center"}}><Label>⌂</Label></View>}
    <View style={{padding:16,gap:6}}>
+    <View style={{flexDirection:"row",alignItems:"center",justifyContent:"flex-end"}}>
+     <Pressable accessibilityRole="button" accessibilityLabel={isSaved(item.id)?dt(locale,"unsave"):dt(locale,"save")} onPress={event=>{event.stopPropagation();void toggle(item.id).catch(()=>setError(dt(locale,"favoriteError")));}} style={{paddingHorizontal:15,paddingVertical:8,minHeight:44,borderRadius:18,backgroundColor:isSaved(item.id)?"#e1f0e9":colors.background}}>
+      <Label style={{fontSize:23,color:colors.primary}}>{isSaved(item.id)?"♥":"♡"}</Label>
+     </Pressable>
+    </View>
     <Label weight="bold" style={{fontSize:20,color:colors.primary}}>{priceSummary(d,locale)}</Label>
     <Label weight="bold">{d.title}</Label>
     <Label muted>{lt(locale,d.transactionType)} · {lt(locale,d.propertyType)} · {findProvince(d.location.provinceId)?.names[locale]} / {d.location.district}</Label>
+    {error?<Label style={{color:colors.error}}>{error}</Label>:null}
     <Label muted style={{fontSize:13}}>{d.attributes.areaM2} m² · {item.lastConfirmedAt?new Date(item.lastConfirmedAt).toLocaleDateString(locale==="en"?"en-US":"fa-AF"):"—"}</Label>
    </View>
   </View>
