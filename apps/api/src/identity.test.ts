@@ -70,6 +70,8 @@ test("PostgreSQL identity lifecycle, MFA, and cross-agency revocation", {skip:!p
   assert.equal((await call("GET","/v1/agencies/"+b+"/workspace",undefined,ownerToken)).status,403);
   const add=await call("POST","/v1/agencies/"+a+"/members",{email:agentEmail,role:"agent"},ownerToken);
   assert.equal(add.status,200);
+  assert.equal((await call("GET","/v1/agencies/"+a+"/workspace",undefined,agentToken)).status,403);
+  assert.equal((await call("POST","/v1/agencies/"+a+"/invitation/accept",{},agentToken)).status,200);
   assert.equal((await call("GET","/v1/agencies/"+a+"/workspace",undefined,agentToken)).status,200);
   const members=await call("GET","/v1/agencies/"+a+"/members",undefined,ownerToken);
   const agentMember=(members.data.items as {id:string;role:string;userId:string}[]).find(m=>m.userId===add.data.userId);
