@@ -1,4 +1,4 @@
-name: Verify foundations
+name: Verify foundations and identity
 on:
   push:
     branches: [main]
@@ -6,6 +6,24 @@ on:
 jobs:
   quality:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: amlak
+          POSTGRES_PASSWORD: test_password_only
+          POSTGRES_DB: amlak_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U amlak -d amlak_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      DATABASE_URL: postgresql://amlak:test_password_only@127.0.0.1:5432/amlak_test
+      AUTH_CODE_PEPPER: "ci-only-32-character-minimum-testing-value-amlak"
+      STAFF_TOTP_ENCRYPTION_KEY_HEX: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -15,6 +33,7 @@ jobs:
         with:
           node-version: '22'
       - run: pnpm install --no-frozen-lockfile
+      - run: pnpm --filter @amlaklink/database migrate
       - run: pnpm check
       - run: pnpm --filter @amlaklink/admin build
       - run: pnpm --filter @amlaklink/mobile exec expo export --platform android --output-dir dist
