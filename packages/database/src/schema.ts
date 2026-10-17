@@ -51,6 +51,7 @@ export const staff=pgTable("staff",{
  displayName:varchar("display_name",{length:100}).notNull(),
  passwordHash:text("password_hash").notNull(),role:staffRole("role").notNull(),
  totpSecretEncrypted:text("totp_secret_encrypted").notNull(),
+ lastTotpStep:integer("last_totp_step").notNull().default(0),
  active:boolean("active").notNull().default(true),
  createdAt:timestamp("created_at",{withTimezone:true}).notNull().defaultNow(),
 },t=>[uniqueIndex("staff_email_unique").on(t.email)]);
