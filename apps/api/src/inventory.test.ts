@@ -4,6 +4,7 @@ import {tmpdir} from "node:os";
 import {join} from "node:path";
 import test from "node:test";
 import sharp from "sharp";
+import {eq} from "drizzle-orm";
 import {connectDatabase,schema} from "@amlaklink/database";
 import {listingDraftSchema,listingSubmissionSchema,publicListingPayload} from "@amlaklink/contracts";
 import {buildApp} from "./app";
@@ -96,5 +97,8 @@ test("real DB: advertiser draft→photo→review→publish→pause; edits never 
   assert.equal((await call("POST","/v1/admin/listings/"+id+"/decision",tokens[2],{revisionId:revision!.revisionId,decision:"reject",reason:"Price update requires documentary correction"})).status,200);
   assert.equal((await call("GET","/v1/properties/"+id)).body.data.price.askingPrice,6500000);
   assert.equal((await call("POST","/v1/listings/"+id+"/pause",tokens[1])).status,403);
+  await db.update(schema.users).set({status:"suspended"}).where(eq(schema.users.id,owner.id));
+  assert.equal((await call("GET","/v1/properties/"+id)).status,404);
+  assert.equal((await call("GET","/v1/photos/"+photoId)).status,404);
  }finally{await app.close();await sql.end();}
 });
