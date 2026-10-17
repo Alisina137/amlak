@@ -1,0 +1,31 @@
+{
+  "expo": {
+    "name": "AmlakLink",
+    "slug": "amlaklink",
+    "scheme": "amlaklink",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "platforms": [
+      "android",
+      "ios"
+    ],
+    "android": {
+      "package": "af.amlaklink.app"
+    },
+    "ios": {
+      "bundleIdentifier": "af.amlaklink.app",
+      "supportsTablet": true
+    },
+    "plugins": [
+      "expo-router"
+    ],
+    "extra": {
+      "country": "AF",
+      "defaultLocale": "fa"
+    },
+    "experiments": {
+      "reactCompiler": false
+    }
+  }
+}
