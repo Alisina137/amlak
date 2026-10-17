@@ -1,6 +1,6 @@
 {
   "name": "@amlaklink/mobile",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "main": "expo-router/entry",
   "scripts": {
@@ -13,6 +13,7 @@
     "@amlaklink/localization": "workspace:*",
     "@amlaklink/design-tokens": "workspace:*",
     "@react-native-async-storage/async-storage": "2.2.0",
+    "expo-secure-store": "~15.0.8",
     "expo": "~57.0.25",
     "expo-router": "~57.0.25",
     "expo-linking": "~57.0.11",
