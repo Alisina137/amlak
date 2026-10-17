@@ -1,0 +1,22 @@
+{
+  "name": "@amlaklink/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "tsx --test src/app.test.ts"
+  },
+  "dependencies": {
+    "@amlaklink/catalog": "workspace:*",
+    "@amlaklink/contracts": "workspace:*",
+    "fastify": "^5.12.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "tsx": "^4.20.0",
+    "typescript": "~6.0.3"
+  }
+}

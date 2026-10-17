@@ -1,0 +1,17 @@
+{
+  "name": "amlaklink",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.27.0",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "dev:api": "pnpm --filter @amlaklink/api dev",
+    "dev:mobile": "pnpm --filter @amlaklink/mobile start",
+    "dev:admin": "pnpm --filter @amlaklink/admin dev",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "test": "pnpm -r --if-present test",
+    "check": "pnpm typecheck && pnpm test"
+  }
+}
