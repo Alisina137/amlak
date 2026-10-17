@@ -1,12 +1,12 @@
 # AmlakLink — Project State
 
-- **Authority:** docs/PRODUCT-SPECIFICATION.md v1.0 (17 October 2026); docs/SOFTWARE-WORKFLOW-V4.md.
-- Repository: Alisina137/amlak, main; Afghanistan-only / Kabul-first, mobile Android-first, Dari/Pashto/English.
-- **Current delivery: Phase 3 — Property inventory.**
-- **Phase 1 completed:** workspaces, localizations/RTL, 34 Afghan provinces, API, staff admin shell.
-- **Phase 2 completed:** email verified auth, secure sessions, seller/independent agent activation, reviewed agencies, scoped memberships, staff MFA.
-- **Phase 3 delivered:** structured listing schema+revisions+photos, genuine image upload with local/S3 storage, type-dependent prices/gharawi, 8-step mobile wizard, draft autosave+resume, staff moderation queue, public details/initial feed, pause/resume/close, review-safe edits, audit, database integration tests.
-- **Verification:** GitHub Actions: PostgreSQL migrations, unit/API/database auth and inventory tests, TypeScript, Next.js production build, Android export; refer to latest successful workflow run for exact hash.
-- **External work still required:** Configure own Neon DB, SMTP and photo bucket in .env; run migration locally; verify actual Android photo picker and physical-device network; provision moderator in admin; evaluate media provider + safe backups. No production environment was changed.
-- **Next documented milestone: Phase 4 — Discovery & seeker experience** (filters, map/list, favorites, calls/WhatsApp, professional profiles and badge scopes).
-- Constraints: API port 4000, ngrok inspector 4040 is not backend; private exact addresses/documents must not leak; no property payments or ownership promises.
+- **Source of truth:** docs/PRODUCT-SPECIFICATION.md v1.0, docs/SOFTWARE-WORKFLOW-V4.md.
+- Repository: Alisina137/amlak, main. Afghanistan-only and Kabul-first; Expo Android-first (Dari/Pashto/English).
+- **Phase 1:** Foundation + locale, provinces, navigation and API.
+- **Phase 2:** Verified accounts, RBAC, agency membership and staff MFA.
+- **Phase 3:** Database-backed property listings, draft photo wizard, sale/rent/gharawi, moderated publishing and approved snapshot revisions.
+- **Phase 4:** Server-side discovery and filters, price-aware sort/cursor pagination, public map pins only with explicit exact coordinates, persistent search state, private user favorites with guest save intent, direct call/WhatsApp tap actions, public advertiser/agency profiles with verification-scope descriptions.
+- **CI:** PostgreSQL migrations, API/unit/integration tests, TypeScript workspace check, Next admin build and Android export. Consult latest workflow action for final commit.
+- **Still requires local operational validation:** user's own Neon database and migration, email delivery, image bucket, physical Android Expo Go testing, external phone/WhatsApp apps, production map SDK key/tile license and network availability.
+- **Next: Phase 5:** Inquiries/viewings, message threads, lead records and in-app notifications.
+- API port **4000**, ngrok inspector is **4040** only; no paid AI, property payments or ownership guarantees in MVP.

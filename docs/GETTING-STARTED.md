@@ -21,3 +21,5 @@ Backend port 4000 is mandatory; ngrok port 4040 is the inspector only. Email acc
 CI tests do not configure, migrate, or validate your Neon environment: they run against a dedicated temporary PostgreSQL container.
 
 Phase 3 listing setup, S3-compatible photo storage and the moderator panel are documented in docs/PHASE-3-INVENTORY.md.
+
+Phase 4 search, favorites, map/list configuration and external call handling are documented in docs/PHASE-4-DISCOVERY.md.
