@@ -1,21 +1,31 @@
-import {and,desc,eq,gt,or,sql} from "drizzle-orm";
+import {and,desc,eq,gt,isNotNull,or,sql} from "drizzle-orm";
 import type {FastifyInstance} from "fastify";
 import {type Database,schema} from "@amlaklink/database";
 import {listingDraftSchema} from "@amlaklink/contracts";
 import {HttpProblem,requireActor} from "./access";
 import {canShowPublic,getListing,getRevision,listingDTO,validId} from "./listings";
-import {parseDiscovery,searchProperties} from "./search";
+import {parseDiscovery,searchProperties,searchConditions} from "./search";
 export function registerDiscoveryRoutes(app:FastifyInstance,db:Database){
  app.get("/v1/discovery",async request=>searchProperties(db,parseDiscovery(request.query)));
  app.get("/v1/discovery/map",async request=>{
   const query=parseDiscovery(request.query);
-  const result=await searchProperties(db,{...query,sort:"newest",limit:30,cursor:undefined});
-  // Never infer a pin from an approximate address or invent neighborhood centroids.
-  return {items:result.items.filter(item=>item.data.location.precision==="exact" &&
-   item.data.location.latitude!==undefined&&item.data.location.longitude!==undefined).map(item=>({
-    id:item.id,latitude:item.data.location.latitude,longitude:item.data.location.longitude,
-    title:item.data.title,price:item.data.price,transactionType:item.data.transactionType
-  })),nextCursor:result.nextCursor,unmappedListings:result.items.filter(x=>x.data.location.precision!=="exact").length};
+  const conditions=searchConditions({...query,sort:"newest",cursor:undefined,limit:30});
+  conditions.push(eq(sql.raw("(listing_revisions.data->'location'->>'precision')"),"exact"));
+  conditions.push(isNotNull(sql.raw("(listing_revisions.data->'location'->>'latitude')")));
+  conditions.push(isNotNull(sql.raw("(listing_revisions.data->'location'->>'longitude')")));
+  // Filter before applying the marker cap so numerous approximate properties cannot
+  // hide valid opt-in precise pins; never fabricate neighborhood centroids.
+  const rows=await db.select({listing:schema.listings,revision:schema.revisions})
+   .from(schema.listings).innerJoin(schema.revisions,eq(schema.revisions.id,schema.listings.approvedRevisionId))
+   .innerJoin(schema.users,eq(schema.users.id,schema.listings.authorId))
+   .leftJoin(schema.agencies,eq(schema.agencies.id,schema.listings.agencyId))
+   .where(and(...conditions)).orderBy(desc(schema.listings.publishedAt),desc(schema.listings.id))
+   .limit(30);
+  return {items:rows.map(({listing,revision})=>{
+   const data=listingDraftSchema.parse(revision.data);
+   return {id:listing.id,latitude:data.location.latitude,longitude:data.location.longitude,
+    title:data.title,price:data.price,transactionType:data.transactionType};
+  }),nextCursor:null,unmappedListings:0};
  });
  app.get("/v1/favorites",async request=>{
   const actor=await requireActor(db,request,"user");

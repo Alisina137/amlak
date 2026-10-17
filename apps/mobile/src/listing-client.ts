@@ -8,7 +8,7 @@ export type ListingDTO={
  photos:{id:string;url:string}[];available?:boolean;
 };
 export type InventoryItem={id:string;status:string;version:number;agencyId:string|null;title?:string;updatedAt:string};
-export async function listPublic(provinceId?:string){return requestJson<{items:ListingDTO[]}>("/v1/properties"+(provinceId?"?provinceId="+encodeURIComponent(provinceId):""));}
+export async function listPublic(provinceId?:string){return requestJson<{items:ListingDTO[]}>("/v1/discovery?sort=recent_confirmed&limit=10"+(provinceId?"&provinceId="+encodeURIComponent(provinceId):""));}
 export async function getPublic(id:string){return requestJson<ListingDTO>("/v1/properties/"+id);}
 export async function getOwned(id:string,token:string){return requestJson<ListingDTO>("/v1/listings/"+id,{token});}
 export async function getMyListings(token:string,agencyId?:string){
