@@ -16,3 +16,5 @@ jobs:
           node-version: '22'
       - run: pnpm install --no-frozen-lockfile
       - run: pnpm check
+      - run: pnpm --filter @amlaklink/admin build
+      - run: pnpm --filter @amlaklink/mobile exec expo export --platform android --output-dir dist
