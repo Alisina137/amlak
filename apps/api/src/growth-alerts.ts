@@ -1,4 +1,4 @@
-import {and,asc,desc,eq,gt,gte,lt,lte,or} from "drizzle-orm";
+import {and,asc,desc,eq,gt,lt,lte,or,isNull} from "drizzle-orm";
 import {type Database,schema} from "@amlaklink/database";
 import {listingDraftSchema} from "@amlaklink/contracts";
 import {parseDiscovery,searchConditions} from "./search";
@@ -71,7 +71,7 @@ export async function scanSavedSearchAlerts(db:Database,options:{execute:boolean
    }).where(and(eq(schema.savedSearches.id,search.id),
      eq(schema.savedSearches.lastScannedAt,search.lastScannedAt),
      search.lastListingId?eq(schema.savedSearches.lastListingId,search.lastListingId):
-      or(eq(schema.savedSearches.lastListingId,null as never))!));
+      isNull(schema.savedSearches.lastListingId)));
   }
  }
  return result;
