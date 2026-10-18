@@ -90,6 +90,29 @@ export function registerBillingControlRoutes(app:FastifyInstance,db:Database){
    .orderBy(desc(schema.billingAdjustments.createdAt)).limit(100);
   return {items};
  });
+ app.get("/v1/admin/billing/reconciliation",async request=>{
+  const actor=await requireActor(db,request,"staff");requireStaffRole(actor,permissions);
+  const [verified,pending,refunds,credits]=await Promise.all([
+   db.select({total:sql<number>`COALESCE(SUM(amount_afn),0)::integer`,
+    count:sql<number>`count(*)::integer`}).from(schema.growthInvoices)
+    .where(eq(schema.growthInvoices.status,"confirmed")),
+   db.select({count:sql<number>`count(*)::integer`}).from(schema.paymentClaims)
+    .where(eq(schema.paymentClaims.status,"submitted")),
+   db.select({total:sql<number>`COALESCE(SUM(amount_afn),0)::integer`})
+    .from(schema.billingAdjustments).where(and(
+     eq(schema.billingAdjustments.kind,"refund"),eq(schema.billingAdjustments.status,"settled"))),
+   db.select({total:sql<number>`COALESCE(SUM(amount_afn),0)::integer`})
+    .from(schema.billingAdjustments).where(and(
+     eq(schema.billingAdjustments.kind,"credit"),eq(schema.billingAdjustments.status,"issued")))
+  ]);
+  const fees=Number(verified[0]?.total||0),returns=Number(refunds[0]?.total||0);
+  return {currency:"AFN",confirmedPlatformInvoices:Number(verified[0]?.count||0),
+   verifiedPlatformFeesAfn:fees,externallySettledRefundsAfn:returns,
+   noncashCreditMemosAfn:Number(credits[0]?.total||0),
+   feesMinusExternallySettledRefundsAfn:fees-returns,
+   pendingClaimCount:Number(pending[0]?.count||0),
+   notice:"Internal AmlakLink platform-fee records only, not a bank statement, reconciliation certification, escrow or property transaction."};
+ });
  app.get("/v1/admin/billing/history",async request=>{
   const actor=await requireActor(db,request,"staff");requireStaffRole(actor,permissions);
   const claims=await db.select({claim:schema.paymentClaims,invoice:schema.growthInvoices})
