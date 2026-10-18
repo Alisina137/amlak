@@ -1,6 +1,6 @@
 import {router,useFocusEffect,useLocalSearchParams} from "expo-router";
 import {useCallback,useMemo,useState} from "react";
-import {Pressable,View} from "react-native";
+import {Pressable,ScrollView} from "react-native";
 import {colors} from "@amlaklink/design-tokens";
 import {formatNumber,isRTL} from "@amlaklink/localization";
 import {leadStageLabel,uiText} from "../../../src/ui-copy";
@@ -24,13 +24,13 @@ export default function AgencyLeads(){
  return <Page>
   <BackButton onPress={()=>router.back()}/>
   <ScreenHeading title={uiText(locale,"agencyLeads")} subtitle={locale==="en"?"Only inquiries in your active agency are visible.":locale==="fa"?"تنها درخواست‌های دفتر فعال شما قابل مشاهده‌اند.":"یوازې ستاسو د فعال دفتر غوښتنې ښکاري."}/>
-  <View style={{flexDirection:isRTL(locale)?"row-reverse":"row",gap:6,flexWrap:"wrap"}}>
-   {(["all","unassigned","new","viewing"] as const).map(k=><Pressable key={k} accessibilityRole="button" accessibilityState={{selected:tab===k}}
+  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{flexDirection:isRTL(locale)?"row-reverse":"row",gap:8,paddingVertical:3}}>
+   {(["all","unassigned","new","viewing"] as const).map(k=><Pressable key={k} accessibilityRole="tab" accessibilityState={{selected:tab===k}}
     onPress={()=>setTab(k)} style={{paddingHorizontal:12,minHeight:44,justifyContent:"center",borderWidth:1,borderRadius:14,
      borderColor:tab===k?colors.primary:colors.border,backgroundColor:tab===k?"#e3f0e9":colors.surface}}>
     <Label>{k==="all"?(locale==="en"?"All":locale==="fa"?"همه":"ټول"):k==="unassigned"?et(locale,"unassigned"):k==="new"?et(locale,"new"):et(locale,"viewings")}</Label>
    </Pressable>)}
-  </View>
+  </ScrollView>
   <Label muted>{formatNumber(filtered.length,locale)} · {et(locale,"lead")}</Label>
   {loading?<SectionCard><Label muted>…</Label></SectionCard>:null}
   {error?<SectionCard><Label style={{color:colors.error}}>{error}</Label></SectionCard>:null}
