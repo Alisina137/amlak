@@ -8,6 +8,7 @@ import {getPublic,photoSource,type ListingDTO} from "../../src/listing-client";
 import {advertiserId,advertiserKind,getContact} from "../../src/discovery-client";
 import {dt} from "../../src/discovery-copy";
 import {et} from "../../src/engagement-copy";
+import {st} from "../../src/safety-copy";
 import {useFavorites} from "../../src/favorites";
 import {lt,priceSummary} from "../../src/listing-ui";
 import {Action,Label,Page,ScreenHeading,SectionCard} from "../../src/ui";
@@ -91,6 +92,7 @@ export default function PropertyDetails(){
     <Action kind="secondary" label={dt(locale,"profile")} onPress={()=>router.push({pathname:"/advertiser/[kind]/[id]",params:{kind,id:profileId}})}/>
    </SectionCard>
    <Label muted>{dt(locale,"safeContact")}</Label>
+   <Action kind="secondary" label={st(locale,"report")} onPress={()=>router.push({pathname:"/report/[listingId]",params:{listingId:id}})}/>
    {error?<SectionCard><Label style={{color:colors.error}}>{error}</Label></SectionCard>:null}
   </Page>
   <View style={{gap:8,backgroundColor:colors.surface,padding:12,borderTopWidth:1,borderColor:colors.border,paddingBottom:20}}>

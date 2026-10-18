@@ -6,6 +6,7 @@ import {t} from "@amlaklink/localization";
 import {findProvince} from "@amlaklink/catalog";
 import {usePreferences} from "../../src/context";
 import {authT} from "../../src/auth-copy";
+import {st} from "../../src/safety-copy";
 import {useAuth,requestJson} from "../../src/auth";
 import {Action,Label,LanguagePicker,Page,ScreenHeading,SectionCard} from "../../src/ui";
 type Membership={agencyId:string;name:string;agencyStatus:string;role:string;membershipStatus:string};
@@ -71,6 +72,7 @@ export default function Account(){
     <Action kind="secondary" disabled={!user.verified} label={copy("applyAgency")} onPress={()=>router.push("/agency/apply")}/>
    </SectionCard>
    {message?<Label style={{color:colors.muted}}>{message}</Label>:null}
+   <Action kind="secondary" label={st(locale,"appeals")} onPress={()=>router.push("/safety")}/>
    <Action kind="secondary" label={copy("refresh")} onPress={()=>void refresh()}/>
    <Action kind="secondary" label={copy("logout")} onPress={()=>void signOut()}/>
   </>}
