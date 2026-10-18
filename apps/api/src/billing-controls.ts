@@ -47,7 +47,8 @@ export function registerBillingControlRoutes(app:FastifyInstance,db:Database){
     .from(schema.billingAdjustments).where(eq(schema.billingAdjustments.payerId,actor.id))
     .orderBy(desc(schema.billingAdjustments.createdAt)).limit(100)};
  });
- app.post<{Params:{id:string}}>("/v1/invoices/:id/adjustments",async request=>{
+ app.post<{Params:{id:string}}>("/v1/invoices/:id/adjustments",
+  {config:{rateLimit:{max:8,timeWindow:"15 minutes"}}},async request=>{
   const actor=await requireActor(db,request,"user");await requireVerified(db,actor);
   const id=validId(request.params.id),input=parse(requestAdjustment,request.body);
   return db.transaction(async tx=>{
@@ -63,6 +64,9 @@ export function registerBillingControlRoutes(app:FastifyInstance,db:Database){
     return {id:prior.id,status:prior.status,reused:true};
    }
    if(invoice.status!=="confirmed")throw new HttpProblem(409,"INVOICE_NOT_CONFIRMED");
+   const [caseCount]=await tx.select({n:sql<number>`count(*)::integer`}).from(schema.billingAdjustments)
+    .where(eq(schema.billingAdjustments.invoiceId,id));
+   if(Number(caseCount?.n||0)>=10)throw new HttpProblem(409,"ADJUSTMENT_CASE_LIMIT_REACHED");
    const [committed]=await tx.select({total:sql<number>`COALESCE(SUM(amount_afn),0)::integer`})
     .from(schema.billingAdjustments).where(and(eq(schema.billingAdjustments.invoiceId,id),
      ne(schema.billingAdjustments.status,"rejected")));
