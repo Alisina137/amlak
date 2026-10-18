@@ -62,7 +62,8 @@ export function BillingAdjustmentUI({token,invoices}:{token:string;invoices:Plat
  },[historyId,token,t.error]);
  const available=invoices.filter(i=>i.status==="confirmed");
  const chosen=available.find(i=>i.id===invoiceId);
- const used=items.filter(i=>i.invoiceId===invoiceId&&i.status!=="rejected").reduce((sum,i)=>sum+i.amountAfn,0);
+ const scoped=items.filter(i=>invoices.some(v=>v.id===i.invoiceId));
+ const used=scoped.filter(i=>i.invoiceId===invoiceId&&i.status!=="rejected").reduce((sum,i)=>sum+i.amountAfn,0);
  async function submit(){
   const value=Number(amount.trim());
   if(!chosen||busy||!Number.isInteger(value)||value<=0||value>chosen.amountAfn-used||reason.trim().length<15)return;
@@ -116,7 +117,7 @@ export function BillingAdjustmentUI({token,invoices}:{token:string;invoices:Plat
     onPress={()=>void submit()}/>
   </View>:null}
   <Label weight="bold">{t.details}</Label>
-  {!items.length?<Label muted>{t.none}</Label>:items.map(item=>
+  {!scoped.length?<Label muted>{t.none}</Label>:scoped.map(item=>
    <View key={item.id} style={{paddingVertical:8,gap:5,borderTopWidth:1,borderColor:colors.border}}>
     <Label weight="bold">{item.kind==="credit"?t.credit:t.refund} · {item.amountAfn.toLocaleString()} AFN</Label>
     <Label muted>{t.status}: {item.status}</Label>
