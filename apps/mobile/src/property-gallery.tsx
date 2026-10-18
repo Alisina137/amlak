@@ -72,7 +72,7 @@ export function PropertyGallery({photos,title}:{photos:Photo[];title:string}){
      <Image source={photoSource(photo.id)} resizeMode="cover"
       style={{width:95,height:72,borderRadius:10,borderWidth:photo.id===current?.id?3:1,
        borderColor:photo.id===current?.id?colors.primary:colors.border}}/>
-     <Label muted style={{fontSize:11,textAlign:"center"}} numberOfLines={1}>
+     <Label muted style={{fontSize:11,textAlign:"center"}}>
       {photo.id===coverId?text.cover:roomName(locale,photo.room)}
      </Label>
     </Pressable>)}
