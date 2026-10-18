@@ -3,7 +3,7 @@ import {and,asc,desc,eq,gt,gte,ilike,lt,lte,or,sql,type SQL} from "drizzle-orm";
 import {z} from "zod";
 import {findProvince} from "@amlaklink/catalog";
 import {type Database,schema} from "@amlaklink/database";
-import {listingDraftSchema} from "@amlaklink/contracts";
+import {listingDraftSchema,parsePolygon,postgresPolygon} from "@amlaklink/contracts";
 import {HttpProblem} from "./access";
 import {listingDTO} from "./listings";
 const qschema=z.object({
@@ -24,6 +24,7 @@ const qschema=z.object({
  limit:z.coerce.number().int().min(1).max(30).default(20),
  cursor:z.string().max(600).optional(),
  viewport:z.string().max(120).optional(),
+ polygon:z.string().max(400).optional(),
 }).strict();
 export type DiscoveryFilters=z.infer<typeof qschema>;
 export function normalizeText(value:string){
@@ -55,6 +56,10 @@ export function parseDiscovery(raw:unknown):DiscoveryFilters{
   const [s,w,n,e]=q.viewport.split(",").map(Number);
   if(![s,w,n,e].every(Number.isFinite)||s>=n||w>=e||s < -90||n>90||w < -180||e>180)
    throw new HttpProblem(422,"INVALID_VIEWPORT");
+ }
+ if(q.polygon){
+  if(q.viewport)throw new HttpProblem(422,"MAP_REGION_CONFLICT");
+  try{parsePolygon(q.polygon);}catch{throw new HttpProblem(422,"INVALID_MAP_POLYGON");}
  }
  return q;
 }
@@ -113,6 +118,24 @@ export function searchConditions(q:DiscoveryFilters):SQL[]{
   conditions.push(eq(column("location","precision"),"exact"));
   conditions.push(gte(numeric("location","latitude"),south),lte(numeric("location","latitude"),north));
   conditions.push(gte(numeric("location","longitude"),west),lte(numeric("location","longitude"),east));
+ }
+ if(q.polygon){
+  const vertices=parsePolygon(q.polygon);
+  const south=Math.min(...vertices.map(v=>v.latitude)),
+   north=Math.max(...vertices.map(v=>v.latitude)),
+   west=Math.min(...vertices.map(v=>v.longitude)),
+   east=Math.max(...vertices.map(v=>v.longitude));
+  conditions.push(eq(column("location","precision"),"exact"));
+  conditions.push(gte(numeric("location","latitude"),south),
+   lte(numeric("location","latitude"),north),
+   gte(numeric("location","longitude"),west),
+   lte(numeric("location","longitude"),east));
+  // Native PostgreSQL polygon containment includes boundary points;
+  // using server-side SQL means pagination and map/list results agree.
+  const polygon=postgresPolygon(vertices);
+  conditions.push(sql`${polygon}::polygon @> point(
+   (${numeric("location","longitude")})::float8,
+   (${numeric("location","latitude")})::float8)`);
  }
  return conditions;
 }
