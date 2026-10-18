@@ -44,3 +44,8 @@ Remote push is **off by default**. The new Account → Push notification setting
 ### Phase 8 Step 3: subscription renewals and grace
 
 Read-only subscription status, queued verified renewals, localized expiry warnings and a **3-day communication grace window** are implemented. Grace does not provide additional paid posting capacity: existing listings and conversations are preserved, but new submissions and invitations use free quotas after expiry. No automatic charges. Billing remains disabled by default. Run `pnpm ops:renewals --dry-run` before scheduling `pnpm ops:renewals --execute`. See [Step 3 policy](docs/PHASE-8-STEP-3-SUBSCRIPTIONS.md).
+
+
+### Phase 8 Step 4: billing verification and adjustments
+
+Billing stays **OFF by default**. Finance staff must enter an independently verified financial statement reference, amount, and date before marking a platform-fee claim paid. Users can view rejected-claim reasons and request a refund review or noncash credit memo on a verified AmlakLink fee. An approved refund requires another billing staff member to record the **actual external settlement**; the app never transfers money. Credit memos are **not redeemable or withdrawable** until formal policy approval. New database migration: `pnpm db:migrate`. See [Step 4 details](docs/PHASE-8-STEP-4-BILLING.md).
