@@ -2,7 +2,7 @@ import {and,desc,eq,gt,inArray,lte,sql} from "drizzle-orm";
 import type {FastifyInstance,FastifyRequest} from "fastify";
 import {z} from "zod";
 import {type Database,schema} from "@amlaklink/database";
-import {createListingSchema,listingDraftSchema,listingSubmissionSchema,listingSubmitSchema,saveDraftSchema,reviewDecisionSchema,publicListingPayload} from "@amlaklink/contracts";
+import {createListingSchema,listingDraftSchema,listingSubmissionSchema,listingSubmitSchema,saveDraftSchema,reviewDecisionSchema,publicListingPayload,photoInfoFor} from "@amlaklink/contracts";
 import {canSubmitListing,HttpProblem,requireActor,requireAgencyMember,requireStaffRole,requireVerified} from "./access";
 import {cancelInactiveListingVisits} from "./engagement-lifecycle";
 type Listing=typeof schema.listings.$inferSelect;
@@ -47,7 +47,7 @@ export function listingDTO(l:Listing,r:Revision,publicView:boolean){
  return {id:l.id,status:l.status,version:l.version,publisher:l.publisher,authorId:l.authorId,agencyId:l.agencyId,revisionId:r.id,
   revisionStatus:publicView?undefined:r.status,revisionReason:publicView?undefined:r.reason,currentRevisionId:publicView?undefined:l.currentRevisionId,
   approvedRevisionId:l.approvedRevisionId,lastConfirmedAt:l.lastConfirmedAt,publishedAt:l.publishedAt,
-  data,photos:data.photoIds.map(id=>({id,url:"/v1/photos/"+id}))};
+  data,photos:data.photoIds.map(id=>({id,url:"/v1/photos/"+id,...photoInfoFor(data,id)}))};
 }
 export function registerListingRoutes(app:FastifyInstance,db:Database){
  app.post("/v1/listings",async request=>{
