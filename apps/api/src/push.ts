@@ -80,7 +80,7 @@ export function registerPushRoutes(app:FastifyInstance,db:Database){
  });
  /** Explicit opt-in test. Produces a private in-app message; only the separately
   * scheduled worker can send a remote push, so never claim immediate delivery. */
- app.post("/v1/push/test",{config:{rateLimit:{max:2,timeWindow:"15 minutes"}}},async request=>{
+ app.post("/v1/push/test",{config:{rateLimit:{max:4,timeWindow:"15 minutes"}}},async request=>{
   const actor=await requireActor(db,request,"user");await requireVerified(db,actor);
   if(!pushEnabled())throw new HttpProblem(503,"PUSH_NOT_CONFIGURED");
   const [prefs]=await db.select().from(schema.pushPreferences)
