@@ -12,7 +12,10 @@
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "migrate": "tsx src/migrate.ts",
-    "diagnose": "tsx src/diagnose.ts"
+    "diagnose": "tsx src/diagnose.ts",
+    "test": "tsx --test src/backup-crypto.test.ts",
+    "backup": "tsx src/backup.ts",
+    "restore:staging": "tsx src/restore.ts"
   },
   "dependencies": {
     "dotenv": "^17.2.0",

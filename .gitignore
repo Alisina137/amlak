@@ -13,3 +13,6 @@ coverage/
 *.tsbuildinfo
 
 .amlak-media/
+
+.amlak-backups/
+*.pg.enc
