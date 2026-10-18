@@ -37,7 +37,14 @@ export function PropertyLocationPicker({latitude,longitude,onChange,locale}:{lat
     }else setError(locale==="en"?"Select a location in Afghanistan.":locale==="fa"?"موقعیت داخل افغانستان انتخاب کنید.":"په افغانستان کې ځای وټاکئ.");
    }}>
     {chosen?<Marker coordinate={{latitude,longitude}} draggable onDragEnd={e=>{
-     onChange(Number(e.nativeEvent.coordinate.latitude.toFixed(6)),Number(e.nativeEvent.coordinate.longitude.toFixed(6)));
+     const point=e.nativeEvent.coordinate;
+     if(point.latitude<29||point.latitude>39||point.longitude<60||point.longitude>75){
+      setError(locale==="en"?"Select a location in Afghanistan.":
+       locale==="fa"?"موقعیت داخل افغانستان انتخاب کنید.":"په افغانستان کې ځای وټاکئ.");
+      return;
+     }
+     setError("");
+     onChange(Number(point.latitude.toFixed(6)),Number(point.longitude.toFixed(6)));
     }}/>:null}
    </MapView>
   </View>

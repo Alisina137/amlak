@@ -9,6 +9,7 @@ import {useSearchFilters} from "../../src/search-context";
 import {cachedDiscovery,fetchDiscovery,queryString,type SearchFilters} from "../../src/discovery-client";
 import {requestJson} from "../../src/auth";
 import {dt} from "../../src/discovery-copy";
+import {mapText} from "../../src/map-copy";
 import {ListingCard} from "../../src/listing-ui";
 import type {ListingDTO} from "../../src/listing-client";
 import {Action,AppInput,Label,Page,ScreenHeading,SectionCard} from "../../src/ui";
@@ -38,7 +39,7 @@ export default function Search(){
    const response=await cachedDiscovery(filters);
    if(epoch!==loadEpoch.current||filterKeyRef.current!==key)return;
    setItems(response.items);setCursor(response.nextCursor);setCached(response.cacheDate);setResultKey(key);
-   if(response.fromCache){setFeatured([]);return;} // Offline snapshots cannot advertise stale promotions.
+   if(response.fromCache||filters.polygon||filters.viewport){setFeatured([]);return;} // Do not show unscoped paid pins or stale promotions.
    void requestJson<{items:ListingDTO[]}>("/v1/promotions/featured?"+key)
     .then(promotions=>{if(epoch===loadEpoch.current&&filterKeyRef.current===key)setFeatured(promotions.items);})
     .catch(()=>{if(epoch===loadEpoch.current&&filterKeyRef.current===key)setFeatured([]);});
@@ -80,6 +81,12 @@ export default function Search(){
    <View style={{flex:1}}><Action kind="secondary" label={"⚙ "+dt(locale,"filter")} onPress={()=>setSheet(true)}/></View>
    <View style={{flex:1}}><Action kind="secondary" label={"⌖ "+dt(locale,"map")} onPress={()=>router.push("/search-map")}/></View>
   </View>
+  {filters.polygon||filters.viewport?<SectionCard>
+   <Label weight="bold" style={{color:colors.primary}}>{mapText(locale,"area")}</Label>
+   <Label muted>{mapText(locale,"privacy")}</Label>
+   <Action kind="secondary" label={mapText(locale,"reset")}
+    onPress={()=>setFilters({viewport:undefined,polygon:undefined})}/>
+  </SectionCard>:null}
   <Action kind="secondary" label={locale==="en"?"Save this search / manage alerts":locale==="fa"?"ذخیره جستجو و مدیریت اعلان‌ها":"پلټنه خوندي کړئ / خبرتیاوې"} onPress={()=>router.push("/saved-searches")}/>
   <View style={{flexDirection:rtl?"row-reverse":"row",gap:8,alignItems:"center",justifyContent:"space-between"}}>
    <Label weight="bold" style={{fontSize:18}}>{dt(locale,"results")} · {visibleItems.length}{visibleCursor?"+":""}</Label>

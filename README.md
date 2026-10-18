@@ -69,3 +69,8 @@ The mobile app now uses a mirrored tab order, accessible locale-dependent back b
 ### Final Completion Step 5: database and media recovery hardening
 
 New read-only checks: `pnpm db:integrity` and `pnpm ops:media:audit --limit=10`. Backups can be verified offline with `pnpm db:backup:verify <file.pg.enc>`. Staging restores require a separate `STAGING_DATABASE_URL`, exact `RESTORE_EXPECT_DATABASE` and explicit operator confirmation, and never target the production database. Remote PostgreSQL backup/restore tools validate TLS hostnames. Media deletion avoids removing bytes before the DB transaction is committed. These checks do not replace a live staging-restore exercise or a separate S3 backup. See [Step 5 runbook](docs/FINAL-COMPLETION-STEP-5-DATABASE-MEDIA.md).
+
+
+### Final Completion Step 6: map search areas
+
+Map search supports 3–12 point custom-drawn polygons and a visible-map rectangular search. Both apply server-side location filters to the same paginated property List, without PostGIS or requesting user GPS coordinates. Only properties explicitly approved for exact public pin locations participate in area searches. Map pin results are capped and labeled accordingly. Real Android map tiles still require a licensed/configured provider. See [Step 6 QA notes](docs/FINAL-COMPLETION-STEP-6-MAPS.md).

@@ -6,7 +6,7 @@ export type SearchFilters={
  city?:string;district?:string;neighborhood?:string;currency?:"AFN"|"USD";
  minPrice?:string;maxPrice?:string;minArea?:string;maxArea?:string;
  bedrooms?:string;bathrooms?:string;furnished?:string;parking?:string;water?:string;electricity?:string;
- advertiser?:string;verifiedAgency?:string;sort?:"newest"|"recent_confirmed"|"price_asc"|"price_desc";
+ advertiser?:string;verifiedAgency?:string;viewport?:string;polygon?:string;sort?:"newest"|"recent_confirmed"|"price_asc"|"price_desc";
 };
 export type DiscoveryResult={items:ListingDTO[];nextCursor:string|null;appliedFilters:SearchFilters};
 export function queryString(filters:SearchFilters,extra:Record<string,string>={}){
@@ -52,8 +52,9 @@ export async function cachedDiscovery(filters:SearchFilters){
 }
 export type PropertyMapPoint={id:string;latitude:number;longitude:number;title:string;transactionType:string;price:ListingDTO["data"]["price"]};
 export async function fetchMap(filters:SearchFilters,viewport?:string){
- const result=await requestJson<{items:PropertyMapPoint[];nextCursor:string|null;unmappedListings:number}>(
-  "/v1/discovery/map?"+queryString(filters,viewport?{viewport}:{}));
+ const effective={...filters,...(viewport?{polygon:undefined,viewport}:{}),cursor:undefined};
+ const result=await requestJson<{items:PropertyMapPoint[];nextCursor:string|null;hasMorePins:boolean;unmappedListings:null}>(
+  "/v1/discovery/map?"+queryString(effective));
  return result;
 }
 export type AdvertiserProfile={id:string;kind:"agency"|"user";name:string;provinceId?:string;

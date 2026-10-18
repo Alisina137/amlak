@@ -20,12 +20,12 @@ export function registerDiscoveryRoutes(app:FastifyInstance,db:Database){
    .innerJoin(schema.users,eq(schema.users.id,schema.listings.authorId))
    .leftJoin(schema.agencies,eq(schema.agencies.id,schema.listings.agencyId))
    .where(and(...conditions)).orderBy(desc(schema.listings.publishedAt),desc(schema.listings.id))
-   .limit(30);
-  return {items:rows.map(({listing,revision})=>{
+   .limit(31);
+  return {items:rows.slice(0,30).map(({listing,revision})=>{
    const data=listingDraftSchema.parse(revision.data);
    return {id:listing.id,latitude:data.location.latitude,longitude:data.location.longitude,
     title:data.title,price:data.price,transactionType:data.transactionType};
-  }),nextCursor:null,unmappedListings:0};
+  }),nextCursor:null,hasMorePins:rows.length>30,unmappedListings:null};
  });
  app.get("/v1/favorites",async request=>{
   const actor=await requireActor(db,request,"user");
