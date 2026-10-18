@@ -1,11 +1,11 @@
-import type {ListingDraft} from "@amlaklink/contracts";
+import type {ListingDraft,PhotoDetail} from "@amlaklink/contracts";
 import {requestJson,ApiError} from "./auth";
 export const API_ROOT=(process.env.EXPO_PUBLIC_API_URL||"").replace(/\/+$/,"");
 export type ListingDTO={
  id:string;status:string;version:number;publisher:string;authorId:string;agencyId:string|null;
  revisionId:string;revisionStatus?:string;revisionReason?:string|null;approvedRevisionId:string|null;currentRevisionId?:string|null;
  lastConfirmedAt:string|null;publishedAt:string|null;data:ListingDraft;approvedData?:ListingDraft|null;
- photos:{id:string;url:string}[];available?:boolean;
+ photos:({id:string;url:string}&PhotoDetail)[];available?:boolean;
 };
 export type InventoryItem={id:string;status:string;version:number;agencyId:string|null;title?:string;updatedAt:string};
 export async function listPublic(provinceId?:string){return requestJson<{items:ListingDTO[]}>("/v1/discovery?sort=recent_confirmed&limit=10"+(provinceId?"&provinceId="+encodeURIComponent(provinceId):""));}
