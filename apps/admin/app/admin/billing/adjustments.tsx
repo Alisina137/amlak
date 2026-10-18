@@ -11,9 +11,12 @@ type History={claims:{claim:{id:string;status:string;reviewReason:string|null;
 type FinanceSummary={currency:"AFN";confirmedPlatformInvoices:number;verifiedPlatformFeesAfn:number;
  externallySettledRefundsAfn:number;noncashCreditMemosAfn:number;feesMinusExternallySettledRefundsAfn:number;
  pendingClaimCount:number;notice:string};
+type ExceptionReport={passed:boolean;counts:Record<string,number>;categories:Record<string,string[]>;
+ cappedAt:number;limited:boolean;readOnly:boolean;notice:string};
 export function BillingAdjustmentsPanel(){
  const [items,setItems]=useState<Row[]>([]),[history,setHistory]=useState<History>({claims:[],adjustments:[]});
  const [summary,setSummary]=useState<FinanceSummary|null>(null);
+ const [exceptions,setExceptions]=useState<ExceptionReport|null>(null);
  const [reasons,setReasons]=useState<Record<string,string>>({}),[references,setReferences]=useState<Record<string,string>>({});
  const [methods,setMethods]=useState<Record<string,"bank_transfer"|"cash_deposit"|"other">>({});
  const [verified,setVerified]=useState<Record<string,boolean>>({});
@@ -21,17 +24,19 @@ export function BillingAdjustmentsPanel(){
  const reload=useCallback(async()=>{
   setLoading(true);setError("");
   try{
-   const [queueResponse,historyResponse,summaryResponse]=await Promise.all([
+   const [queueResponse,historyResponse,summaryResponse,exceptionResponse]=await Promise.all([
     fetch("/api/billing/adjustments",{cache:"no-store"}),
     fetch("/api/billing/history",{cache:"no-store"}),
-    fetch("/api/billing/reconciliation",{cache:"no-store"})
+    fetch("/api/billing/reconciliation",{cache:"no-store"}),
+    fetch("/api/billing/exceptions",{cache:"no-store"})
    ]);
    const queue=await queueResponse.json() as {items?:Row[];error?:string};
    const past=await historyResponse.json() as History&{error?:string};
    const summaryResult=await summaryResponse.json() as FinanceSummary&{error?:string};
-   if(!queueResponse.ok||!historyResponse.ok||!summaryResponse.ok)
-    throw Error(queue.error||past.error||summaryResult.error||"REQUEST_FAILED");
-   setItems(queue.items||[]);setHistory(past);setSummary(summaryResult);
+   const anomalies=await exceptionResponse.json() as ExceptionReport&{error?:string};
+   if(!queueResponse.ok||!historyResponse.ok||!summaryResponse.ok||!exceptionResponse.ok)
+    throw Error(queue.error||past.error||summaryResult.error||anomalies.error||"REQUEST_FAILED");
+   setItems(queue.items||[]);setHistory(past);setSummary(summaryResult);setExceptions(anomalies);
   }catch(err){setError((err as Error).message);}
   finally{setLoading(false);}
  },[]);
@@ -69,6 +74,23 @@ export function BillingAdjustmentsPanel(){
    <p>جمع خدمات منهای بازپرداخت‌های ثبت‌شده: {summary.feesMinusExternallySettledRefundsAfn.toLocaleString("fa-AF")} افغانی</p>
    <p>این فقط خلاصه سوابق داخلی است، نه موجودی بانک یا تأیید حسابرسی و نه پول معاملهٔ ملک.</p>
   </div>:null}
+  <section className="agency-review" style={{display:"grid",gap:8}}>
+   <h3>بررسی ناسازگاری‌های سوابق داخلی مالی</h3>
+   {exceptions?<div style={{display:"grid",gap:6}}>
+    <p role="status" style={{fontWeight:700,color:exceptions.passed?"#16734b":"#b45309"}}>
+     {exceptions.passed?"در نمونهٔ بررسی‌شده ناسازگاری ثبت نشده است.":"⚠️ ناسازگاری یافت شد؛ قبل از تصویب مالی بررسی مستقل کنید."}
+    </p>
+    {Object.entries(exceptions.counts).map(([code,count])=><div key={code} style={{
+     border:"1px solid #b8c7c2",borderRadius:8,padding:8}}>
+     <p dir="ltr" style={{textAlign:"left"}}>{code}: {count}{count>=exceptions.cappedAt?" (50+)":""}</p>
+     {count>0?<details><summary>شناسه‌های پرونده برای بررسی</summary>
+      <p dir="ltr" style={{wordBreak:"break-all"}}>{(exceptions.categories[code]||[]).join(", ")}</p>
+     </details>:null}
+    </div>)}
+    <p>{exceptions.notice}</p>
+    <p>این گزارش فقط سوابق داخلی را بررسی می‌کند. برای اثبات پرداخت یا بازپرداخت، اسناد مستقل بانکی/نقدی الزامی است.</p>
+   </div>:<p>در انتظار بارگیری بررسی ناسازگاری‌ها…</p>}
+  </section>
   <h2>درخواست‌های بازپرداخت و اعتبار خدمات</h2>
   <p>اعتبار فقط یادداشت غیرنقدی است و فعلاً قابل مصرف به‌عنوان پول نیست. درخواست بازپرداخت پول را انتقال نمی‌دهد؛ تسویه فقط پس از انتقال واقعی خارج از سیستم ثبت می‌شود.</p>
   <button className="admin-button secondary" onClick={()=>void reload()} disabled={loading}>تازه‌سازی</button>
