@@ -9,6 +9,7 @@
   "scripts": {
     "dev:api": "pnpm --filter @amlaklink/api dev",
     "dev:mobile": "pnpm --filter @amlaklink/mobile start",
+    "dev:mobile:push": "pnpm --filter @amlaklink/mobile start:dev-client",
     "dev:admin": "pnpm --filter @amlaklink/admin dev",
     "db:migrate": "pnpm --filter @amlaklink/database migrate",
     "staff:create": "pnpm --filter @amlaklink/api staff:create",
@@ -18,6 +19,7 @@
     "db:diagnose": "pnpm --filter @amlaklink/database diagnose",
     "ops:freshness": "pnpm --filter @amlaklink/api ops:freshness",
     "ops:alerts": "pnpm --filter @amlaklink/api ops:alerts",
+    "ops:push": "pnpm --filter @amlaklink/api ops:push",
     "db:backup": "pnpm --filter @amlaklink/database backup",
     "db:restore:staging": "pnpm --filter @amlaklink/database restore:staging",
     "pilot:smoke": "node scripts/pilot-smoke.mjs"

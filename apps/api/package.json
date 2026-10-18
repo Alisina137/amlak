@@ -10,7 +10,8 @@
     "test": "tsx --test src/*.test.ts",
     "staff:create": "tsx src/create-staff.ts",
     "ops:freshness": "tsx src/run-freshness.ts",
-    "ops:alerts": "tsx src/run-growth-alerts.ts"
+    "ops:alerts": "tsx src/run-growth-alerts.ts",
+    "ops:push": "tsx src/run-push.ts"
   },
   "dependencies": {
     "@amlaklink/catalog": "workspace:*",

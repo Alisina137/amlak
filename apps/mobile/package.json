@@ -5,6 +5,7 @@
   "main": "expo-router/entry",
   "scripts": {
     "start": "expo start --clear --go",
+    "start:dev-client": "expo start --dev-client --tunnel --clear",
     "android": "expo start --android",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
@@ -27,6 +28,9 @@
     "@amlaklink/contracts": "workspace:*",
     "expo-image-picker": "~57.0.20",
     "expo-crypto": "~57.0.3",
+    "expo-notifications": "~57.0.18",
+    "expo-device": "~57.0.2",
+    "expo-dev-client": "~57.0.19",
     "react-native-maps": "1.27.2"
   },
   "devDependencies": {

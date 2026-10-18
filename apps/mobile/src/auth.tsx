@@ -60,6 +60,7 @@ export function AuthProvider({children}:{children:ReactNode}){
    await persist(data.token,data.user);
  },[persist]);
  const signOut=useCallback(async()=>{
+   if(token)await import("./push-client").then(p=>p.unregisterCurrentDevice(token)).catch(()=>{});
    if(token)await requestJson("/v1/auth/logout",{method:"POST",token}).catch(()=>{});
    await SecureStore.deleteItemAsync(KEY);setToken(null);setUser(null);
  },[token]);

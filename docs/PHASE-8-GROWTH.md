@@ -50,7 +50,7 @@ Run `pnpm dev:api`, `pnpm dev:mobile` and `pnpm dev:admin` as usual; the API rem
 
 ## Remaining Phase 8 work
 
-- Expo **development-build push delivery and explicit OS permission UX**, push token lifecycle, preference controls and fallback; current alerts are **in-app only**.
+- Expo **development-build push implementation is in Step 1**: token lifecycle, explicit OS permission UX, preferences, delivery tickets and receipt tracking. Still requires EAS/FCM configuration and physical-device acceptance; remote push is **disabled by default**. See docs/PHASE-8-STEP-1-PUSH.md.
 - Room-labeled media and optional drawn map regions after map-provider cost validation.
 - Full E2E payment review and rejection/resubmission scenarios, refund/credit policy, grace/renewal notices and real pilot pricing validation.
 - Real-device accessibility/RTL QA, distribution to a controlled pilot, local business/legal validation and full production readiness review.

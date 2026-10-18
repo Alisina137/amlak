@@ -4,8 +4,9 @@ import {PreferencesProvider} from "../src/context";
 import {AuthProvider} from "../src/auth";
 import {SearchProvider} from "../src/search-context";
 import {FavoriteProvider} from "../src/favorites";
+import {PushBridge} from "../src/push-bridge";
 export default function RootLayout(){
- return <SafeAreaProvider><PreferencesProvider><AuthProvider><FavoriteProvider><SearchProvider><Stack screenOptions={{headerShown:false}}>
+ return <SafeAreaProvider><PreferencesProvider><AuthProvider><FavoriteProvider><SearchProvider><PushBridge/><Stack screenOptions={{headerShown:false}}>
   <Stack.Screen name="(tabs)" />
   <Stack.Screen name="locations" />
   <Stack.Screen name="auth" />
@@ -25,5 +26,6 @@ export default function RootLayout(){
   <Stack.Screen name="saved-searches" />
   <Stack.Screen name="compare" />
   <Stack.Screen name="upgrade" />
+  <Stack.Screen name="notification-settings" />
  </Stack></SearchProvider></FavoriteProvider></AuthProvider></PreferencesProvider></SafeAreaProvider>;
 }
