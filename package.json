@@ -9,6 +9,7 @@
   "scripts": {
     "dev:api": "pnpm --filter @amlaklink/api dev",
     "dev:mobile": "pnpm --filter @amlaklink/mobile start",
+    "dev:mobile:push": "pnpm --filter @amlaklink/mobile start:dev-client",
     "dev:admin": "pnpm --filter @amlaklink/admin dev",
     "db:migrate": "pnpm --filter @amlaklink/database migrate",
     "staff:create": "pnpm --filter @amlaklink/api staff:create",
