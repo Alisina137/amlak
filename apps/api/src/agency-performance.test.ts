@@ -42,6 +42,23 @@ test("agency performance is private to active management; agents see only assign
   assert.equal((await get(base+"/performance?days=14",0)).status,422);
   const report=await get(base+"/performance?days=30",0);
   assert.equal(report.status,200);assert.equal(report.body.aggregates.total,0);
+  const [listing]=await db.insert(schema.listings).values({authorId:owner.id,agencyId:agency.id,
+   publisher:"agency",clientRequestId:randomUUID(),status:"published",lastConfirmedAt:new Date()}).returning();
+  const [lead]=await db.insert(schema.inquiries).values({listingId:listing.id,
+   seekerId:outsider.id,advertiserId:owner.id,agencyId:agency.id,
+   assignedTo:agent.id,requestId:randomUUID(),priceSnapshot:{currency:"AFN",askingPrice:12000}}).returning();
+  await db.insert(schema.messages).values([
+   {inquiryId:lead.id,authorId:outsider.id,clientRequestId:randomUUID(),
+    body:"Interested, please contact me",createdAt:new Date(lead.createdAt.getTime()+5000)},
+   {inquiryId:lead.id,authorId:agent.id,clientRequestId:randomUUID(),
+    body:"I can arrange a viewing",createdAt:new Date(lead.createdAt.getTime()+120000)}
+  ]);
+  const populated=await get(base+"/performance?days=30",0);
+  assert.equal(populated.body.aggregates.total,1);
+  assert.equal(populated.body.aggregates.answeredWithin24h,1);
+  assert.equal(populated.body.agents.find((x:{userId:string})=>x.userId===agent.id).assigned,1);
+  assert.equal((await get(base+"/lead-queue?status=mine",1)).body.items.length,1);
+  assert.equal((await get(base+"/lead-queue?status=unassigned",0)).body.items.length,0);
   assert.equal(report.body.agents.length,2);
   assert.equal((await get(base+"/lead-queue?status=unassigned",1)).status,403);
   assert.equal((await get(base+"/lead-queue?status=all",1)).status,200);
