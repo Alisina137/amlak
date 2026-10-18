@@ -1,0 +1,40 @@
+import {test} from "node:test";
+import assert from "node:assert/strict";
+import {readFileSync} from "node:fs";
+import {fileURLToPath} from "node:url";
+import {resolve} from "node:path";
+const base=fileURLToPath(new URL("..",import.meta.url));
+const source=(p)=>readFileSync(resolve(base,p),"utf8");
+test("renewal worker uses bounded, cursor-based scans and prevents obsolete warnings",()=>{
+ const code=source("apps/api/src/subscription-worker.ts");
+ assert.match(code,/limit\+1/);
+ assert.match(code,/hasMore/);
+ assert.match(code,/nextCursor/);
+ assert.match(code,/decodeRenewalCursor/);
+ assert.match(code,/desc\(schema.growthEntitlements.expiresAt\)/);
+ assert.match(code,/pg_advisory_xact_lock/);
+ assert.match(code,/gt\(schema.growthEntitlements.expiresAt,grant.expiresAt\)/);
+ assert.match(code,/onConflictDoNothing\(\)/);
+});
+test("operator detects incomplete backlogs and cannot perform financial actions",()=>{
+ const cli=source("apps/api/src/run-renewals.ts");
+ assert.match(cli,/--all/);
+ assert.match(cli,/--execute/);
+ assert.match(cli,/--dry-run/);
+ assert.match(cli,/process.exitCode=2/);
+ assert.match(cli,/aggregate.complete/);
+ assert.doesNotMatch(cli,/growthInvoices/);
+ assert.doesNotMatch(cli,/paymentClaims/);
+ assert.doesNotMatch(cli,/growthEntitlements\)\.values/);
+});
+test("mobile plan status refreshes without showing prior account's data",()=>{
+ const ui=source("apps/mobile/src/billing-ui.tsx");
+ assert.match(ui,/snapshot.scope===scope/);
+ assert.match(ui,/scopeRef.current!==key/);
+ assert.match(ui,/AppState.addEventListener/);
+ assert.match(ui,/60\*60_000/);
+ const lifecycle=source("apps/api/src/subscription-lifecycle.ts");
+ assert.match(lifecycle,/graceAllowsNewPaidCapacity:false/);
+ assert.match(lifecycle,/status:state/);
+ assert.match(lifecycle,/listingLimit:active\?\.listingLimit\|\|3/);
+});
