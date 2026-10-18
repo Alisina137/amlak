@@ -1,4 +1,4 @@
-import {useCallback,useRef,useState} from "react";
+import {useCallback,useEffect,useRef,useState} from "react";
 import {router,useFocusEffect} from "expo-router";
 import {ActivityIndicator,Switch,View} from "react-native";
 import {colors} from "@amlaklink/design-tokens";
@@ -51,6 +51,7 @@ export default function PushSettingsScreen(){
  const [testMessage,setTestMessage]=useState("");
  const [permission,setPermission]=useState<string>(""),
  [busy,setBusy]=useState(false),[error,setError]=useState("");
+ useEffect(()=>{setTestMessage("");setError("");},[token]);
  const refresh=useCallback(async()=>{
   const request=++epoch.current;
   if(!token){setSnapshot({token:null,value:null});return;}
