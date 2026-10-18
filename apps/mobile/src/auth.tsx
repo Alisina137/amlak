@@ -7,27 +7,50 @@ type AuthContext={user:Account|null;token:string|null;loading:boolean;signIn:(em
  verify:(email:string,code:string)=>Promise<void>;signOut:()=>Promise<void>;refresh:()=>Promise<void>};
 const Context=createContext<AuthContext|null>(null);
 export class ApiError extends Error{constructor(public code:string,public status:number){super(code);}}
-export async function requestJson<T>(path:string,options:{method?:string;body?:object;token?:string|null}={}):Promise<T>{
+/** Bounded GET recovery only. Mutations are never retried automatically: the server
+ * may already have committed them before a client timeout. */
+const GET_ATTEMPTS=3,REQUEST_TIMEOUT_MS=12000;
+const wait=(ms:number)=>new Promise<void>(resolve=>setTimeout(resolve,ms));
+export function retryableReadStatus(status:number){
+ return status===408||status===429||[502,503,504].includes(status);
+}
+export function retryDelayMs(attempt:number,retryAfter?:string|null){
+ // Retry-After is respected only within a small mobile-friendly upper bound.
+ if(retryAfter){
+  const parsed=Number(retryAfter);
+  if(Number.isFinite(parsed)&&parsed>=0)return Math.min(2500,Math.max(300,parsed*1000));
+ }
+ return Math.min(2500,500*Math.pow(2,attempt));
+}
+export async function requestJson<T>(path:string,options:{method?:string;body?:object;token?:string|null;timeoutMs?:number}={}):Promise<T>{
  if(!BASE_URL)throw new ApiError("API_NOT_CONFIGURED",0);
- const method=options.method||"GET",attempts=method==="GET"?2:1;
+ const method=(options.method||"GET").toUpperCase(),read=method==="GET";
+ const attempts=read?GET_ATTEMPTS:1;
+ const timeoutMs=Math.min(60000,Math.max(1000,options.timeoutMs??REQUEST_TIMEOUT_MS));
  for(let attempt=0;attempt<attempts;attempt++){
-  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),timeoutMs);
   try{
    const response=await fetch(BASE_URL+path,{method,
-    headers:{"Content-Type":"application/json",...(options.token?{Authorization:"Bearer "+options.token}:{})},
+    headers:{"Accept":"application/json",...(options.body?{"Content-Type":"application/json"}:{}),
+     ...(options.token?{Authorization:"Bearer "+options.token}:{})},
     ...(options.body?{body:JSON.stringify(options.body)}:{}),signal:controller.signal});
-   const data=await response.json().catch(()=>({error:"INVALID_SERVER_RESPONSE"}));
    if(!response.ok){
-    if(method==="GET"&&attempt+1<attempts&&[502,503,504].includes(response.status)){
-     await new Promise(resolve=>setTimeout(resolve,400));continue;
+    const data=await response.json().catch(()=>({error:"REQUEST_FAILED"}));
+    if(read&&attempt+1<attempts&&retryableReadStatus(response.status)){
+     clearTimeout(timer);await wait(retryDelayMs(attempt,response.headers.get("Retry-After")));continue;
     }
     throw new ApiError(typeof data?.error==="string"?data.error:"REQUEST_FAILED",response.status);
    }
-   return data as T;
+   try{return await response.json() as T;}
+   catch{throw new ApiError("INVALID_SERVER_RESPONSE",response.status);}
   }catch(err){
    if(err instanceof ApiError)throw err;
-   if(method==="GET"&&attempt+1<attempts){await new Promise(resolve=>setTimeout(resolve,400));continue;}
-   throw new ApiError("NETWORK_UNAVAILABLE",0);
+   const error=new ApiError(controller.signal.aborted?"REQUEST_TIMEOUT":"NETWORK_UNAVAILABLE",0);
+   if(read&&attempt+1<attempts){
+    clearTimeout(timer);await wait(retryDelayMs(attempt));continue;
+   }
+   // Failed POST/PUT/DELETE response does not imply the server rejected the write.
+   throw error;
   }finally{clearTimeout(timer);}
  }
  throw new ApiError("NETWORK_UNAVAILABLE",0);
