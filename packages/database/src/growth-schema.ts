@@ -9,6 +9,7 @@ export const savedSearches=pgTable("saved_searches",{
  filters:jsonb("filters").$type<Record<string,string>>().notNull(),
  alertsEnabled:boolean("alerts_enabled").notNull().default(false),
  lastScannedAt:timestamp("last_scanned_at",{withTimezone:true}).notNull().defaultNow(),
+ lastListingId:uuid("last_listing_id"),
  createdAt:timestamp("created_at",{withTimezone:true}).notNull().defaultNow()
 },t=>[index("saved_search_owner_idx").on(t.userId,t.createdAt)]);
 export const growthInvoices=pgTable("growth_invoices",{
