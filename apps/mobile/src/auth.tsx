@@ -37,8 +37,10 @@ export function AuthProvider({children}:{children:ReactNode}){
  // In-flight /me from a previous session must never revive a signed-out or switched account.
  const sessionEpoch=useRef(0);
  const persist=useCallback(async(nextToken:string,nextUser:Account)=>{
-   sessionEpoch.current++;
-   await SecureStore.setItemAsync(KEY,nextToken);setToken(nextToken);setUser(nextUser);
+   const epoch=++sessionEpoch.current;
+   await SecureStore.setItemAsync(KEY,nextToken);
+   if(epoch!==sessionEpoch.current)return;
+   setToken(nextToken);setUser(nextUser);
  },[]);
  const refresh=useCallback(async()=>{
   const epoch=sessionEpoch.current;
@@ -57,11 +59,15 @@ export function AuthProvider({children}:{children:ReactNode}){
  },[token]);
  useEffect(()=>{let mounted=true;void (async()=>{try{await refresh();}finally{if(mounted)setLoading(false);}})();return()=>{mounted=false;};},[]); // once at launch
  const signIn=useCallback(async(email:string,password:string)=>{
+   const epoch=sessionEpoch.current;
    const data=await requestJson<{token:string;user:Account}>("/v1/auth/login",{method:"POST",body:{email,password}});
+   if(epoch!==sessionEpoch.current)return;
    await persist(data.token,data.user);
  },[persist]);
  const verify=useCallback(async(email:string,code:string)=>{
+   const epoch=sessionEpoch.current;
    const data=await requestJson<{token:string;user:Account}>("/v1/auth/verify",{method:"POST",body:{email,code}});
+   if(epoch!==sessionEpoch.current)return;
    await persist(data.token,data.user);
  },[persist]);
  const signOut=useCallback(async()=>{
