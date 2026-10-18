@@ -1,13 +1,14 @@
 import {router} from "expo-router";
 import {useEffect,useState,useRef} from "react";
-import {ActivityIndicator,View,Pressable} from "react-native";
+import {ActivityIndicator,View} from "react-native";
 import MapView,{Marker, type Region} from "react-native-maps";
 import {colors} from "@amlaklink/design-tokens";
 import {usePreferences} from "../src/context";
 import {useSearchFilters} from "../src/search-context";
 import {fetchMap,type PropertyMapPoint} from "../src/discovery-client";
 import {dt} from "../src/discovery-copy";
-import {Label,Action,Page,ScreenHeading,SectionCard} from "../src/ui";
+import {Label,Action,BackButton,Page,ScreenHeading,SectionCard} from "../src/ui";
+import {uiText} from "../src/ui-copy";
 export default function SearchMap(){
  const {locale}=usePreferences(),{filters}=useSearchFilters();
  const [points,setPoints]=useState<PropertyMapPoint[]>([]),[unmapped,setUnmapped]=useState(0);
@@ -33,7 +34,7 @@ export default function SearchMap(){
  };
  return <Page>
   <ScreenHeading title={dt(locale,"map")} subtitle={dt(locale,"limited")}/>
-  <Action kind="secondary" label={"← "+dt(locale,"returnList")} onPress={()=>router.back()}/>
+  <BackButton onPress={()=>router.back()}/>
   {loading?<SectionCard><ActivityIndicator color={colors.primary}/><Label>{dt(locale,"loading")}</Label></SectionCard>:null}
   {error?<SectionCard><Label style={{color:colors.error}}>{error}</Label><Action label={dt(locale,"returnList")} onPress={()=>router.back()}/></SectionCard>:null}
   {!loading&&!error&&!mapEnabled?<SectionCard><Label weight="bold">{dt(locale,"mapEmpty")}</Label><Label muted>{dt(locale,"approximate")}</Label><Action label={dt(locale,"returnList")} onPress={()=>router.back()}/></SectionCard>:null}
@@ -47,9 +48,9 @@ export default function SearchMap(){
   {mapEnabled?<Action kind="secondary" disabled={!ready||loading} label={dt(locale,"mapArea")} onPress={reloadArea}/>:null}
   {selected?<SectionCard><Label weight="bold">{selected.title}</Label>
    <Label muted>{selected.transactionType}</Label>
-   <Action label={locale==="en"?"View property":"مشاهدهٔ ملک"} onPress={()=>router.push({pathname:"/property/[id]",params:{id:selected.id}})}/>
+   <Action label={uiText(locale,"viewProperty")} onPress={()=>router.push({pathname:"/property/[id]",params:{id:selected.id}})}/>
   </SectionCard>:null}
   <Label muted>{dt(locale,"approximate")}</Label>
-  {unmapped>0?<Label muted>{unmapped} {locale==="en"?"properties were not mapped because they do not share exact coordinates.":"ملک بدون مختصات دقیق روی نقشه نمایش داده نشد."}</Label>:null}
+  {unmapped>0?<Label muted>{unmapped} {uiText(locale,"noMapCoordinates")}</Label>:null}
  </Page>;
 }
