@@ -33,7 +33,9 @@ export function PushBridge(){
    tokenSubscription=Notifications.addPushTokenListener(()=>synchronize(true));
    // Account session must have hydrated before navigating from a cold-start push tap.
    const last=await Notifications.getLastNotificationResponseAsync().catch(()=>null);
-   if(last)route(last.notification.request.content.data);
+   if(last){route(last.notification.request.content.data);
+    await Notifications.clearLastNotificationResponseAsync().catch(()=>{});
+   }
   }).catch(()=>{});
   stateSubscription=AppState.addEventListener("change",s=>{if(s==="active")synchronize();});
   synchronize(true);
