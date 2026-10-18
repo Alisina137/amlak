@@ -20,5 +20,9 @@ export default function RootLayout(){
   <Stack.Screen name="safety" />
   <Stack.Screen name="inquiries" />
   <Stack.Screen name="viewings" />
+  <Stack.Screen name="shortlists" />
+  <Stack.Screen name="saved-searches" />
+  <Stack.Screen name="compare" />
+  <Stack.Screen name="upgrade" />
  </Stack></SearchProvider></FavoriteProvider></AuthProvider></PreferencesProvider></SafeAreaProvider>;
 }
