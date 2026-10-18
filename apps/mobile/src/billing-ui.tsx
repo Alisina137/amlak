@@ -84,9 +84,18 @@ export function BillingScreen({agencyId,listingId}:{agencyId?:string;listingId?:
   if(!token||!selectedInvoice||reference.trim().length<8||busy)return;
   setBusy(true);setError("");setMessage("");
   try{
-   await requestJson("/v1/invoices/"+selectedInvoice+"/claims",{token,method:"POST",
+   const result=await requestJson<{status:"submitted"|"confirmed"|"rejected";reused?:boolean}>(
+    "/v1/invoices/"+selectedInvoice+"/claims",{token,method:"POST",
     body:{reference:reference.trim(),method}});
-   setMessage(locale==="en"?"Claim submitted; no entitlement until verified.":"درخواست ثبت شد؛ تا تأیید پرداخت امتیازی فعال نمی‌شود.");
+   if(result.status==="rejected"){
+    setError(locale==="en"?"This reference was already rejected. Submit a different genuine reference.":
+     locale==="fa"?"این شماره مرجع قبلاً رد شده است. شماره رسید واقعی دیگری ارسال کنید.":
+     "دا حواله مخکې رد شوې ده. بل رښتینی حواله نمبر ولېږئ.");
+    return;
+   }
+   setMessage(locale==="en"?"Claim pending manual verification; no entitlement is active yet.":
+    locale==="fa"?"ادعای پرداخت در انتظار بررسی است؛ تا تأیید هیچ اشتراکی فعال نمی‌شود.":
+    "د تادیې ادعا د ارزونې په تمه ده؛ پلان لا نه دی فعال شوی.");
    setReference("");setSelectedInvoice(null);await load();
   }catch{setError(t.fail);}finally{setBusy(false);}
  }
