@@ -1,6 +1,6 @@
 import * as Crypto from "expo-crypto";
-import {useCallback,useEffect,useState} from "react";
-import {TextInput,View} from "react-native";
+import {useCallback,useEffect,useRef,useState} from "react";
+import {AppState,TextInput,View} from "react-native";
 import {colors} from "@amlaklink/design-tokens";
 import {isRTL} from "@amlaklink/localization";
 import {useAuth,requestJson} from "./auth";
@@ -52,13 +52,20 @@ const copy={
 };
 export function BillingScreen({agencyId,listingId}:{agencyId?:string;listingId?:string}){
  const {token}=useAuth(),{locale}=usePreferences(),t=copy[locale],rtl=isRTL(locale);
- const [plans,setPlans]=useState<Plans|null>(null),[invoices,setInvoices]=useState<Invoice[]>([]);
- const [entitlement,setEntitlement]=useState<SubscriptionState|null>(null);
+ // Never show one account's plan, receipts or invoices during an account switch.
+ const scope=(token||"guest")+":"+(agencyId||"solo")+":"+(listingId||"all");
+ const scopeRef=useRef(scope),loadEpoch=useRef(0);
+ scopeRef.current=scope;
+ const [snapshot,setSnapshot]=useState<{scope:string;plans:Plans|null;invoices:Invoice[];
+  entitlement:SubscriptionState|null}>({scope:"",plans:null,invoices:[],entitlement:null});
+ const scoped=snapshot.scope===scope?snapshot:null;
+ const plans=scoped?.plans||null,invoices=scoped?.invoices||[],entitlement=scoped?.entitlement||null;
  const [reference,setReference]=useState(""),[selectedInvoice,setSelectedInvoice]=useState<string|null>(null),
   [method,setMethod]=useState<"bank_transfer"|"cash_deposit"|"other">("bank_transfer"),
   [busy,setBusy]=useState(false),[error,setError]=useState(""),[message,setMessage]=useState("");
  const load=useCallback(async()=>{
-  if(!token)return;
+  const version=++loadEpoch.current,key=scope;
+  if(!token){setSnapshot({scope:key,plans:null,invoices:[],entitlement:null});return;}
   try{
    const [catalog,owned,grant]=await Promise.all([
     requestJson<Plans>("/v1/plans"),
@@ -66,37 +73,52 @@ export function BillingScreen({agencyId,listingId}:{agencyId?:string;listingId?:
     requestJson<SubscriptionState>(
      "/v1/entitlements"+(agencyId?"?agencyId="+encodeURIComponent(agencyId):""),{token})
    ]);
-   setPlans(catalog);setInvoices(owned.items.filter(i=>agencyId?i.agencyId===agencyId:
-    listingId?i.listingId===listingId:!i.agencyId&&!i.listingId));
-   setEntitlement(grant);setError("");
-  }catch{setError(t.fail);}
- },[token,agencyId,listingId,t.fail]);
- useEffect(()=>{void load();},[load]);
+   if(loadEpoch.current!==version||scopeRef.current!==key)return;
+   const matching=owned.items.filter(i=>agencyId?i.agencyId===agencyId:
+    listingId?i.listingId===listingId:!i.agencyId&&!i.listingId);
+   setSnapshot({scope:key,plans:catalog,invoices:matching,entitlement:grant});
+   setError("");
+  }catch{
+   if(loadEpoch.current===version&&scopeRef.current===key)setError(t.fail);
+  }
+ },[token,agencyId,listingId,t.fail,scope]);
+ useEffect(()=>{
+  setSelectedInvoice(null);setReference("");setMessage("");setError("");
+  void load();
+  const listener=AppState.addEventListener("change",state=>{
+   if(state==="active")void load();
+  });
+  // A plan can expire while its screen stays open. Re-evaluate server quotas.
+  const timer=setInterval(()=>{if(AppState.currentState==="active")void load();},60*60_000);
+  return()=>{loadEpoch.current++;listener.remove();clearInterval(timer);};
+ },[load]);
  async function invoice(code:string){
-  if(!token||busy)return;setBusy(true);setError("");setMessage("");
+  if(!token||!scoped||busy)return;setBusy(true);setError("");setMessage("");
   try{
    const row=await requestJson<Invoice>("/v1/invoices",{token,method:"POST",
     body:{productCode:code,requestId:Crypto.randomUUID(),...(agencyId?{agencyId}:{}),...(listingId?{listingId}:{})}});
-   setSelectedInvoice(row.id);setMessage(row.id);await load();
+   if(scopeRef.current===scope){setSelectedInvoice(row.id);setMessage(row.id);await load();}
   }catch{setError(t.fail);}finally{setBusy(false);}
  }
  async function claim(){
-  if(!token||!selectedInvoice||reference.trim().length<8||busy)return;
+  if(!token||!scoped||!selectedInvoice||reference.trim().length<8||busy)return;
   setBusy(true);setError("");setMessage("");
   try{
    const result=await requestJson<{status:"submitted"|"confirmed"|"rejected";reused?:boolean}>(
     "/v1/invoices/"+selectedInvoice+"/claims",{token,method:"POST",
     body:{reference:reference.trim(),method}});
+   if(scopeRef.current!==scope)return;
    if(result.status==="rejected"){
     setError(locale==="en"?"This reference was already rejected. Submit a different genuine reference.":
      locale==="fa"?"این شماره مرجع قبلاً رد شده است. شماره رسید واقعی دیگری ارسال کنید.":
      "دا حواله مخکې رد شوې ده. بل رښتینی حواله نمبر ولېږئ.");
     return;
    }
+   if(scopeRef.current!==scope)return;
    setMessage(locale==="en"?"Claim pending manual verification; no entitlement is active yet.":
     locale==="fa"?"ادعای پرداخت در انتظار بررسی است؛ تا تأیید هیچ اشتراکی فعال نمی‌شود.":
     "د تادیې ادعا د ارزونې په تمه ده؛ پلان لا نه دی فعال شوی.");
-   setReference("");setSelectedInvoice(null);await load();
+   if(scopeRef.current===scope){setReference("");setSelectedInvoice(null);await load();}
   }catch{setError(t.fail);}finally{setBusy(false);}
  }
  const products=(plans?.products||[]).filter(p=>agencyId?
