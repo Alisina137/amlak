@@ -8,7 +8,8 @@ import {usePreferences} from "../../src/context";
 import {authT} from "../../src/auth-copy";
 import {st} from "../../src/safety-copy";
 import {useAuth,requestJson} from "../../src/auth";
-import {Action,Label,LanguagePicker,Page,ScreenHeading,SectionCard} from "../../src/ui";
+import {Action,DirectionalRow,Label,LanguagePicker,Page,ScreenHeading,SectionCard} from "../../src/ui";
+import {uiText} from "../../src/ui-copy";
 type Membership={agencyId:string;name:string;agencyStatus:string;role:string;membershipStatus:string};
 export default function Account(){
  const {locale,provinceId}=usePreferences(),{user,token,signOut,refresh,loading}=useAuth();
@@ -40,29 +41,29 @@ export default function Account(){
    </SectionCard>
    {user.advertiserEnabled||user.independentAgentStatus==="approved"?
    <SectionCard>
-    <Label weight="bold">{locale==="en"?"My property workspace":"مدیریت ملک‌ها"}</Label>
-    <Action label={locale==="en"?"Manage my listings":"مدیریت آگهی‌های من"} onPress={()=>router.push("/my-listings")}/>
-    <Action kind="secondary" label={locale==="en"?"Create new listing":"ثبت ملک جدید"} onPress={()=>router.push("/listings/new")}/>
+    <Label weight="bold">{uiText(locale,"accountListings")}</Label>
+    <Action label={uiText(locale,"accountManage")} onPress={()=>router.push("/my-listings")}/>
+    <Action kind="secondary" label={uiText(locale,"accountCreate")} onPress={()=>router.push("/listings/new")}/>
    </SectionCard>:null}
    <SectionCard>
-    <Label weight="bold">{locale==="en"?"Inquiries & viewings":"پرسش‌ها و بازدیدها"}</Label>
-    <Action kind="secondary" label={locale==="en"?"Open inbox":"بازکردن پیام‌ها"} onPress={()=>router.push("/(tabs)/inbox")}/>
+    <Label weight="bold">{uiText(locale,"accountContact")}</Label>
+    <Action kind="secondary" label={uiText(locale,"accountOpenInbox")} onPress={()=>router.push("/(tabs)/inbox")}/>
    </SectionCard>
    <SectionCard>
     <Label weight="bold">{copy("seller")}</Label>
     <Label muted>{copy("listingLater")}</Label>
     {user.advertiserEnabled?<Label style={{color:colors.success}}>{copy("sellerActive")}</Label>:<>
-     <View style={{flexDirection:"row",alignItems:"center",gap:12}}>
+     <DirectionalRow style={{gap:12}}>
       <Switch accessibilityLabel={copy("sellerTerms")} value={accept} onValueChange={setAccept}/>
       <View style={{flex:1}}><Label>{copy("sellerTerms")}</Label></View>
-     </View>
+     </DirectionalRow>
      <Action disabled={busy||!accept||!user.verified} label={copy("sellerActivate")} onPress={()=>void activate()}/>
     </>}
    </SectionCard>
    <SectionCard><Label weight="bold">{copy("agent")}</Label>
     {user.independentAgentStatus==="approved"?<Label style={{color:colors.success}}>{copy("agentApproved")}</Label>:user.independentAgentStatus==="pending"?<Label muted>{copy("agentPending")}</Label>:<Action kind="secondary" label={copy("agentApplication")} onPress={()=>router.push("/agent/apply")}/>}
     {user.independentAgentStatus==="approved"?
-     <Action kind="secondary" label={locale==="en"?"Professional plan":"اشتراک حرفه‌ای"}
+     <Action kind="secondary" label={uiText(locale,"accountPlan")}
       onPress={()=>router.push("/upgrade")}/>:null}
    </SectionCard>
    <SectionCard>
@@ -78,8 +79,8 @@ export default function Account(){
     <Action kind="secondary" disabled={!user.verified} label={copy("applyAgency")} onPress={()=>router.push("/agency/apply")}/>
    </SectionCard>
    {message?<Label style={{color:colors.muted}}>{message}</Label>:null}
-   <Action kind="secondary" label={locale==="en"?"Push notification settings":locale==="fa"?"تنظیمات اعلان‌ها":"د خبرتیاوو تنظیمات"} onPress={()=>router.push("/notification-settings")}/>
-   <Action kind="secondary" label={locale==="en"?"Help & support":locale==="fa"?"کمک و پشتیبانی":"مرسته او ملاتړ"} onPress={()=>router.push("/support")}/>
+   <Action kind="secondary" label={uiText(locale,"accountNotifications")} onPress={()=>router.push("/notification-settings")}/>
+   <Action kind="secondary" label={uiText(locale,"accountSupport")} onPress={()=>router.push("/support")}/>
    <Action kind="secondary" label={st(locale,"appeals")} onPress={()=>router.push("/safety")}/>
    <Action kind="secondary" label={copy("refresh")} onPress={()=>void refresh()}/>
    <Action kind="secondary" label={copy("logout")} onPress={()=>void signOut()}/>
