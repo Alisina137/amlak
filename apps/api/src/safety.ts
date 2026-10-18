@@ -40,7 +40,7 @@ export async function latestChecks(db:Database,kind:"user"|"agency"|"listing",id
  return [...latest.values()].filter(r=>r.result==="approved"&&(!r.expiresAt||r.expiresAt>new Date()))
   .map(r=>({scope:r.scope,reviewedAt:r.reviewedAt,expiresAt:r.expiresAt}));
 }
-const caseTransitions:Record<string,string[]>={open:["triaged","investigating","rejected"],triaged:["investigating","resolved","rejected"],investigating:["resolved","rejected"],resolved:["closed"],rejected:["closed"],appealed:["investigating","resolved","rejected","closed"],closed:[]};
+const caseTransitions:Record<string,string[]>={open:["triaged","investigating","rejected"],triaged:["investigating","resolved","rejected"],investigating:["resolved","rejected"],resolved:["closed"],rejected:["closed"],appealed:[],closed:[]};
 export function normalizeDuplicateToken(value:string){return value.normalize("NFKC").toLowerCase().replace(/[يى]/g,"ی").replace(/ك/g,"ک").replace(/[\u064b-\u065f\u200c]/g,"").replace(/[^\p{L}\p{N}]/gu," ").replace(/\s+/g," ").trim();}
 export function duplicates(a:ReturnType<typeof listingDraftSchema.parse>,b:ReturnType<typeof listingDraftSchema.parse>){
  if(a.propertyType!==b.propertyType||a.transactionType!==b.transactionType)return false;
@@ -55,6 +55,12 @@ export function registerSafetyRoutes(app:FastifyInstance,db:Database){
   const actor=await requireActor(db,request,"user");await requireVerified(db,actor);
   const input=parse(reportInput,request.body),l=await getListing(db,request.params.id);
   if(l.authorId===actor.id)throw new HttpProblem(403,"CANNOT_REPORT_OWN_LISTING");
+  if(l.agencyId){
+   const [member]=await db.select({id:schema.memberships.id}).from(schema.memberships)
+    .where(and(eq(schema.memberships.agencyId,l.agencyId),eq(schema.memberships.userId,actor.id),
+     eq(schema.memberships.status,"active"))).limit(1);
+   if(member)throw new HttpProblem(403,"CANNOT_REPORT_OWN_AGENCY");
+  }
   if(!l.approvedRevisionId||!["published","paused","sold","rented"].includes(l.status)||!await canShowPublic(db,l))
    throw new HttpProblem(404,"PROPERTY_NOT_AVAILABLE");
   return db.transaction(async tx=>{

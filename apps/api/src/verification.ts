@@ -4,7 +4,7 @@ import {z} from "zod";
 import {type Database,schema} from "@amlaklink/database";
 import {listingDraftSchema} from "@amlaklink/contracts";
 import {HttpProblem,requireActor,requireStaffRole} from "./access";
-import {getListing,validId} from "./listings";
+import {getListing,validId,canShowPublic} from "./listings";
 import {duplicates,latestChecks} from "./safety";
 const verifyRoles:typeof schema.staff.$inferSelect.role[]=["verification","admin","super_admin"];
 const modRoles:typeof schema.staff.$inferSelect.role[]=["moderator","admin","super_admin"];
@@ -41,7 +41,7 @@ export function registerVerificationRoutes(app:FastifyInstance,db:Database){
  });
  app.get<{Params:{id:string}}>("/v1/properties/:id/verified-checks",async request=>{
   const l=await getListing(db,request.params.id);
-  if(!l.approvedRevisionId||!["published","paused","sold","rented"].includes(l.status))throw new HttpProblem(404,"PROPERTY_NOT_AVAILABLE");
+  if(!l.approvedRevisionId||!["published","paused","sold","rented"].includes(l.status)||!await canShowPublic(db,l))throw new HttpProblem(404,"PROPERTY_NOT_AVAILABLE");
   return {items:(await latestChecks(db,"listing",l.id)).filter(s=>s.scope==="listing_authorization_reviewed").map(s=>({...s,
    description:"Listing authorization documents reviewed; does not certify legal title or ownership."}))};
  });
