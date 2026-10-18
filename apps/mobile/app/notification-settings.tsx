@@ -1,4 +1,4 @@
-import {useCallback,useState} from "react";
+import {useCallback,useRef,useState} from "react";
 import {router,useFocusEffect} from "expo-router";
 import {ActivityIndicator,Switch,View} from "react-native";
 import {colors} from "@amlaklink/design-tokens";
@@ -35,29 +35,52 @@ const copy={
   noAccount:"د خبرتیاوو لپاره ننوزئ او ایمیل تایید کړئ.",retry:"بیا تازه کړه",
   disclaimer:"خبرتیاوې کېدای شي ناوخته ورسېږي؛ د تازه مالوماتو لپاره پیغامونه وګورئ."}
 };
+const testCopy={
+ en:{send:"Send a test notification",queued:"Test alert queued. An enabled worker must run before your device can receive it.",conflict:"This installation is registered to another account. Sign out of that account while online before enrolling this device.",devices:"Registered devices",worker:"Remote push needs an installed development build, valid EAS/FCM setup and a running delivery worker."},
+ fa:{send:"ارسال اعلان آزمایشی",queued:"اعلان آزمایشی در صف قرار گرفت. برای دریافت آن در تلفن باید کارگر ارسال فعال باشد.",conflict:"این دستگاه به حساب دیگری وصل است. نخست از آن حساب هنگام اتصال به اینترنت خارج شوید.",devices:"دستگاه‌های ثبت‌شده",worker:"اعلان بیرونی به نسخهٔ توسعه‌ای، تنظیم درست EAS/FCM و اجرای کارگر ارسال نیاز دارد."},
+ ps:{send:"ازمایښتي خبرتیا ولېږئ",queued:"ازمایښتي خبرتیا په کتار کې واچول شوه. د رسېدو لپاره باید د لېږلو دنده فعاله وي.",conflict:"دا وسیله له بل حساب سره ثبت ده. د انټرنېټ پر وخت له هغه حسابه ووځئ.",devices:"ثبت شوې وسیلې",worker:"بهرنۍ خبرتیا نصب شوې پرمختیايي نسخه، سم EAS/FCM او فعال لېږونکی غواړي."}
+} as const;
 type Choice="savedSearches"|"inquiries"|"viewings"|"account";
 const kinds:Choice[]=["savedSearches","inquiries","viewings","account"];
 export default function PushSettingsScreen(){
- const {locale}=usePreferences(),t=copy[locale],{user,token}=useAuth();
- const [state,setState]=useState<PushSettings|null>(null),[permission,setPermission]=useState<string>(""),
+ const {locale}=usePreferences(),t=copy[locale],p=testCopy[locale],{user,token}=useAuth();
+ const [snapshot,setSnapshot]=useState<{token:string|null;value:PushSettings|null}>({token:null,value:null});
+ const state=snapshot.token===token?snapshot.value:null;
+ const activeToken=useRef(token),epoch=useRef(0);
+ activeToken.current=token;
+ const [testMessage,setTestMessage]=useState("");
+ const [permission,setPermission]=useState<string>(""),
  [busy,setBusy]=useState(false),[error,setError]=useState("");
  const refresh=useCallback(async()=>{
-  if(!token){setState(null);return;}
-  try{const [r,p]=await Promise.all([readPushSettings(token),checkSystemPermission()]);
-   setState(r);setPermission(p);setError("");
-  }catch{setError(t.error);}
+  const request=++epoch.current;
+  if(!token){setSnapshot({token:null,value:null});return;}
+  try{const [r,permissionValue]=await Promise.all([readPushSettings(token),checkSystemPermission()]);
+   if(activeToken.current!==token||request!==epoch.current)return;
+   setSnapshot({token,value:r});setPermission(permissionValue);setError("");
+  }catch{if(activeToken.current===token&&request===epoch.current)setError(t.error);}
  },[token,t.error]);
- useFocusEffect(useCallback(()=>{void refresh();},[refresh]));
+ useFocusEffect(useCallback(()=>{void refresh();return()=>{epoch.current++;};},[refresh]));
  async function change(patch:Partial<PushPreferences>,enableOnDevice=false){
   if(!token||busy)return;setBusy(true);setError("");
   try{
    if(enableOnDevice)await registerCurrentDevice(token,true);
    const r=await requestJson<{preferences:PushPreferences}>("/v1/push/preferences",{
     token,method:"PATCH",body:patch});
-   setState(prev=>prev?{...prev,preferences:r.preferences}:prev);
+   if(activeToken.current===token)setSnapshot(prev=>prev.token===token&&prev.value?
+    {token,value:{...prev.value,preferences:r.preferences}}:prev);
    await refresh();
-  }catch(err){setError(err instanceof Error&&["PUSH_PERMISSION_NOT_GRANTED","EAS_PROJECT_ID_REQUIRED",
+  }catch(err){setError(err instanceof Error&&err.message==="PUSH_TOKEN_ALREADY_REGISTERED"?p.conflict:
+   err instanceof Error&&["PUSH_PERMISSION_NOT_GRANTED","EAS_PROJECT_ID_REQUIRED",
    "PUSH_DEV_BUILD_REQUIRED","PUSH_PHYSICAL_DEVICE_REQUIRED"].includes(err.message)?err.message:t.error);}
+  finally{setBusy(false);}
+ }
+ async function testDelivery(){
+  if(!token||busy||!state?.serverConfigured||!state.preferences.enabled)return;
+  setBusy(true);setError("");setTestMessage("");
+  try{
+   await requestJson("/v1/push/test",{method:"POST",token});
+   if(activeToken.current===token)setTestMessage(p.queued);
+  }catch{if(activeToken.current===token)setError(t.error);}
   finally{setBusy(false);}
  }
  const consented=!!state?.preferences.enabled;
@@ -73,9 +96,14 @@ export default function PushSettingsScreen(){
    <Label muted>{permission==="blocked"?t.blocked:
     permission==="granted"?t.granted:t.notGranted}</Label>
    <Label weight="bold">{consented?t.enabled:t.disabled}</Label>
+   <Label muted>{p.devices}: {state?.registeredDevices||0}</Label>
    <Action disabled={busy||!state?.serverConfigured&&!consented||!nativePushAvailable()&&!consented}
     label={consented?t.disable:t.enable}
     onPress={()=>void change({enabled:!consented},!consented)}/>
+   {consented?<Action kind="secondary" label={p.send} disabled={busy||!state?.serverConfigured}
+    onPress={()=>void testDelivery()}/>:null}
+   <Label muted>{p.worker}</Label>
+   {testMessage?<Label style={{color:colors.primary}}>{testMessage}</Label>:null}
   </SectionCard>
   <SectionCard>
    {kinds.map(kind=><View key={kind}
