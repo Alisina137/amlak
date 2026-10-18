@@ -41,5 +41,15 @@ test("media retry: a repeated image uses one photo ID, even for concurrent retri
   const rows=await db.select({id:schema.photos.id}).from(schema.photos)
    .where(eq(schema.photos.listingId,listing.id));
   assert.equal(rows.length,1,"retry must not create orphan database photo rows");
+  const deletion=await app.inject({method:"DELETE",
+   url:"/v1/listings/"+listing.id+"/photos/"+first.json().id,
+   headers:{"authorization":"Bearer "+token}});
+  assert.equal(deletion.statusCode,200,deletion.body);
+  assert.equal(deletion.json().mediaCleanupPending,false);
+  const remaining=await db.select({id:schema.photos.id}).from(schema.photos)
+   .where(eq(schema.photos.listingId,listing.id));
+  assert.equal(remaining.length,0,"deleted photo must leave no DB pointer");
+  const missing=await app.inject({method:"GET",url:"/v1/photos/"+first.json().id});
+  assert.equal(missing.statusCode,404);
  }finally{await app.close();await sql.end();}
 });
