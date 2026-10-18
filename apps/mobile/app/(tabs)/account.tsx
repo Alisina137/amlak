@@ -79,6 +79,9 @@ export default function Account(){
     <Action kind="secondary" disabled={!user.verified} label={copy("applyAgency")} onPress={()=>router.push("/agency/apply")}/>
    </SectionCard>
    {message?<Label style={{color:colors.muted}}>{message}</Label>:null}
+   <Action kind="secondary" label={locale==="en"?"Devices and active sessions":
+    locale==="fa"?"دستگاه‌ها و نشست‌های فعال":"وسیلې او فعالې ناستې"}
+    onPress={()=>router.push("/account-sessions")}/>
    <Action kind="secondary" label={uiText(locale,"accountNotifications")} onPress={()=>router.push("/notification-settings")}/>
    <Action kind="secondary" label={uiText(locale,"accountSupport")} onPress={()=>router.push("/support")}/>
    <Action kind="secondary" label={st(locale,"appeals")} onPress={()=>router.push("/safety")}/>
