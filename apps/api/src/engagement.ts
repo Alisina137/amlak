@@ -110,18 +110,29 @@ export function registerEngagementRoutes(app:FastifyInstance,db:Database){
   }
   await checkBlocks(db,actor.id,l.authorId);
   const price=listingDraftSchema.parse((await getRevision(db,l.approvedRevisionId!)).data).price;
-  const [created]=await db.insert(schema.inquiries).values({
-   seekerId:actor.id,listingId:l.id,advertiserId:l.authorId,agencyId:l.agencyId,requestId:input.clientRequestId,
-   priceSnapshot:price
-  }).onConflictDoNothing().returning();
-  if(!created){
-   const [existing]=await db.select().from(schema.inquiries).where(and(eq(schema.inquiries.seekerId,actor.id),eq(schema.inquiries.listingId,l.id))).limit(1);
-   if(!existing)throw new HttpProblem(409,"INQUIRY_RETRY");
-   return {id:existing.id,status:existing.status,reused:true};
+  // A first inquiry and its first message must commit as one unit.
+  const outcome=await db.transaction(async tx=>{
+   const [created]=await tx.insert(schema.inquiries).values({
+    seekerId:actor.id,listingId:l.id,advertiserId:l.authorId,agencyId:l.agencyId,
+    requestId:input.clientRequestId,priceSnapshot:price
+   }).onConflictDoNothing().returning();
+   if(!created){
+    const [existing]=await tx.select().from(schema.inquiries).where(and(eq(schema.inquiries.seekerId,actor.id),
+      eq(schema.inquiries.listingId,l.id))).limit(1);
+    if(!existing)throw new HttpProblem(409,"INQUIRY_RETRY");
+    return {id:existing.id,status:existing.status,reused:true};
+   }
+   await tx.insert(schema.messages).values({inquiryId:created.id,authorId:actor.id,
+    clientRequestId:input.clientRequestId,body:input.body});
+   return {id:created.id,status:"new" as const,reused:false};
+  });
+  if(!outcome.reused){
+   const row=await lookup(db,outcome.id);
+   await notifyOthers(db,row,actor.id,"inquiry",row.id,"New inquiry about your property")
+    .catch(error=>app.log.warn({error},"Inquiry created but in-app notification was not delivered"));
   }
-  await db.insert(schema.messages).values({inquiryId:created.id,authorId:actor.id,clientRequestId:input.clientRequestId,body:input.body});
-  await notifyOthers(db,created,actor.id,"inquiry",created.id,"New inquiry about your property");
-  return {id:created.id,status:"new",reused:false};
+  return outcome;
+ });
  });
  app.get("/v1/inquiries",async request=>{
   const actor=await requireActor(db,request,"user");await requireVerified(db,actor);
@@ -154,35 +165,46 @@ export function registerEngagementRoutes(app:FastifyInstance,db:Database){
  app.post<{Params:{id:string}}>("/v1/inquiries/:id/messages",{config:{rateLimit:{max:20,timeWindow:"1 minute"}}},async request=>{
   const row=await lookup(db,request.params.id),permission=await access(db,request,row);
   const input=parse(messageInput,request.body);
-  if(["closed","blocked"].includes(row.status))throw new HttpProblem(409,"INQUIRY_CLOSED");
   await checkConversationBlocks(db,row,permission.actor.id);
-  // Ensure seller membership is evaluated on each request; no stale JWT permissions.
-  const [created]=await db.insert(schema.messages).values({inquiryId:row.id,authorId:permission.actor.id,
-   clientRequestId:input.clientRequestId,body:input.body}).onConflictDoNothing().returning();
-  if(!created){
-   const [prior]=await db.select().from(schema.messages).where(and(eq(schema.messages.inquiryId,row.id),
+  const result=await db.transaction(async tx=>{
+   const [locked]=await tx.select().from(schema.inquiries).where(eq(schema.inquiries.id,row.id)).for("update");
+   if(!locked)throw new HttpProblem(404,"INQUIRY_NOT_FOUND");
+   const [prior]=await tx.select().from(schema.messages).where(and(eq(schema.messages.inquiryId,row.id),
     eq(schema.messages.authorId,permission.actor.id),eq(schema.messages.clientRequestId,input.clientRequestId))).limit(1);
-   if(!prior)throw new HttpProblem(409,"MESSAGE_RETRY");return {id:prior.id,reused:true};
-  }
-  await db.update(schema.inquiries).set({status:permission.side==="seeker"?"open":"responded",lastMessageAt:new Date(),updatedAt:new Date()})
-   .where(eq(schema.inquiries.id,row.id));
-  await notifyOthers(db,row,permission.actor.id,"message",created.id,"New message about a property");
-  return {id:created.id,reused:false};
+   if(prior)return {id:prior.id,reused:true};
+   if(["closed","blocked"].includes(locked.status))throw new HttpProblem(409,"INQUIRY_CLOSED");
+   const [created]=await tx.insert(schema.messages).values({inquiryId:row.id,authorId:permission.actor.id,
+    clientRequestId:input.clientRequestId,body:input.body}).onConflictDoNothing().returning();
+   if(!created)throw new HttpProblem(409,"MESSAGE_RETRY");
+   await tx.update(schema.inquiries).set({status:permission.side==="seeker"?"open":"responded",
+    lastMessageAt:new Date(),updatedAt:new Date()}).where(eq(schema.inquiries.id,row.id));
+   return {id:created.id,reused:false};
+  });
+  if(!result.reused)await notifyOthers(db,row,permission.actor.id,"message",result.id,"New message about a property")
+    .catch(error=>app.log.warn({error},"Message stored but in-app alert failed"));
+  return result;
  });
  app.post<{Params:{id:string}}>("/v1/inquiries/:id/close",async request=>{
   const row=await lookup(db,request.params.id);await access(db,request,row);
-  await db.update(schema.inquiries).set({status:"closed",updatedAt:new Date()})
-   .where(and(eq(schema.inquiries.id,row.id),inArray(schema.inquiries.status,["new","open","responded"])));
-  return {status:"closed"};
+  return db.transaction(async tx=>{
+   const [locked]=await tx.select().from(schema.inquiries).where(eq(schema.inquiries.id,row.id)).for("update");
+   if(!locked)throw new HttpProblem(404,"INQUIRY_NOT_FOUND");
+   if(locked.status==="closed")return {status:"closed",reused:true};
+   if(locked.status==="blocked")throw new HttpProblem(409,"INQUIRY_BLOCKED");
+   await tx.update(schema.inquiries).set({status:"closed",updatedAt:new Date()}).where(eq(schema.inquiries.id,row.id));
+   return {status:"closed",reused:false};
+  });
  });
  app.post<{Params:{id:string}}>("/v1/inquiries/:id/reopen",async request=>{
   const row=await lookup(db,request.params.id),p=await access(db,request,row);
   if(p.side!=="seeker")throw new HttpProblem(403,"SEEKER_ONLY");
   await checkConversationBlocks(db,row,p.actor.id);
   await validListing(db,await getListing(db,row.listingId));
-  const [updated]=await db.update(schema.inquiries).set({status:"open",updatedAt:new Date()})
-   .where(and(eq(schema.inquiries.id,row.id),eq(schema.inquiries.status,"closed"))).returning();
-  if(!updated)throw new HttpProblem(409,"INQUIRY_NOT_CLOSED");
+  await db.transaction(async tx=>{
+   const [locked]=await tx.select().from(schema.inquiries).where(eq(schema.inquiries.id,row.id)).for("update");
+   if(locked?.status!=="closed")throw new HttpProblem(409,"INQUIRY_NOT_CLOSED");
+   await tx.update(schema.inquiries).set({status:"open",updatedAt:new Date()}).where(eq(schema.inquiries.id,row.id));
+  });
   await notifyOthers(db,row,p.actor.id,"inquiry",row.id+":reopened","Property inquiry reopened");
   return {status:"open"};
  });
