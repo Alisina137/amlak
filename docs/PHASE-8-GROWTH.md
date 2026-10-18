@@ -14,6 +14,7 @@ This phase is built on Phases 1–7 and **does not override the pilot launch gat
 - Agency activity metrics: actual listings, public listings, captured inquiries, open inquiries and deliberate contact taps. No fabricated phone conversations, external WhatsApp completion or completed-sales claims.
 - Dedicated staff billing page and separate agency reports/billing pages; ordinary users cannot call staff payment endpoints. Owner-only plan purchase; account-level solo plan is available to approved independent agents.
 - Private support requests: user-only tickets, reply threads and localized mobile UI, plus separate staff-only review and replies; request-ID idempotency, five-open-ticket cap and audited staff status changes. Support does not replace urgent fraud reporting.
+- Room-tagged and optionally captioned property photos, an accessible filtered public gallery with fullscreen viewer, and a human moderation view of photo metadata. Public labels come from the approved listing revision; older listings default to “other”.
 - Existing email-verification, moderation, staff MFA and audit rules still apply.
 
 ## Commercial and security gates
@@ -51,7 +52,7 @@ Run `pnpm dev:api`, `pnpm dev:mobile` and `pnpm dev:admin` as usual; the API rem
 ## Remaining Phase 8 work
 
 - Expo **development-build push implementation is in Step 1**: token lifecycle, explicit OS permission UX, preferences, delivery tickets and receipt tracking. Still requires EAS/FCM configuration and physical-device acceptance; remote push is **disabled by default**. See docs/PHASE-8-STEP-1-PUSH.md.
-- Room-labeled media and optional drawn map regions after map-provider cost validation.
+- Optional drawn map regions after map-provider cost validation. Room-labeled media and reviewed photo captions are implemented in Step 2 (see docs/PHASE-8-STEP-2-MEDIA.md), pending real-device QA.
 - Full E2E payment review and rejection/resubmission scenarios, refund/credit policy, grace/renewal notices and real pilot pricing validation.
 - Real-device accessibility/RTL QA, distribution to a controlled pilot, local business/legal validation and full production readiness review.
 
