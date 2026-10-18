@@ -1,8 +1,8 @@
 import {router,useLocalSearchParams} from "expo-router";
 import {useCallback,useEffect,useState} from "react";
-import {ActivityIndicator,View} from "react-native";
+import {ActivityIndicator,ScrollView,View,Pressable} from "react-native";
 import {colors} from "@amlaklink/design-tokens";
-import {formatNumber} from "@amlaklink/localization";
+import {formatNumber,isRTL} from "@amlaklink/localization";
 import {leadStageLabel,uiText} from "../../../src/ui-copy";
 import {useAuth,requestJson} from "../../../src/auth";
 import {usePreferences} from "../../../src/context";
@@ -96,11 +96,20 @@ export default function AgencyPerformance(){
   </SectionCard>
   <SectionCard>
    <Label weight="bold">{t.queue}</Label>
-   <View style={{gap:7}}>
-    {(["all","mine","unassigned"] as const).map(x=><Action key={x}
-     kind={status===x?"primary":"secondary"} label={x==="all"?t.all:x==="mine"?t.mine:t.unassigned}
-     onPress={()=>setStatus(x)}/>)}
-   </View>
+   <ScrollView horizontal showsHorizontalScrollIndicator={false}
+    contentContainerStyle={{flexDirection:isRTL(locale)?"row-reverse":"row",gap:8,paddingVertical:4}}>
+    {(["all","mine","unassigned"] as const).map(x=><Pressable key={x}
+     accessibilityRole="tab" accessibilityState={{selected:status===x}}
+     accessibilityLabel={x==="all"?t.all:x==="mine"?t.mine:t.unassigned}
+     onPress={()=>setStatus(x)} style={{borderWidth:1,borderRadius:12,
+      borderColor:status===x?colors.primary:colors.border,
+      backgroundColor:status===x?colors.primary:colors.surface,
+      paddingHorizontal:16,minHeight:48,justifyContent:"center"}}>
+     <Label weight="medium" style={{textAlign:"center",color:status===x?colors.surface:colors.text}}>
+      {x==="all"?t.all:x==="mine"?t.mine:t.unassigned}
+     </Label>
+    </Pressable>)}
+   </ScrollView>
    {!queue.length?<Label muted>{t.empty}</Label>:queue.map(lead=><View key={lead.id}
     style={{gap:7,borderBottomWidth:1,borderColor:colors.border,paddingVertical:12}}>
     <Label>{lead.status} · {leadStageLabel(locale,lead.leadStatus)} · {lead.assignedTo?t.assigned:t.unassigned}</Label>

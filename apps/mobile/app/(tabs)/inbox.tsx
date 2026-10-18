@@ -1,7 +1,8 @@
 import {router,useFocusEffect} from "expo-router";
 import {useCallback,useRef,useState} from "react";
-import {ActivityIndicator,Pressable,View} from "react-native";
+import {ActivityIndicator,Pressable,ScrollView} from "react-native";
 import {colors} from "@amlaklink/design-tokens";
+import {formatNumber,isRTL} from "@amlaklink/localization";
 import {useAuth} from "../../src/auth";
 import {usePreferences} from "../../src/context";
 import {inbox,fetchViewings,fetchAlerts,readAllAlerts,readAlert,displayKabul,type InquirySummary,type Viewing,type Alert} from "../../src/engagement-client";
@@ -45,11 +46,20 @@ export default function Inbox(){
   {!token?<SectionCard><Label>{et(locale,"login")}</Label>
     <Action label={et(locale,"login")} onPress={()=>router.push({pathname:"/auth/[action]",params:{action:"login"}})}/>
    </SectionCard>:null}
-  <View style={{flexDirection:locale==="en"?"row":"row-reverse",gap:5}}>
-   {(["inquiries","viewings","notifications"] as const).map(key=><View key={key} style={{flex:1}}>
-    <Action kind={tab===key?"primary":"secondary"} label={et(locale,key)+(key==="notifications"&&unread?" ("+unread+")":"")} onPress={()=>setTab(key)}/>
-   </View>)}
-  </View>
+  <ScrollView horizontal showsHorizontalScrollIndicator={false}
+   contentContainerStyle={{flexDirection:isRTL(locale)?"row-reverse":"row",gap:8,paddingVertical:3}}
+   accessibilityRole="tablist">
+   {(["inquiries","viewings","notifications"] as const).map(key=>
+    <Pressable key={key} accessibilityRole="tab" accessibilityState={{selected:tab===key}}
+     accessibilityLabel={et(locale,key)} onPress={()=>setTab(key)}
+     style={{minWidth:112,minHeight:48,paddingHorizontal:14,justifyContent:"center",alignItems:"center",
+      borderWidth:1,borderRadius:14,borderColor:tab===key?colors.primary:colors.border,
+      backgroundColor:tab===key?colors.primary:colors.surface}}>
+     <Label weight="medium" style={{textAlign:"center",color:tab===key?colors.surface:colors.text}}>
+      {et(locale,key)}{key==="notifications"&&unread?" ("+formatNumber(unread,locale)+")":""}
+     </Label>
+    </Pressable>)}
+  </ScrollView>
   {token?<Action kind="secondary" disabled={busy} label={et(locale,"refresh")} onPress={()=>void refresh()}/>:null}
   {busy&&safeItems.length===0&&safeViewings.length===0&&safeAlerts.length===0?<SectionCard><ActivityIndicator color={colors.primary}/></SectionCard>:null}
   {error?<SectionCard><Label style={{color:colors.error}}>{error}</Label></SectionCard>:null}
@@ -57,7 +67,7 @@ export default function Inbox(){
   {token&&tab==="inquiries"&&safeItems.map(i=><SectionCard key={i.id}>
    <Pressable accessibilityRole="button" onPress={()=>router.push({pathname:"/inquiries/[id]",params:{id:i.id}})} style={{gap:5,minHeight:44}}>
     <Label weight="bold">{i.title}</Label>
-    <Label muted>{i.side==="seeker"?et(locale,"sent"):et(locale,"received")} · {i.status}</Label>
+    <Label muted>{i.side==="seeker"?et(locale,"sent"):et(locale,"received")} · {i.status==="closed"?et(locale,"closed"):i.status==="responded"?et(locale,"responded"):et(locale,"new")}</Label>
     <Label muted>{displayKabul(i.lastMessageAt,locale)}</Label>
    </Pressable>
    <Action kind="secondary" label={et(locale,"open")} onPress={()=>router.push({pathname:"/inquiries/[id]",params:{id:i.id}})}/>

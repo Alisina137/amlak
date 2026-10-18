@@ -7,7 +7,7 @@ import { usePreferences } from "./context";
 import {uiText} from "./ui-copy";
 export function Label({children,style,muted=false,weight="regular"}:{children:ReactNode;style?:StyleProp<TextStyle>;muted?:boolean;weight?:"regular"|"medium"|"bold"}){
  const {locale}=usePreferences();
- return <Text style={[{fontSize:typeScale.body,lineHeight:26,color:muted?colors.muted:colors.text,textAlign:isRTL(locale)?"right":"left",writingDirection:isRTL(locale)?"rtl":"ltr",fontWeight:weight==="regular"?"400":weight==="bold"?"700":"600"},style]}>{children}</Text>;
+ return <Text allowFontScaling style={[{fontSize:typeScale.body,lineHeight:26,color:muted?colors.muted:colors.text,textAlign:isRTL(locale)?"right":"left",writingDirection:isRTL(locale)?"rtl":"ltr",fontWeight:weight==="regular"?"400":weight==="bold"?"700":"600"},style]}>{children}</Text>;
 }
 /** Rows mirror their content order without depending on the OS-wide I18nManager flag. */
 export function DirectionalRow({children,style}:{children:ReactNode;style?:StyleProp<ViewStyle>}){
@@ -20,7 +20,7 @@ export function AppInput({style,inputDirection="auto",...props}:TextInputProps&{
  const {locale}=usePreferences(),rtl=inputDirection!=="ltr"&&isRTL(locale);
  const direction:TextStyle={writingDirection:rtl?"rtl":"ltr",textAlign:rtl?"right":"left",
   fontSize:16,color:colors.text};
- return <TextInput {...props} placeholderTextColor={props.placeholderTextColor||colors.muted}
+ return <TextInput {...props} allowFontScaling placeholderTextColor={props.placeholderTextColor||colors.muted}
   style={[{minHeight:48,borderWidth:1,borderColor:colors.border,borderRadius:12,
    paddingHorizontal:12,paddingVertical:10,backgroundColor:colors.surface},direction,style]}/>;
 }
@@ -72,7 +72,7 @@ export function EmptyMessage({icon,title,body}:{icon:string;title:string;body:st
  </View></SectionCard>;
 }
 const styles=StyleSheet.create({
- container:{padding:spacing.base},
+ container:{padding:spacing.base,paddingHorizontal:Math.min(spacing.base,16)},
  card:{backgroundColor:colors.surface,padding:spacing.lg,borderRadius:radius.lg,borderWidth:1,borderColor:colors.border,gap:12},
  action:{borderRadius:radius.md,borderWidth:1,paddingHorizontal:18,minHeight:48,justifyContent:"center",alignItems:"center"},
 });
