@@ -27,7 +27,11 @@ const invoiceInput=z.object({requestId:z.uuid(),
 const paymentInput=z.object({method:z.enum(["bank_transfer","cash_deposit","other"]),
  reference:z.string().trim().min(8).max(120)}).strict();
 const decisionInput=z.object({decision:z.enum(["confirm","reject"]),
- reason:z.string().trim().min(12).max(700),reconciled:z.boolean().optional()}).strict();
+ reason:z.string().trim().min(12).max(700),
+ reconciliation:z.object({statementReference:z.string().trim().min(8).max(120),
+  matchedAmountAfn:z.number().int().positive(),
+  statementDate:z.iso.date(),
+  independentlyVerified:z.literal(true)}).strict().optional()}).strict();
 
 export async function currentAgencyLimits(db:Database,id:string){
  return readSubscription(db,{agencyId:id});
@@ -108,13 +112,31 @@ export function registerBillingRoutes(app:FastifyInstance,db:Database){
  app.post<{Params:{id:string}}>("/v1/admin/billing/claims/:id/decision",async request=>{
   const actor=await requireActor(db,request,"staff");requireStaffRole(actor,["billing","admin","super_admin"]);
   const id=validId(request.params.id),input=parse(decisionInput,request.body);
-  if(input.decision==="confirm"&&input.reconciled!==true)throw new HttpProblem(422,"EXTERNAL_RECONCILIATION_REQUIRED");
+  if(input.decision==="confirm"&&!input.reconciliation)
+   throw new HttpProblem(422,"EXTERNAL_RECONCILIATION_REQUIRED");
+  if(input.decision==="reject"&&input.reconciliation)
+   throw new HttpProblem(422,"REJECT_CANNOT_RECONCILE");
   return db.transaction(async tx=>{
    const [claim]=await tx.select().from(schema.paymentClaims).where(eq(schema.paymentClaims.id,id)).for("update");
    if(!claim||claim.status!=="submitted")throw new HttpProblem(409,"CLAIM_NOT_PENDING");
    const [invoice]=await tx.select().from(schema.growthInvoices).where(eq(schema.growthInvoices.id,claim.invoiceId)).for("update");
    if(!invoice||invoice.status!=="submitted")throw new HttpProblem(409,"INVOICE_NOT_PENDING");
    const confirmed=input.decision==="confirm",now=new Date();
+   let reconciliationEvidence:{hash:string;date:string;amount:number}|null=null;
+   if(confirmed){
+    const evidence=input.reconciliation!;
+    if(evidence.matchedAmountAfn!==invoice.amountAfn)
+     throw new HttpProblem(409,"RECONCILIATION_AMOUNT_MISMATCH");
+    const statementTime=new Date(evidence.statementDate+"T00:00:00Z").getTime();
+    if(!Number.isFinite(statementTime)||statementTime>Date.now()+86_400_000||
+      statementTime<Date.now()-400*86_400_000)
+     throw new HttpProblem(422,"INVALID_RECONCILIATION_DATE");
+    const hash=referenceHash("statement:"+claim.method,evidence.statementReference);
+    const [used]=await tx.select({id:schema.paymentClaims.id}).from(schema.paymentClaims)
+     .where(eq(schema.paymentClaims.reconciliationReferenceHash,hash)).limit(1);
+    if(used)throw new HttpProblem(409,"RECONCILIATION_REFERENCE_REUSED");
+    reconciliationEvidence={hash,date:evidence.statementDate,amount:evidence.matchedAmountAfn};
+   }
    if(confirmed){
     const product=PRODUCTS[invoice.productCode as ProductCode];
     if(!product||product.amountAfn!==invoice.amountAfn)throw new HttpProblem(409,"INVOICE_PRICE_CHANGED");
@@ -144,12 +166,26 @@ export function registerBillingRoutes(app:FastifyInstance,db:Database){
     }
    }
    await tx.update(schema.paymentClaims).set({status:confirmed?"confirmed":"rejected",
-    reviewReason:input.reason,reviewedBy:actor.id,reviewedAt:now}).where(eq(schema.paymentClaims.id,id));
+    reviewReason:input.reason,reviewedBy:actor.id,reviewedAt:now,
+    ...(reconciliationEvidence?{reconciliationReferenceHash:reconciliationEvidence.hash,
+     reconciliationAmountAfn:reconciliationEvidence.amount,
+     reconciliationDate:reconciliationEvidence.date}:{})}).where(eq(schema.paymentClaims.id,id));
    await tx.update(schema.growthInvoices).set({status:confirmed?"confirmed":"rejected",
     reviewedBy:actor.id,reviewedAt:now}).where(eq(schema.growthInvoices.id,invoice.id));
    await tx.insert(schema.audit).values({actorType:"staff",actorId:actor.id,
     action:confirmed?"platform_fee_confirmed":"platform_fee_rejected",targetType:"platform_invoice",
     targetId:invoice.id,reason:input.reason});
+   const [payer]=await tx.select({locale:schema.users.locale}).from(schema.users)
+    .where(eq(schema.users.id,invoice.payerId)).limit(1);
+   const lang=payer?.locale||"fa";
+   const title=confirmed?(lang==="en"?"Your AmlakLink platform payment was verified.":
+    lang==="ps"?"ستاسو د املاک لینک د خدمت تادیه تایید شوه.":"پرداخت خدمات املاک لینک شما تأیید شد."):
+    (lang==="en"?"Your payment claim needs correction. Open Billing to review the reason.":
+     lang==="ps"?"ستاسو د تادیې ادعا رد شوه. په بلینګ کې دلیل وګورئ.":
+     "ادعای پرداخت شما رد شد. دلیل را در بخش پرداخت ببینید.");
+   await tx.insert(schema.notifications).values({userId:invoice.payerId,
+    kind:"billing",referenceId:invoice.id,dedupeKey:"billing:claim:"+claim.id,
+    title}).onConflictDoNothing();
    return {id:claim.id,invoiceId:invoice.id,status:confirmed?"confirmed":"rejected"};
   });
  });
