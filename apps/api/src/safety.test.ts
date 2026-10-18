@@ -74,7 +74,7 @@ test("safety: reporter isolation, staff roles, audited holds, appeals and expiry
   assert.equal((await call("POST","/v1/admin/safety/cases/"+caseId+"/transition",3,{
    expectedVersion:1,status:"investigating",reason:"Should fail on stale version"})).status,409);
   assert.equal((await call("POST","/v1/admin/safety/cases/"+caseId+"/transition",3,{
-   expectedVersion:2,status:"resolved",reason:"Not an allowed jump"})).status,409);
+   expectedVersion:2,status:"closed",reason:"Not an allowed jump"})).status,409);
   assert.equal((await call("POST","/v1/admin/safety/cases/"+caseId+"/transition",3,{
    expectedVersion:2,status:"investigating",reason:"Reviewed evidence and listing"})).status,200);
   assert.equal((await call("POST","/v1/admin/safety/cases/"+caseId+"/transition",3,{
