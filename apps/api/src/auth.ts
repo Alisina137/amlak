@@ -21,30 +21,53 @@ function parse<T>(schemaToUse:z.ZodType<T>,body:unknown):T {
  return result.data;
 }
 type Purpose="verify"|"recover";
+/** Serialize OTP issue, attempts and redemption by normalized identity + purpose.
+ * A second challenge must not silently invalidate a concurrently delivered code. */
 async function deliverChallenge(db:Database,notify:SendCode,user:{id:string;email:string},purpose:Purpose) {
- const [last]=await db.select({sentAt:schema.challenges.sentAt}).from(schema.challenges)
+ return db.transaction(async tx=>{
+  await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${user.email+"|"+purpose}))`);
+  const [last]=await tx.select({sentAt:schema.challenges.sentAt}).from(schema.challenges)
    .where(and(eq(schema.challenges.email,user.email),eq(schema.challenges.purpose,purpose)))
    .orderBy(desc(schema.challenges.sentAt)).limit(1);
- if(last && Date.now()-last.sentAt.getTime()<60_000)throw new HttpProblem(429,"CODE_COOLDOWN");
- const code=randomCode();
- await notify(user.email,purpose,code);
- await db.insert(schema.challenges).values({userId:user.id,email:user.email,purpose,secretHash:hashCode(user.email,purpose,code),expiresAt:new Date(Date.now()+10*60_000)});
+  // Do not leak whether an email belongs to a registered, rate-limited account.
+  if(last && Date.now()-last.sentAt.getTime()<60_000)return false;
+  const code=randomCode();
+  // Delivery and challenge insertion share an exclusive lock. A delivery error
+  // aborts the transaction, preventing a phantom valid code in the DB.
+  await notify(user.email,purpose,code);
+  await tx.insert(schema.challenges).values({userId:user.id,email:user.email,
+   purpose,secretHash:hashCode(user.email,purpose,code),
+   expiresAt:new Date(Date.now()+10*60_000)});
+  return true;
+ });
 }
 async function validateCode(db:Database,mail:string,purpose:Purpose,code:string){
- const [latest]=await db.select().from(schema.challenges).where(and(eq(schema.challenges.email,mail),eq(schema.challenges.purpose,purpose)))
+ return db.transaction(async tx=>{
+  await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${mail+"|"+purpose}))`);
+  const [latest]=await tx.select().from(schema.challenges)
+   .where(and(eq(schema.challenges.email,mail),eq(schema.challenges.purpose,purpose)))
    .orderBy(desc(schema.challenges.sentAt)).limit(1);
- if(!latest || latest.consumedAt || latest.expiresAt.getTime()<=Date.now() || latest.attempts>=5)
+  if(!latest || latest.consumedAt || latest.expiresAt.getTime()<=Date.now() || latest.attempts>=5)
    throw new HttpProblem(422,"CODE_INVALID_OR_EXPIRED");
- // Count failed guesses using DB-side atomic increment.
- if(!verifyCode(mail,purpose,code,latest.secretHash)){
-   await db.update(schema.challenges).set({attempts:sql`${schema.challenges.attempts}+1`}).where(and(eq(schema.challenges.id,latest.id),isNull(schema.challenges.consumedAt),lt(schema.challenges.attempts,5)));
+  const [user]=await tx.select().from(schema.users).where(eq(schema.users.email,mail)).limit(1);
+  if(!user || user.status!=="active" || latest.userId!==user.id)
    throw new HttpProblem(422,"CODE_INVALID_OR_EXPIRED");
- }
- const success=await db.update(schema.challenges).set({consumedAt:new Date()}).where(and(eq(schema.challenges.id,latest.id),isNull(schema.challenges.consumedAt),lt(schema.challenges.attempts,5))).returning({id:schema.challenges.id});
- if(!success.length)throw new HttpProblem(422,"CODE_ALREADY_USED");
- const [user]=await db.select().from(schema.users).where(eq(schema.users.email,mail)).limit(1);
- if(!user || user.status!=="active" || latest.userId!==user.id)throw new HttpProblem(422,"CODE_INVALID_OR_EXPIRED");
- return user;
+  if(!verifyCode(mail,purpose,code,latest.secretHash)){
+   await tx.update(schema.challenges).set({attempts:sql`${schema.challenges.attempts}+1`})
+    .where(and(eq(schema.challenges.id,latest.id),isNull(schema.challenges.consumedAt),
+     lt(schema.challenges.attempts,5)));
+   // This must commit to the DB even when we respond with 422.
+   return {user:null};
+  }
+  const [used]=await tx.update(schema.challenges).set({consumedAt:new Date()})
+   .where(and(eq(schema.challenges.id,latest.id),isNull(schema.challenges.consumedAt),
+    lt(schema.challenges.attempts,5)))
+   .returning({id:schema.challenges.id});
+  return {user:used?user:null};
+ }).then(result=>{
+  if(!result.user)throw new HttpProblem(422,"CODE_INVALID_OR_EXPIRED");
+  return result.user;
+ });
 }
 async function issue(db:Database,audience:"user"|"staff",id:string){
  const token=newToken();
