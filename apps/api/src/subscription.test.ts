@@ -6,7 +6,7 @@ import {buildApp} from "./app";
 import {PRODUCTS} from "./billing";
 import {hashToken,newToken} from "./security";
 import {DAY_MS,RENEWAL_GRACE_DAYS,describeSubscription,renewalStage,readSubscription,subscriptionNotice} from "./subscription-lifecycle";
-import {scanSubscriptionRenewals} from "./subscription-worker";
+import {scanSubscriptionRenewals,encodeRenewalCursor,decodeRenewalCursor} from "./subscription-worker";
 
 test("subscription lifecycle: paid quota ends exactly at expiry; grace is not a paid extension",()=>{
  const now=new Date("2030-02-10T12:00:00Z");
@@ -46,6 +46,15 @@ test("renewal thresholds and localized notices have no past-due blast",()=>{
  assert.equal(renewalStage(e(-2.5),now),"grace_ending");
  assert.equal(renewalStage(e(-3),now),"expired");
  for(const locale of ["fa","ps","en"])assert.ok(subscriptionNotice(locale,"expired","solo_agent").length<=160);
+});
+test("subscription pagination cursor preserves order and rejects malformed inputs",()=>{
+ const id=randomUUID(),expiresAt=new Date("2030-02-10T12:00:00.000Z");
+ const encoded=encodeRenewalCursor({id,expiresAt});
+ assert.deepEqual(decodeRenewalCursor(encoded),{id,expiresAt});
+ for(const invalid of ["", "!", "a".repeat(300),
+  Buffer.from("garbage").toString("base64url"),
+  Buffer.from("2030-02-10T12:00:00.000Z|not-uuid").toString("base64url")])
+  assert.throws(()=>decodeRenewalCursor(invalid),/INVALID_RENEWAL_CURSOR/);
 });
 test("renewal API and worker: private scope, owner-only notice, dedupe, confirmed renewal suppression",
  {skip:!process.env.DATABASE_URL},async()=>{
@@ -114,5 +123,12 @@ test("renewal API and worker: private scope, owner-only notice, dedupe, confirme
   const after=await scanSubscriptionRenewals(db,{execute:true,now:new Date(now.getTime()+DAY_MS),limit:100});
   assert.equal(after.notified,0);
   assert.ok(after.skippedRenewed>=1);
+  // The renewed grant remains current even after the old original expires,
+  // so the worker must never issue an old-plan expired warning.
+  const later=await scanSubscriptionRenewals(db,{
+   execute:true,now:new Date(expiry.getTime()+2*DAY_MS),limit:100});
+  assert.ok(later.skippedRenewed>=1);
+  const stale=await db.select().from(schema.notifications);
+  assert.equal(stale.filter(n=>n.dedupeKey==="subscription:"+grant.id+":grace_ending").length,0);
  }finally{await app.close();await sql.end();}
 });
