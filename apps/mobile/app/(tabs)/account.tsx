@@ -12,10 +12,13 @@ import {Action,Label,LanguagePicker,Page,ScreenHeading,SectionCard} from "../../
 type Membership={agencyId:string;name:string;agencyStatus:string;role:string;membershipStatus:string};
 export default function Account(){
  const {locale,provinceId}=usePreferences(),{user,token,signOut,refresh,loading}=useAuth();
- const [agencies,setAgencies]=useState<Membership[]>([]),[busy,setBusy]=useState(false),[accept,setAccept]=useState(false),[message,setMessage]=useState("");
+ const [agencySnapshot,setAgencySnapshot]=useState<{token:string|null;items:Membership[]}>({token:null,items:[]});
+ const agencies=agencySnapshot.token===token?agencySnapshot.items:[];
+ const setAgencies=(items:Membership[])=>setAgencySnapshot({token,items});
+ const [busy,setBusy]=useState(false),[accept,setAccept]=useState(false),[message,setMessage]=useState("");
  const copy=(key:Parameters<typeof authT>[1])=>authT(locale,key);
- useEffect(()=>{if(!token){setAgencies([]);return;}
- let active=true;void requestJson<{items:Membership[]}>("/v1/agencies/mine",{token}).then(r=>{if(active)setAgencies(r.items);}).catch(()=>{});
+ useEffect(()=>{if(!token){setAgencySnapshot({token:null,items:[]});return;}
+ let active=true;void requestJson<{items:Membership[]}>("/v1/agencies/mine",{token}).then(r=>{if(active)setAgencySnapshot({token,items:r.items});}).catch(()=>{});
  return()=>{active=false;};},[token]);
  async function activate(){
   if(!token || !accept)return;
