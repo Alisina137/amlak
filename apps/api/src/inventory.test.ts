@@ -91,9 +91,9 @@ test("real DB: advertiser draft→photo→review→publish→pause; edits never 
   assert.equal((await call("GET","/v1/properties/"+id)).status,404);
   assert.equal((await call("GET","/v1/admin/listings/review-queue",tokens[0])).status,401);
   const queue=await call("GET","/v1/admin/listings/review-queue",tokens[2]);
-  assert.equal(queue.status,200);const item=(queue.body.items as {id:string;revisionId:string}[]).find(x=>x.id===id);
+  assert.equal(queue.status,200);const item=(queue.body.items as {id:string;revisionId:string;data:{photoDetails:Record<string,{room:string}>}}[]).find(x=>x.id===id);
   assert.ok(item);
-  assert.equal((item as {data:{photoDetails:Record<string,{room:string}>}}).data.photoDetails[photoId].room,"living_room");
+  assert.equal(item.data.photoDetails[photoId].room,"living_room");
   const review=await call("POST","/v1/admin/listings/"+id+"/decision",tokens[2],{revisionId:item!.revisionId,decision:"approve",reason:"Images and property information inspected"});
   assert.equal(review.status,200);
   assert.equal((await call("POST","/v1/admin/listings/"+id+"/decision",tokens[2],{revisionId:item!.revisionId,decision:"approve",reason:"Second reviewer tries stale version"})).status,409);
