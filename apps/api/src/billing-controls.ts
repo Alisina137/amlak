@@ -117,9 +117,14 @@ export function registerBillingControlRoutes(app:FastifyInstance,db:Database){
     targetId:invoice.id,reason:input.reason});
    if(approved&&entry.kind==="credit"){
     // A credit memo is NOT an invoice payment or withdrawable balance yet.
+    const [payer]=await tx.select({locale:schema.users.locale}).from(schema.users)
+     .where(eq(schema.users.id,entry.payerId)).limit(1);
+    const title=payer?.locale==="ps"?
+      "ستاسو د املاک لینک خدمت غیرنغدي اعتبار یادښت تایید شو.":
+     payer?.locale==="fa"?"یادداشت اعتبار غیرنقدی خدمات املاک لینک شما ثبت شد.":
+      "Your AmlakLink platform noncash service credit memo was recorded.";
     await tx.insert(schema.notifications).values({userId:entry.payerId,kind:"billing",
-     referenceId:invoice.id,dedupeKey:"billing:credit:"+id,
-     title:"AmlakLink platform service credit memo recorded (not cash)."}).onConflictDoNothing();
+     referenceId:invoice.id,dedupeKey:"billing:credit:"+id,title}).onConflictDoNothing();
    }
    return {id,status,amountAfn:entry.amountAfn};
   });
@@ -144,9 +149,13 @@ export function registerBillingControlRoutes(app:FastifyInstance,db:Database){
    await tx.insert(schema.audit).values({actorType:"staff",actorId:actor.id,
     action:"platform_refund_external_settlement_verified",targetType:"platform_invoice",
     targetId:entry.invoiceId,reason:input.reason});
+   const [payer]=await tx.select({locale:schema.users.locale}).from(schema.users)
+    .where(eq(schema.users.id,entry.payerId)).limit(1);
+   const title=payer?.locale==="ps"?"ستاسو د املاک لینک خدمت پیسو بیرته ورکړه په بهرني حساب کې ثبت شوه.":
+    payer?.locale==="fa"?"بازپرداخت خدمات املاک لینک شما پس از تسویه بیرونی ثبت شد.":
+    "Your AmlakLink platform service refund was recorded after external settlement.";
    await tx.insert(schema.notifications).values({userId:entry.payerId,kind:"billing",
-    referenceId:entry.invoiceId,dedupeKey:"billing:refund:"+id,
-    title:"Your AmlakLink platform service refund has been recorded as externally settled."})
+    referenceId:entry.invoiceId,dedupeKey:"billing:refund:"+id,title})
     .onConflictDoNothing();
    return {id,status:"settled",amountAfn:entry.amountAfn};
   });
