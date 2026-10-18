@@ -69,7 +69,6 @@ export default function AgencyPerformance(){
   [t.average,report.aggregates.avgFirstResponseMinutes],
   [t.crmWon,report.aggregates.crmWon],[t.viewing,report.aggregates.viewings]
  ]:[];
- const roleFlags=report?.agents.some(a=>["owner","manager"].includes(a.role))||false;
  return <Page><ScreenHeading title={t.title} subtitle={t.subtitle}/>
   <SectionCard>
    <Label weight="bold">{t.period}</Label>
