@@ -6,7 +6,7 @@ import {buildApp} from "./app";
 import {PRODUCTS} from "./billing";
 import {hashToken,newToken} from "./security";
 import {DAY_MS,RENEWAL_GRACE_DAYS,describeSubscription,renewalStage,readSubscription,subscriptionNotice} from "./subscription-lifecycle";
-import {scanSubscriptionRenewals} from "./subscription-worker";
+import {scanSubscriptionRenewals,encodeRenewalCursor,decodeRenewalCursor} from "./subscription-worker";
 
 test("subscription lifecycle: paid quota ends exactly at expiry; grace is not a paid extension",()=>{
  const now=new Date("2030-02-10T12:00:00Z");
@@ -46,6 +46,15 @@ test("renewal thresholds and localized notices have no past-due blast",()=>{
  assert.equal(renewalStage(e(-2.5),now),"grace_ending");
  assert.equal(renewalStage(e(-3),now),"expired");
  for(const locale of ["fa","ps","en"])assert.ok(subscriptionNotice(locale,"expired","solo_agent").length<=160);
+});
+test("subscription pagination cursor preserves order and rejects malformed inputs",()=>{
+ const id=randomUUID(),expiresAt=new Date("2030-02-10T12:00:00.000Z");
+ const encoded=encodeRenewalCursor({id,expiresAt});
+ assert.deepEqual(decodeRenewalCursor(encoded),{id,expiresAt});
+ for(const invalid of ["", "!", "a".repeat(300),
+  Buffer.from("garbage").toString("base64url"),
+  Buffer.from("2030-02-10T12:00:00.000Z|not-uuid").toString("base64url")])
+  assert.throws(()=>decodeRenewalCursor(invalid),/INVALID_RENEWAL_CURSOR/);
 });
 test("renewal API and worker: private scope, owner-only notice, dedupe, confirmed renewal suppression",
  {skip:!process.env.DATABASE_URL},async()=>{
@@ -114,5 +123,70 @@ test("renewal API and worker: private scope, owner-only notice, dedupe, confirme
   const after=await scanSubscriptionRenewals(db,{execute:true,now:new Date(now.getTime()+DAY_MS),limit:100});
   assert.equal(after.notified,0);
   assert.ok(after.skippedRenewed>=1);
+  // The renewed grant remains current even after the old original expires,
+  // so the worker must never issue an old-plan expired warning.
+  const later=await scanSubscriptionRenewals(db,{
+   execute:true,now:new Date(expiry.getTime()+2*DAY_MS),limit:100});
+  assert.ok(later.skippedRenewed>=1);
+  const stale=await db.select().from(schema.notifications);
+  assert.equal(stale.filter(n=>n.dedupeKey==="subscription:"+grant.id+":grace_ending").length,0);
  }finally{await app.close();await sql.end();}
+});
+
+test("renewal worker paginates large queues without repeating the first page, and never nags reactivated subscribers",{
+ skip:!process.env.DATABASE_URL},async()=>{
+ const {db,sql}=connectDatabase();
+ const now=new Date(),tag=randomUUID().slice(0,8);
+ try{
+  const accounts=await db.insert(schema.users).values([
+   {email:"renewal-page1-"+tag+"@example.test",displayName:"Paging one",passwordHash:"test",emailVerifiedAt:now},
+   {email:"renewal-page2-"+tag+"@example.test",displayName:"Paging two",passwordHash:"test",emailVerifiedAt:now},
+   {email:"renewal-gap-"+tag+"@example.test",displayName:"Gap subscriber",passwordHash:"test",emailVerifiedAt:now}
+  ]).returning();
+  for(const [index,user] of accounts.slice(0,2).entries()){
+   const [invoice]=await db.insert(schema.growthInvoices).values({
+    payerId:user.id,requestId:randomUUID(),productCode:"solo_agent",amountAfn:PRODUCTS.solo_agent.amountAfn,
+    status:"confirmed"
+   }).returning();
+   await db.insert(schema.growthEntitlements).values({
+    invoiceId:invoice.id,userId:user.id,planCode:"solo_agent",listingLimit:15,seatLimit:1,
+    startsAt:new Date(now.getTime()-23*DAY_MS),
+    expiresAt:new Date(now.getTime()+(6.9-index*0.1)*DAY_MS)
+   });
+  }
+  const first=await scanSubscriptionRenewals(db,{execute:false,now,limit:1});
+  assert.equal(first.scanned,1);
+  assert.equal(first.hasMore,true);
+  assert.ok(first.nextCursor);
+  const firstCursor=decodeRenewalCursor(first.nextCursor!);
+  const second=await scanSubscriptionRenewals(db,{execute:false,now,limit:1,cursor:first.nextCursor!});
+  assert.equal(second.scanned,1);
+  assert.ok(second.nextCursor!==first.nextCursor||!second.hasMore);
+  const secondCursor=second.nextCursor?decodeRenewalCursor(second.nextCursor):null;
+  if(secondCursor)assert.ok(secondCursor.expiresAt<=firstCursor.expiresAt);
+
+  const [oldInvoice,newInvoice]=await db.insert(schema.growthInvoices).values([
+   {payerId:accounts[2].id,requestId:randomUUID(),productCode:"solo_agent",
+    amountAfn:PRODUCTS.solo_agent.amountAfn,status:"confirmed"},
+   {payerId:accounts[2].id,requestId:randomUUID(),productCode:"solo_agent",
+    amountAfn:PRODUCTS.solo_agent.amountAfn,status:"confirmed"}
+  ]).returning();
+  const oldEnd=new Date(now.getTime()-2*DAY_MS);
+  const [oldGrant]=await db.insert(schema.growthEntitlements).values({
+   invoiceId:oldInvoice.id,userId:accounts[2].id,planCode:"solo_agent",
+   listingLimit:15,seatLimit:1,startsAt:new Date(now.getTime()-32*DAY_MS),expiresAt:oldEnd
+  }).returning();
+  // Staff verified a paid renewal after a one-day gap.
+  await db.insert(schema.growthEntitlements).values({
+   invoiceId:newInvoice.id,userId:accounts[2].id,planCode:"solo_agent",
+   listingLimit:15,seatLimit:1,startsAt:new Date(now.getTime()-DAY_MS),
+   expiresAt:new Date(now.getTime()+29*DAY_MS)
+  });
+  assert.equal((await readSubscription(db,{userId:accounts[2].id},now)).status,"active");
+  const scanned=await scanSubscriptionRenewals(db,{execute:true,now,limit:100});
+  assert.ok(scanned.skippedRenewed>=1);
+  const notifications=await db.select().from(schema.notifications);
+  assert.equal(notifications.filter(n=>n.dedupeKey==="subscription:"+oldGrant.id+":grace_started").length,0);
+  assert.equal(notifications.filter(n=>n.dedupeKey==="subscription:"+oldGrant.id+":grace_ending").length,0);
+ }finally{await sql.end();}
 });

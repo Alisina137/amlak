@@ -31,6 +31,7 @@
     "qa:phase8": "node --test scripts/test-phase8-release-gate.mjs && node scripts/phase8-release-gate.mjs --ci",
     "qa:ui": "node --test scripts/test-final-rtl-ui.mjs",
     "qa:network": "node --test scripts/test-final-network.mjs",
+    "qa:renewals": "node --test scripts/test-final-subscriptions.mjs",
     "qa:release": "node scripts/phase8-release-gate.mjs --release"
   }
 }
