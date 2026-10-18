@@ -4,7 +4,10 @@ type Context={params:Promise<{path:string[]}>};
 async function run(request:Request,context:Context,method:"GET"|"POST"){
  const {path}=await context.params;
  const name=path.join("/");
- const allowed=method==="GET"?name==="claims":path.length===3&&path[0]==="claims"&&path[2]==="decision"&&/^[0-9a-f-]{36}$/.test(path[1]);
+ const allowed=method==="GET"?["claims","history","adjustments"].includes(name):
+   (path.length===3&&/^[0-9a-f-]{36}$/.test(path[1])&&
+    (path[0]==="claims"&&path[2]==="decision"||
+     path[0]==="adjustments"&&["decision","settle"].includes(path[2])));
  if(!allowed)return NextResponse.json({error:"INVALID_PATH"},{status:422});
  if(method==="POST"&&!safeOrigin(request))return NextResponse.json({error:"FORBIDDEN"},{status:403});
  const token=await staffToken();
