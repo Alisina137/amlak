@@ -5,6 +5,7 @@
   "main": "expo-router/entry",
   "scripts": {
     "start": "expo start --clear --go",
+    "start:dev-client": "expo start --dev-client --tunnel --clear",
     "android": "expo start --android",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
