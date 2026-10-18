@@ -1,4 +1,4 @@
-import {and,eq} from "drizzle-orm";
+import {and,eq,sql} from "drizzle-orm";
 import type {FastifyInstance} from "fastify";
 import {type Database,schema} from "@amlaklink/database";
 import {listingDraftSchema} from "@amlaklink/contracts";
@@ -6,20 +6,46 @@ import {HttpProblem,requireActor,requireStaffRole} from "./access";
 import {getListing,getRevision,requireEditor,validId,canShowPublic} from "./listings";
 import {storePhoto,retrievePhoto,removePhoto} from "./media-storage";
 export function registerPhotoRoutes(app:FastifyInstance,db:Database){
- app.post<{Params:{id:string}}>("/v1/listings/:id/photos",async request=>{
+ app.post<{Params:{id:string}}>("/v1/listings/:id/photos",
+  {config:{rateLimit:{max:18,timeWindow:"15 minutes"}}},async request=>{
   const l=await getListing(db,request.params.id),actor=await requireEditor(db,request,l);
   if(["archived","sold","rented"].includes(l.status))throw new HttpProblem(409,"LISTING_IS_CLOSED");
-  const existing=await db.select({id:schema.photos.id}).from(schema.photos).where(eq(schema.photos.listingId,l.id));
-  if(existing.length>=20)throw new HttpProblem(409,"PHOTO_LIMIT_REACHED");
   const file=await request.file({limits:{fileSize:6_000_000,files:1}});
   if(!file)throw new HttpProblem(422,"IMAGE_REQUIRED");
-  if(!["image/jpeg","image/png","image/webp","image/heic","image/heif","image/avif"].includes(file.mimetype))throw new HttpProblem(422,"UNSUPPORTED_IMAGE_TYPE");
+  if(!["image/jpeg","image/png","image/webp","image/heic","image/heif","image/avif"].includes(file.mimetype))
+   throw new HttpProblem(422,"UNSUPPORTED_IMAGE_TYPE");
   let bytes:Buffer;
   try{bytes=await file.toBuffer();}catch{throw new HttpProblem(413,"IMAGE_SIZE_INVALID");}
-  const result=await storePhoto(l.id,bytes);
-  const [photo]=await db.insert(schema.photos).values({listingId:l.id,uploaderId:actor.id,storageKey:result.key,
-   storageMode:result.mode,bytes:result.bytes,width:result.width,height:result.height,fingerprint:result.fingerprint}).returning();
-  return {id:photo.id,bytes:photo.bytes,width:photo.width,height:photo.height,url:"/v1/photos/"+photo.id};
+  // A mobile upload may succeed on the server while the reply is lost. A retry
+  // of the exact same normalized image must reuse its original photo ID.
+  const stored=await storePhoto(l.id,bytes);
+  try{
+   const result=await db.transaction(async tx=>{
+    // Lock by listing, not just hash: capacity and duplicate detection are atomic.
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${l.id}::text))`);
+    const [same]=await tx.select({id:schema.photos.id,bytes:schema.photos.bytes,
+     width:schema.photos.width,height:schema.photos.height})
+     .from(schema.photos).where(and(eq(schema.photos.listingId,l.id),
+      eq(schema.photos.uploaderId,actor.id),
+      eq(schema.photos.fingerprint,stored.fingerprint))).limit(1);
+    if(same)return {...same,reused:true};
+    const [count]=await tx.select({n:sql<number>`count(*)::integer`})
+     .from(schema.photos).where(eq(schema.photos.listingId,l.id));
+    if(Number(count?.n||0)>=20)throw new HttpProblem(409,"PHOTO_LIMIT_REACHED");
+    const [photo]=await tx.insert(schema.photos).values({listingId:l.id,uploaderId:actor.id,
+     storageKey:stored.key,storageMode:stored.mode,bytes:stored.bytes,
+     width:stored.width,height:stored.height,fingerprint:stored.fingerprint})
+     .returning({id:schema.photos.id,bytes:schema.photos.bytes,
+      width:schema.photos.width,height:schema.photos.height});
+    return {...photo,reused:false};
+   });
+   if(result.reused)await removePhoto(stored.key,stored.mode).catch(()=>{});
+   return {...result,url:"/v1/photos/"+result.id};
+  }catch(error){
+   // A failed DB transaction should not leave freshly stored orphan media.
+   await removePhoto(stored.key,stored.mode).catch(()=>{});
+   throw error;
+  }
  });
  app.delete<{Params:{id:string;photoId:string}}>("/v1/listings/:id/photos/:photoId",async request=>{
   const l=await getListing(db,request.params.id);

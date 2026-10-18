@@ -18,18 +18,36 @@ export function queryString(filters:SearchFilters,extra:Record<string,string>={}
 export async function fetchDiscovery(filters:SearchFilters,cursor?:string){
  return requestJson<DiscoveryResult>("/v1/discovery?"+queryString(filters,cursor?{cursor}:{}));
 }
+// Public discovery only. Offline results are stale previews, not availability guarantees.
+const CACHE_PREFIX="amlak:search:v5:",CACHE_MAX_AGE_MS=48*3600_000,CACHE_LIMIT=24;
+export function parseCachedDiscovery(raw:string|null,now=Date.now()):{timestamp:number;items:ListingDTO[]}|null{
+ if(!raw)return null;
+ try{
+  const value=JSON.parse(raw) as {timestamp:unknown;items:unknown};
+  if(!value||typeof value!=="object"||typeof value.timestamp!=="number"||
+   !Number.isFinite(value.timestamp)||value.timestamp>now||
+   now-value.timestamp>CACHE_MAX_AGE_MS||!Array.isArray(value.items))return null;
+  const items=value.items as ListingDTO[];
+  if(items.length>50||items.some(x=>!x||typeof x.id!=="string"||!x.data))return null;
+  return {timestamp:value.timestamp,items};
+ }catch{return null;}
+}
 export async function cachedDiscovery(filters:SearchFilters){
- const key="amlak:search:v4:"+queryString(filters);
+ const key=CACHE_PREFIX+queryString(filters);
  try{
   const online=await fetchDiscovery(filters);
-  await AsyncStorage.setItem(key,JSON.stringify({timestamp:Date.now(),items:online.items})).catch(()=>{});
+  try{
+   // Bounded on-device public cache: avoid unbounded query variants.
+   const keys=(await AsyncStorage.getAllKeys()).filter(x=>x.startsWith(CACHE_PREFIX));
+   if(!keys.includes(key)&&keys.length>=CACHE_LIMIT)
+    await AsyncStorage.multiRemove(keys.slice(0,keys.length-CACHE_LIMIT+1));
+   await AsyncStorage.setItem(key,JSON.stringify({timestamp:Date.now(),items:online.items.slice(0,50)}));
+  }catch{} // Cache storage issues never turn a successful request into an error.
   return {...online,fromCache:false,cacheDate:null as number|null};
  }catch(error){
-  const raw=await AsyncStorage.getItem(key).catch(()=>null);
-  if(!raw)throw error;
-  const data=JSON.parse(raw) as {timestamp:number;items:ListingDTO[]};
-  if(!Array.isArray(data.items)||Date.now()-data.timestamp>7*86400_000)throw error;
-  return {items:data.items,nextCursor:null,appliedFilters:filters,fromCache:true,cacheDate:data.timestamp};
+  const cached=parseCachedDiscovery(await AsyncStorage.getItem(key).catch(()=>null));
+  if(!cached)throw error;
+  return {items:cached.items,nextCursor:null,appliedFilters:filters,fromCache:true,cacheDate:cached.timestamp};
  }
 }
 export type PropertyMapPoint={id:string;latitude:number;longitude:number;title:string;transactionType:string;price:ListingDTO["data"]["price"]};

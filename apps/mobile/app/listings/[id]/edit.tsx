@@ -6,7 +6,7 @@ import {Image,Pressable,ScrollView,View,ActivityIndicator} from "react-native";
 import {colors} from "@amlaklink/design-tokens";
 import {findProvince,searchProvinces} from "@amlaklink/catalog";
 import {listingDraftSchema,photoInfoFor,type ListingDraft,type PhotoDetail} from "@amlaklink/contracts";
-import {useAuth,requestJson} from "../../../src/auth";
+import {useAuth,requestJson,ApiError} from "../../../src/auth";
 import {usePreferences} from "../../../src/context";
 import {PropertyLocationPicker} from "../../../src/location-picker";
 import {lt,priceSummary} from "../../../src/listing-ui";
@@ -20,22 +20,38 @@ const steps={
  ps:["د ملکیت ډول","معامله","ځای","ځانګړنې","بیه","انځورونه","اړیکه","بیاکتنه"]
 };
 const labels={
- en:{title:"Title",description:"Description",province:"Province",city:"City",district:"District",neighborhood:"Neighborhood",address:"Street address (kept private)",area:"Area (m²)",bedrooms:"Bedrooms",bathrooms:"Bathrooms",floor:"Floor",floors:"Total floors",frontage:"Frontage (m)",currency:"Currency",salePrice:"Asking price",rent:"Monthly rent",deposit:"Refundable deposit / advance (0 allowed)",principal:"Refundable gharawi principal",duration:"Duration in months",refund:"Refund terms",maint:"Monthly maintenance",phone:"Telephone number",whatsapp:"WhatsApp number",enablePhone:"Allow telephone calls",enableWhatsapp:"Allow WhatsApp",precise:"Share exact coordinates publicly",photo:"Choose and upload a property photo",preview:"Preview / submission checks",save:"Save draft",next:"Save & next",back:"Previous",submit:"Submit for moderation",rejected:"This revision was rejected; edit and resubmit.",review:"Submitted for staff review. The approved public version stays unchanged.",pending:"Under review",approval:"Approved version visible publicly",required:"Complete required fields before submission",offline:"Offline draft saved on this device; server not yet updated.",conflict:"Draft changed elsewhere; reload before saving.",withdraw:"Withdraw submitted revision"},
- fa:{title:"عنوان",description:"توضیحات",province:"ولایت",city:"شهر",district:"ناحیه / ولسوالی",neighborhood:"محله / گذر",address:"آدرس دقیق (خصوصی)",area:"مساحت (متر مربع)",bedrooms:"اتاق خواب",bathrooms:"تشناب",floor:"طبقه",floors:"تعداد طبقات",frontage:"بر زمین (متر)",currency:"پول",salePrice:"قیمت فروش",rent:"کرایه ماهانه",deposit:"پول پیش / تضمین (صفر نیز مجاز)",principal:"اصل پول قابل بازپرداخت گروی",duration:"مدت به ماه",refund:"شرایط بازپرداخت گروی",maint:"مصرف ماهانه خدمات",phone:"شماره تماس",whatsapp:"شماره واتساپ",enablePhone:"تماس تلفنی فعال",enableWhatsapp:"واتساپ فعال",precise:"نمایش مختصات دقیق برای همه",photo:"انتخاب و بارگذاری عکس ملک",preview:"بررسی معلومات پیش از ارسال",save:"ذخیره پیش‌نویس",next:"ذخیره و ادامه",back:"قبلی",submit:"ارسال برای بررسی",rejected:"این نسخه رد شده است؛ اصلاح و دوباره ارسال کنید.",review:"برای بررسی مسئول ارسال شد. نسخهٔ نشرشده تغییر نمی‌کند.",pending:"در حال بررسی",approval:"نسخهٔ تأییدشده برای عموم قابل مشاهده است",required:"تمام معلومات ضروری را تکمیل کنید",offline:"نسخهٔ محلی ذخیره شد؛ هنوز به سرور نرسیده است.",conflict:"ملک در جای دیگری تغییر یافته؛ دوباره دریافت کنید.",withdraw:"پس گرفتن نسخهٔ ارسال‌شده"},
- ps:{title:"سرلیک",description:"تشریح",province:"ولایت",city:"ښار",district:"ولسوالي / ناحیه",neighborhood:"سیمه",address:"د کوڅې پته (خصوصي)",area:"مساحت (متر مربع)",bedrooms:"خوب خونې",bathrooms:"تشنابونه",floor:"پوړ",floors:"ټول پوړونه",frontage:"مخ (متر)",currency:"پیسې",salePrice:"د پلور بیه",rent:"میاشتنۍ کرایه",deposit:"بېرته ورکړه / مخکې ورکړه (صفر هم شونی)",principal:"د ګروۍ بېرته ورکړه",duration:"موده په میاشتو",refund:"د بېرته ورکولو شرطونه",maint:"میاشتنۍ خدمت فیس",phone:"تلیفون شمېره",whatsapp:"واټساپ شمېره",enablePhone:"تلیفون فعال",enableWhatsapp:"واټساپ فعال",precise:"دقیق ځای عام ښکاره کول",photo:"د ملک انځور واچوئ",preview:"د سپارلو معلومات وګورئ",save:"مسوده خوندي کړه",next:"خوندي او بل ګام",back:"مخکې",submit:"کتنې ته ولېږئ",rejected:"دا نسخه رد شوې. سمون او بیا یې وسپارئ.",review:"کتنې ته ولېږل شو. مخکینی خپور شوی معلومات پاتې دي.",pending:"د کتنې لاندې",approval:"منل شوی معلومات خلکو ته ښکاري",required:"ټول ضروري معلومات ډک کړئ",offline:"مسوده په دې وسیله خوندي شوه، سرور ته نه ده تللې.",conflict:"مسوده بل ځای بدله شوې، بیا یې راواخلئ.",withdraw:"سپارل شوې نسخه بېرته واخلئ"}
+ en:{title:"Title",description:"Description",province:"Province",city:"City",district:"District",neighborhood:"Neighborhood",address:"Street address (kept private)",area:"Area (m²)",bedrooms:"Bedrooms",bathrooms:"Bathrooms",floor:"Floor",floors:"Total floors",frontage:"Frontage (m)",currency:"Currency",salePrice:"Asking price",rent:"Monthly rent",deposit:"Refundable deposit / advance (0 allowed)",principal:"Refundable gharawi principal",duration:"Duration in months",refund:"Refund terms",maint:"Monthly maintenance",phone:"Telephone number",whatsapp:"WhatsApp number",enablePhone:"Allow telephone calls",enableWhatsapp:"Allow WhatsApp",precise:"Share exact coordinates publicly",photo:"Choose and upload a property photo",preview:"Preview / submission checks",save:"Save draft",next:"Save & next",back:"Previous",submit:"Submit for moderation",rejected:"This revision was rejected; edit and resubmit.",review:"Submitted for staff review. The approved public version stays unchanged.",pending:"Under review",approval:"Approved version visible publicly",required:"Complete required fields before submission",offline:"Offline draft saved on this device; server not yet updated.",conflict:"Draft changed elsewhere; reload before saving.",restoreLocal:"Restore my offline edits (overwrites newer draft after saving)",keepServer:"Keep server draft",withdraw:"Withdraw submitted revision"},
+ fa:{title:"عنوان",description:"توضیحات",province:"ولایت",city:"شهر",district:"ناحیه / ولسوالی",neighborhood:"محله / گذر",address:"آدرس دقیق (خصوصی)",area:"مساحت (متر مربع)",bedrooms:"اتاق خواب",bathrooms:"تشناب",floor:"طبقه",floors:"تعداد طبقات",frontage:"بر زمین (متر)",currency:"پول",salePrice:"قیمت فروش",rent:"کرایه ماهانه",deposit:"پول پیش / تضمین (صفر نیز مجاز)",principal:"اصل پول قابل بازپرداخت گروی",duration:"مدت به ماه",refund:"شرایط بازپرداخت گروی",maint:"مصرف ماهانه خدمات",phone:"شماره تماس",whatsapp:"شماره واتساپ",enablePhone:"تماس تلفنی فعال",enableWhatsapp:"واتساپ فعال",precise:"نمایش مختصات دقیق برای همه",photo:"انتخاب و بارگذاری عکس ملک",preview:"بررسی معلومات پیش از ارسال",save:"ذخیره پیش‌نویس",next:"ذخیره و ادامه",back:"قبلی",submit:"ارسال برای بررسی",rejected:"این نسخه رد شده است؛ اصلاح و دوباره ارسال کنید.",review:"برای بررسی مسئول ارسال شد. نسخهٔ نشرشده تغییر نمی‌کند.",pending:"در حال بررسی",approval:"نسخهٔ تأییدشده برای عموم قابل مشاهده است",required:"تمام معلومات ضروری را تکمیل کنید",offline:"نسخهٔ محلی ذخیره شد؛ هنوز به سرور نرسیده است.",conflict:"ملک در جای دیگری تغییر یافته؛ دوباره دریافت کنید.",restoreLocal:"بازیابی اصلاحات محلی (پس از ذخیره نسخهٔ جدید را جایگزین می‌کند)",keepServer:"حفظ نسخهٔ سرور",withdraw:"پس گرفتن نسخهٔ ارسال‌شده"},
+ ps:{title:"سرلیک",description:"تشریح",province:"ولایت",city:"ښار",district:"ولسوالي / ناحیه",neighborhood:"سیمه",address:"د کوڅې پته (خصوصي)",area:"مساحت (متر مربع)",bedrooms:"خوب خونې",bathrooms:"تشنابونه",floor:"پوړ",floors:"ټول پوړونه",frontage:"مخ (متر)",currency:"پیسې",salePrice:"د پلور بیه",rent:"میاشتنۍ کرایه",deposit:"بېرته ورکړه / مخکې ورکړه (صفر هم شونی)",principal:"د ګروۍ بېرته ورکړه",duration:"موده په میاشتو",refund:"د بېرته ورکولو شرطونه",maint:"میاشتنۍ خدمت فیس",phone:"تلیفون شمېره",whatsapp:"واټساپ شمېره",enablePhone:"تلیفون فعال",enableWhatsapp:"واټساپ فعال",precise:"دقیق ځای عام ښکاره کول",photo:"د ملک انځور واچوئ",preview:"د سپارلو معلومات وګورئ",save:"مسوده خوندي کړه",next:"خوندي او بل ګام",back:"مخکې",submit:"کتنې ته ولېږئ",rejected:"دا نسخه رد شوې. سمون او بیا یې وسپارئ.",review:"کتنې ته ولېږل شو. مخکینی خپور شوی معلومات پاتې دي.",pending:"د کتنې لاندې",approval:"منل شوی معلومات خلکو ته ښکاري",required:"ټول ضروري معلومات ډک کړئ",offline:"مسوده په دې وسیله خوندي شوه، سرور ته نه ده تللې.",conflict:"مسوده بل ځای بدله شوې، بیا یې راواخلئ.",restoreLocal:"زما محلي بدلونونه بېرته راوګرځوئ (له خوندي کولو وروسته نوې مسوده بدلوي)",keepServer:"د سرور مسوده وساتئ",withdraw:"سپارل شوې نسخه بېرته واخلئ"}
 } as const;
 type Key=keyof typeof labels.en;
 export default function ListingEditor(){
- const {id}=useLocalSearchParams<{id:string}>(),{locale}=usePreferences(),{token}=useAuth();
+ const {id}=useLocalSearchParams<{id:string}>(),{locale}=usePreferences(),{token,user}=useAuth();
  const [pendingImage,setPendingImage]=useState<{uri:string;mime:string;bytes?:number}|null>(null);
+ const [pendingConflict,setPendingConflict]=useState<ListingDraft|null>(null);
  const [roomEditor,setRoomEditor]=useState<string|null>(null);
  const [data,setData]=useState<ListingDraft>(listingDraftSchema.parse({})),[status,setStatus]=useState("draft"),[revisionStatus,setRevisionStatus]=useState("draft"),[revisionReason,setRevisionReason]=useState("");
  const [version,setVersion]=useState(1),[step,setStep]=useState(0),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),
  [error,setError]=useState(""),[notice,setNotice]=useState(""),[provinceQuery,setProvinceQuery]=useState("");
  const latest=useRef(data),versionRef=useRef(1),saveChain=useRef<Promise<void>>(Promise.resolve()),loaded=useRef(false);
+ const lastHydrated=useRef<ListingDraft|null>(null);
  const tx=(key:Key)=>labels[locale][key],media=mediaCopy[locale];
- const localKey="amlak:draft:"+id;
- const mutable=revisionStatus!=="submitted" && !["sold","rented","archived"].includes(status);
+ // Private contact details and drafts must never be shared between accounts on one phone.
+ const localKey="amlak:draft:v5:"+user?.id+":"+id;
+ const scope=token+":"+user?.id+":"+id;
+ const activeScope=useRef(scope),cacheChain=useRef<Promise<void>>(Promise.resolve()),offlineUntil=useRef(0);
+ activeScope.current=scope;
+ const cache=async(snapshot:ListingDraft,serverVersion:number,unsynced:boolean)=>{
+  const key=localKey,ownerScope=scope;
+  cacheChain.current=cacheChain.current.catch(()=>{}).then(async()=>{
+   if(activeScope.current!==ownerScope)return;
+   await AsyncStorage.setItem(key,JSON.stringify({version:serverVersion,data:snapshot,unsynced,
+    status,revisionStatus,revisionReason})).catch(()=>{});
+  });
+  await cacheChain.current;
+ };
+ const mutableBase=revisionStatus!=="submitted" && !["sold","rented","archived"].includes(status);
+ const mutable=mutableBase&&!pendingConflict;
  const change=(value:ListingDraft)=>{latest.current=value;setData(value);};
  const setPhotoDetail=(photoId:string,updates:Partial<PhotoDetail>)=>{
   const current=photoInfoFor(latest.current,photoId);
@@ -50,48 +66,116 @@ export default function ListingEditor(){
   change({...latest.current,[section]:{...latest.current[section],[key]:value}});
  };
  async function refresh(){
-  if(!token||!id)return;
-  setLoading(true);setError("");
+  if(!token||!id||!user?.id)return;
+  const requestScope=scope;
+  setLoading(true);setError("");setPendingConflict(null);
   try{
    const response=await getOwned(id,token);
+   if(activeScope.current!==requestScope)return;
    const saved=await AsyncStorage.getItem(localKey).catch(()=>null);
    let doc=response.data;
    if(saved){
-    try{const cached=JSON.parse(saved) as {version:number;data:unknown;unsynced:boolean};
+    try{
+     const cached=JSON.parse(saved) as {version:number;data:unknown;unsynced:boolean};
      const result=listingDraftSchema.safeParse(cached.data);
-     if(result.success && cached.version===response.version && cached.unsynced && response.revisionStatus!=="submitted")doc=result.data;
+     if(result.success&&cached.unsynced&&response.revisionStatus!=="submitted"&&
+      !["sold","rented","archived"].includes(response.status)){
+      if(cached.version===response.version){
+       doc=result.data;
+       setNotice(tx("offline")); // Cached edits are NOT confirmed saved on the server.
+      }else if(JSON.stringify(result.data)!==JSON.stringify(response.data))
+       setPendingConflict(result.data); // Never silently discard or overwrite divergent remote edits.
+     }
     }catch{}
    }
+   if(activeScope.current!==requestScope)return;
+   lastHydrated.current=doc;
    change(doc);versionRef.current=response.version;setVersion(response.version);
-   setStatus(response.status);setRevisionStatus(response.revisionStatus||"approved");setRevisionReason(response.revisionReason||"");loaded.current=true;
-  }catch{setError(tx("offline"));}
-  finally{setLoading(false);}
+   setStatus(response.status);setRevisionStatus(response.revisionStatus||"approved");
+   setRevisionReason(response.revisionReason||"");loaded.current=true;
+   offlineUntil.current=0;
+  }catch(err){
+   if(activeScope.current!==requestScope)return;
+   // Only a network/timeout failure is eligible for offline edits. Authorization
+   // or stale-version errors must not resurrect an inaccessible property.
+   const network=err instanceof ApiError&&(err.status===0||[502,503,504].includes(err.status));
+   const saved=network?await AsyncStorage.getItem(localKey).catch(()=>null):null;
+   if(saved&&activeScope.current===requestScope){
+    try{
+     const cached=JSON.parse(saved) as {version:number;data:unknown;unsynced:boolean;
+      status?:string;revisionStatus?:string;revisionReason?:string};
+     const parsed=listingDraftSchema.safeParse(cached.data);
+     if(parsed.success&&Number.isInteger(cached.version)&&cached.version>0&&
+      cached.revisionStatus!=="submitted"&&!["archived","sold","rented"].includes(cached.status||"")){
+      lastHydrated.current=parsed.data;
+      change(parsed.data);versionRef.current=cached.version;setVersion(cached.version);
+      setStatus(cached.status||"draft");setRevisionStatus(cached.revisionStatus||"draft");
+      setRevisionReason(cached.revisionReason||"");loaded.current=true;
+      offlineUntil.current=Date.now()+10000;setNotice(tx("offline"));
+      return;
+     }
+    }catch{}
+   }
+   setError(network?tx("offline"):(err as Error).message);
+  }finally{if(activeScope.current===requestScope)setLoading(false);}
  }
- useEffect(()=>{void refresh();},[id,token]);
- async function save(){
-  if(!token||!id||!loaded.current||!mutable)return;
-  const snapshot=latest.current;
+ useEffect(()=>{
+  loaded.current=false;lastHydrated.current=null;saveChain.current=Promise.resolve();cacheChain.current=Promise.resolve();
+  offlineUntil.current=0;
+  setLoading(true);setNotice("");setError("");setPendingImage(null);setPendingConflict(null);
+  void refresh();
+ },[id,token,user?.id]);
+ async function save(manual=false){
+  if(!token||!id||!user?.id||!loaded.current||!mutable)return;
+  if(!manual&&Date.now()<offlineUntil.current)return;
+  const snapshot=latest.current,ownerScope=scope;
   saveChain.current=saveChain.current.catch(()=>{}).then(async()=>{
-    const r=await requestJson<{version:number;status:string}>("/v1/listings/"+id+"/draft",{method:"PUT",token,body:{expectedVersion:versionRef.current,data:snapshot}});
+   if(activeScope.current!==ownerScope) return;
+   try{
+    const r=await requestJson<{version:number;status:string}>("/v1/listings/"+id+"/draft",
+     {method:"PUT",token,body:{expectedVersion:versionRef.current,data:snapshot}});
+    if(activeScope.current!==ownerScope)return;
     versionRef.current=r.version;setVersion(r.version);setStatus(r.status);
-    await AsyncStorage.setItem(localKey,JSON.stringify({version:r.version,data:snapshot,unsynced:false})).catch(()=>{});
+    offlineUntil.current=0;
+    const changed=latest.current!==snapshot;
+    await cache(changed?latest.current:snapshot,r.version,changed);
+    if(!changed){lastHydrated.current=snapshot;setNotice("");}
+   }catch(err){
+    if(activeScope.current!==ownerScope)return;
+    if(err instanceof ApiError&&err.status===0){
+     offlineUntil.current=Date.now()+10000;
+     await cache(latest.current,versionRef.current,true);
+     setNotice(tx("offline"));
+    }else if(err instanceof ApiError&&err.status===409){
+     await cache(latest.current,versionRef.current,true);
+     setError(tx("conflict"));
+    }
+    throw err;
+   }
   });
   return saveChain.current;
  }
  useEffect(()=>{
-  if(!loaded.current||!mutable)return;
-  void AsyncStorage.setItem(localKey,JSON.stringify({version:versionRef.current,data,unsynced:true})).catch(()=>{});
-  const timer=setTimeout(()=>{void save().catch(()=>setNotice(tx("offline")));},1800);
+  if(!loaded.current||!mutable||!token||!user?.id||lastHydrated.current===data)return;
+  void cache(data,versionRef.current,true);
+  const timer=setTimeout(()=>{
+   if(activeScope.current===scope)void save(false).catch(()=>{});
+  },1800);
   return()=>clearTimeout(timer);
- },[data,id,token,mutable]);
+ },[data,id,token,user?.id,mutable]);
  async function next(){
   if(busy)return;setBusy(true);setError("");setNotice("");
-  try{await save();setStep(s=>Math.min(s+1,7));}catch{setError(tx("conflict"));}finally{setBusy(false);}
+  try{await save(true);setStep(s=>Math.min(s+1,7));}
+  catch(err){
+   if(err instanceof ApiError&&err.status===0){
+    setStep(s=>Math.min(s+1,7));setNotice(tx("offline"));
+   }else setError(tx("conflict"));
+  }finally{setBusy(false);}
  }
  async function submit(){
   if(busy||!token)return;setBusy(true);setError("");setNotice("");
   try{
-   await save();
+   await save(true);
    await requestJson("/v1/listings/"+id+"/submit",{method:"POST",token,body:{expectedVersion:versionRef.current}});
    setRevisionStatus("submitted");setStatus(s=>s==="published"?"published":"pending_review");setNotice(tx("review"));
    await AsyncStorage.removeItem(localKey).catch(()=>{});
@@ -118,9 +202,12 @@ export default function ListingEditor(){
   setBusy(true);setError("");setNotice("");
   try{
    const response=await uploadPhoto(id,token,asset.uri,asset.mime);
-   change({...latest.current,photoIds:[...latest.current.photoIds,response.id],
-    photoDetails:{...latest.current.photoDetails,[response.id]:{room:"other",caption:""}}});
-   await save();setNotice(uiText(locale,"editorUploadSuccess"));
+   change({...latest.current,
+    photoIds:latest.current.photoIds.includes(response.id)?
+     latest.current.photoIds:[...latest.current.photoIds,response.id],
+    photoDetails:{...latest.current.photoDetails,
+     [response.id]:latest.current.photoDetails[response.id]||{room:"other",caption:""}}});
+   await save(true);setNotice(uiText(locale,"editorUploadSuccess"));
    setPendingImage(null);
   }catch(err){
    setPendingImage(asset);setError((err as Error).message);
@@ -260,12 +347,28 @@ export default function ListingEditor(){
   {revisionStatus==="rejected"?<SectionCard><Label>{tx("rejected")}</Label><Label muted>{revisionReason}</Label></SectionCard>:null}
   {status==="published"&&revisionStatus!=="submitted"?<SectionCard><Label style={{color:colors.success}}>{tx("approval")}</Label></SectionCard>:null}
   {mutable?form():null}
-  {error?<SectionCard><Label style={{color:colors.error}}>{error}</Label></SectionCard>:null}
+  {pendingConflict?<SectionCard>
+   <Label style={{color:colors.warning}}>{tx("conflict")}</Label>
+   <Label muted>{tx("offline")}</Label>
+   <Action kind="secondary" label={tx("restoreLocal")} onPress={()=>{
+    if(!mutableBase)return;
+    const local=pendingConflict;setPendingConflict(null);change(local);
+    void cache(local,versionRef.current,true);
+   }}/>
+   <Action kind="secondary" label={tx("keepServer")} onPress={()=>{
+    setPendingConflict(null);
+    void AsyncStorage.removeItem(localKey).catch(()=>{});
+   }}/>
+  </SectionCard>:null}
+  {error?<SectionCard><Label style={{color:colors.error}}>{error}</Label>
+   <Action kind="secondary" disabled={busy} label={tx("save")}
+    onPress={()=>void save(true).then(()=>refresh()).catch(()=>setNotice(tx("offline")))}/>
+  </SectionCard>:null}
   {notice?<SectionCard><Label muted>{notice}</Label></SectionCard>:null}
   {mutable?<View style={{gap:10}}>
    {step===7?<Action disabled={busy} label={busy?"…":tx("submit")} onPress={()=>void submit()}/>:<Action disabled={busy} label={busy?"…":tx("next")} onPress={()=>void next()}/>}
    {step>0?<Action kind="secondary" disabled={busy} label={tx("back")} onPress={()=>setStep(s=>s-1)}/>:null}
-   <Action kind="secondary" disabled={busy} label={tx("save")} onPress={()=>void save().then(()=>setNotice(tx("save"))).catch(()=>setError(tx("offline")))}/>
+   <Action kind="secondary" disabled={busy} label={tx("save")} onPress={()=>void save(true).then(()=>setNotice(tx("save"))).catch(()=>setError(tx("offline")))}/>
   </View>:null}
   <Action kind="secondary" label={uiText(locale,"editorMyListings")} onPress={()=>router.replace("/my-listings")}/>
  </Page>;

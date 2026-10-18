@@ -9,7 +9,7 @@ import { useApiStatus } from "../../src/api";
 import { Action, Label, LanguagePicker, Page, ScreenHeading, SectionCard } from "../../src/ui";
 import {uiText} from "../../src/ui-copy";
 export default function Explore(){
- const {locale,provinceId}=usePreferences(),{status,refresh}=useApiStatus();
+ const {locale,provinceId}=usePreferences(),{status,refresh,reconnectEpoch}=useApiStatus();
  const province=findProvince(provinceId);const rtl=isRTL(locale);
  const connection=status==="connected"?t(locale,"networkOnline"):status==="unconfigured"?t(locale,"networkUnconfigured"):t(locale,"networkOffline");
  return <Page>
@@ -31,7 +31,7 @@ export default function Explore(){
    <Action label={t(locale,"searchProvince")} onPress={()=>router.push("/locations")} />
   </SectionCard>
   <Label weight="bold" style={{fontSize:20}}>{uiText(locale,"recentProperties")}</Label>
-  <ListingFeed provinceId={provinceId}/>
+  <ListingFeed provinceId={provinceId} reconnectEpoch={reconnectEpoch}/>
   <SectionCard>
    <Label weight="medium">{t(locale,"changeLanguage")}</Label><LanguagePicker/>
   </SectionCard>
