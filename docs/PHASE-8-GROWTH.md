@@ -49,6 +49,8 @@ Run `pnpm dev:api`, `pnpm dev:mobile` and `pnpm dev:admin` as usual; the API rem
 6. Opt-out completely stops future saved-search alerts; worker retries do not duplicate notifications.
 7. RTL Dari/Pashto and LTR English mobile controls, TalkBack, weak connection, low-end Android and admin MFA tested on real devices.
 
+- Phase 8 Step 5 adds restricted agency owner/manager lead-performance views, first-response-time reporting, lead queue and assignment controls. See docs/PHASE-8-STEP-5-AGENCIES.md; real-device QA is still required.
+
 ## Remaining Phase 8 work
 
 - Expo **development-build push implementation is in Step 1**: token lifecycle, explicit OS permission UX, preferences, delivery tickets and receipt tracking. Still requires EAS/FCM configuration and physical-device acceptance; remote push is **disabled by default**. See docs/PHASE-8-STEP-1-PUSH.md.
