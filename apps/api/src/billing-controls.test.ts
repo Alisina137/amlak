@@ -8,6 +8,8 @@ import {encryptTotp,hashToken,newToken,newTotpSecret} from "./security";
 
 test("Step 4 finance: scoped history, replay protection, refunds and noncash credits",
  {skip:!process.env.DATABASE_URL},async()=>{
+ const previousBilling=process.env.AMLAK_BILLING_ENABLED;
+ process.env.AMLAK_BILLING_ENABLED="false";
  const {db,sql}=connectDatabase(),app=buildApp({db});
  const tag=randomUUID().slice(0,8);
  const people=await db.insert(schema.users).values([
@@ -46,6 +48,22 @@ test("Step 4 finance: scoped history, replay protection, refunds and noncash cre
  };
  const reason="This adjustment relates only to a verified AmlakLink platform fee.";
  try{
+  // The billing pause flag must block all paid activations, not just creation
+  // of invoices. Staff may still reject a pending claim and process refunds.
+  assert.equal((await call("POST","/v1/invoices/"+claimInvoice.id+"/claims",0,{
+   method:"bank_transfer",reference:"blocked-receipt-"+tag})).status,503);
+  assert.equal((await call("POST","/v1/admin/billing/claims/"+claim.id+"/decision",2,{
+   decision:"confirm",reason:"Independently verified real bank statement.",reconciliation:{
+    statementReference:"blocked-external-"+tag,matchedAmountAfn:500,
+    statementDate:new Date().toISOString().slice(0,10),independentlyVerified:true
+   }})).status,503);
+  const flagRead=await call("GET","/v1/admin/billing/exceptions",2);
+  assert.equal(flagRead.status,200);
+  assert.equal(flagRead.body.readOnly,true);
+  assert.ok(flagRead.body.categories.confirmedInvoiceWithoutConfirmedClaim.includes(invoice.id));
+  assert.equal((await call("GET","/v1/admin/billing/exceptions",0)).status,401);
+  assert.equal((await call("GET","/v1/admin/billing/exceptions",4)).status,403);
+  process.env.AMLAK_BILLING_ENABLED="true";
   assert.equal((await call("GET","/v1/billing/adjustments")).status,401);
   assert.equal((await call("GET","/v1/admin/billing/history",0)).status,401);
   assert.equal((await call("GET","/v1/admin/billing/adjustments",4)).status,403);
@@ -126,5 +144,16 @@ test("Step 4 finance: scoped history, replay protection, refunds and noncash cre
   const evidence=history.body.claims.find((x:{claim:{id:string}})=>x.claim.id===claim.id);
   assert.equal(evidence.claim.reconciliationAmountAfn,500);
   assert.ok(!JSON.stringify(end.body).includes("refund-"+tag));
- }finally{await app.close();await sql.end();}
+  const anomalies=await call("GET","/v1/admin/billing/exceptions",2);
+  assert.equal(anomalies.status,200);
+  assert.ok(anomalies.body.categories.confirmedPlanWithoutEntitlement.includes(invoice.id));
+  assert.ok(anomalies.body.categories.confirmedClaimWithIncompleteEvidence.every(
+   (id:string)=>id!==claim.id));
+  assert.equal(anomalies.body.categories.refundWithoutSettlementEvidence.length,0);
+  assert.equal(anomalies.body.limited,true);
+ }finally{
+  if(previousBilling===undefined)delete process.env.AMLAK_BILLING_ENABLED;
+  else process.env.AMLAK_BILLING_ENABLED=previousBilling;
+  await app.close();await sql.end();
+ }
 });
