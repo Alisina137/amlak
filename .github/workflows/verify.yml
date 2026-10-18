@@ -34,7 +34,11 @@ jobs:
           node-version: '22'
       - run: pnpm install --no-frozen-lockfile
       - run: pnpm --filter @amlaklink/database migrate
+      - name: Migration rerun safety (idempotency)
+        run: pnpm --filter @amlaklink/database migrate
       - run: pnpm check
+      - name: Phase 8 automated QA guard (not production approval)
+        run: pnpm qa:phase8
       - name: Pilot API startup and read-only smoke
         run: |
           pnpm --filter @amlaklink/api start > /tmp/amlak-api.log 2>&1 &
