@@ -131,7 +131,7 @@ export function registerBillingRoutes(app:FastifyInstance,db:Database){
     if(!Number.isFinite(statementTime)||statementTime>Date.now()+86_400_000||
       statementTime<Date.now()-400*86_400_000)
      throw new HttpProblem(422,"INVALID_RECONCILIATION_DATE");
-    const hash=referenceHash("statement:"+claim.method,evidence.statementReference);
+    const hash=referenceHash("financial_statement",evidence.statementReference);
     const [used]=await tx.select({id:schema.paymentClaims.id}).from(schema.paymentClaims)
      .where(eq(schema.paymentClaims.reconciliationReferenceHash,hash)).limit(1);
     if(used)throw new HttpProblem(409,"RECONCILIATION_REFERENCE_REUSED");
@@ -144,7 +144,8 @@ export function registerBillingRoutes(app:FastifyInstance,db:Database){
      if(!invoice.listingId)throw new HttpProblem(409,"PROMOTION_LISTING_MISSING");
      const [l]=await tx.select().from(schema.listings).where(eq(schema.listings.id,invoice.listingId)).for("update");
      if(!l||l.status!=="published"||l.safetyHold||!l.approvedRevisionId
-       ||!l.lastConfirmedAt||l.lastConfirmedAt.getTime()<=Date.now()-30*86400_000)
+       ||!l.lastConfirmedAt||l.lastConfirmedAt.getTime()<=Date.now()-30*86400_000
+       ||!await canShowPublic(tx as unknown as Database,l))
       throw new HttpProblem(409,"LISTING_NOT_ELIGIBLE");
      await tx.insert(schema.growthPromotions).values({invoiceId:invoice.id,listingId:l.id,
       startsAt:now,endsAt:feePeriod(now,product.days)});
