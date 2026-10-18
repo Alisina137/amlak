@@ -28,7 +28,8 @@ test("direction is determined by in-app locale, not just translated strings",()=
  const ui=read("apps/mobile/src/ui.tsx"),tabs=read("apps/mobile/app/(tabs)/_layout.tsx");
  assert.match(ui,/flexDirection:isRTL\(locale\)\?"row-reverse":"row"/);
  assert.match(ui,/writingDirection:rtl\?"rtl":"ltr"/);
- assert.match(ui,/inputDirection="auto"/.source===undefined?/back button no effect/:/BackButton/);
+ assert.match(ui,/export function AppInput/);
+ assert.match(ui,/inputDirection!=="ltr"\&\&isRTL\(locale\)/);
  assert.match(ui,/accessibilityLabel=\{uiText\(locale,"back"\)\}/);
  assert.match(tabs,/rtl\?\["account","inbox","saved","search","index"\]/);
  assert.match(tabs,/initialRouteName="index"/);
