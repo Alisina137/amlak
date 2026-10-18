@@ -40,7 +40,7 @@ export function registerGrowthRoutes(app:FastifyInstance,db:Database){
  app.patch<{Params:{id:string}}>("/v1/saved-searches/:id",async request=>{
   const actor=await requireActor(db,request,"user");
   const {alertsEnabled}=parse(z.object({alertsEnabled:z.boolean()}).strict(),request.body);
-  const [item]=await db.update(schema.savedSearches).set({alertsEnabled,lastScannedAt:new Date()})
+  const [item]=await db.update(schema.savedSearches).set({alertsEnabled,lastScannedAt:new Date(),lastListingId:null})
    .where(and(eq(schema.savedSearches.id,validId(request.params.id)),eq(schema.savedSearches.userId,actor.id))).returning();
   if(!item)throw new HttpProblem(404,"SAVED_SEARCH_NOT_FOUND");
   return item;
