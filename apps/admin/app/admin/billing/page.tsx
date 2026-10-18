@@ -2,6 +2,7 @@ import Link from "next/link";
 import {redirect} from "next/navigation";
 import {getStaff} from "../../../lib/staff";
 import {BillingPanel} from "./panel";
+import {BillingAdjustmentsPanel} from "./adjustments";
 export default async function BillingAdmin(){
  const staff=await getStaff();
  if(!staff)redirect("/admin/login");
@@ -11,5 +12,6 @@ export default async function BillingAdmin(){
   <h1>بررسی پرداخت خدمات املاک لینک</h1>
   <p>تنها پرداخت حق اشتراک و تبلیغات پلتفرم را با مدارک مستقل تطبیق دهید؛ این سیستم پول ملک، کرایه، گروی یا سند مالکیت را تأیید نمی‌کند.</p>
   <BillingPanel/>
+  <BillingAdjustmentsPanel/>
  </main>;
 }
