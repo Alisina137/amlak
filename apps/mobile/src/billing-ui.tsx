@@ -102,11 +102,11 @@ export function BillingScreen({agencyId,listingId}:{agencyId?:string;listingId?:
     {entitlement?t[entitlement.status]:"—"} · {(entitlement?.plan||"free").replaceAll("_"," ")}
    </Label>
    <Label>{entitlement?.listingLimit??3} listings · {entitlement?.seatLimit??(agencyId?3:1)} seats</Label>
-   {entitlement?.expiresAt?<Label muted>{t.expiry}: {new Date(entitlement.expiresAt).toLocaleDateString(locale==="en"?"en-GB":"fa-AF")}
+   {entitlement?.expiresAt?<Label muted>{t.expiry}: {new Date(entitlement.expiresAt).toLocaleDateString(locale==="en"?"en-GB":locale==="ps"?"ps-AF":"fa-AF")}
     {entitlement.daysRemaining!==null?" · "+t.daysLeft+": "+entitlement.daysRemaining:""}</Label>:null}
    {entitlement?.scheduled?<View style={{gap:5}}>
     <Label weight="bold">{t.scheduled}: {entitlement.scheduled.plan.replaceAll("_"," ")}</Label>
-    <Label muted>{t.renewalPending}: {new Date(entitlement.scheduled.startsAt).toLocaleDateString(locale==="en"?"en-GB":"fa-AF")}</Label>
+    <Label muted>{t.renewalPending}: {new Date(entitlement.scheduled.startsAt).toLocaleDateString(locale==="en"?"en-GB":locale==="ps"?"ps-AF":"fa-AF")}</Label>
    </View>:null}
    {entitlement?.status==="grace"?<View style={{gap:5}}>
     <Label style={{color:colors.warning}}>{t.graceWarning}</Label>
