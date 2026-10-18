@@ -25,6 +25,7 @@
     "db:restore:staging": "pnpm --filter @amlaklink/database restore:staging",
     "pilot:smoke": "node scripts/pilot-smoke.mjs",
     "qa:phase8": "node --test scripts/test-phase8-release-gate.mjs && node scripts/phase8-release-gate.mjs --ci",
+    "qa:ui": "node --test scripts/test-final-rtl-ui.mjs",
     "qa:release": "node scripts/phase8-release-gate.mjs --release"
   }
 }

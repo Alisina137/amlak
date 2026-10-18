@@ -10,6 +10,7 @@ import {dt} from "../../src/discovery-copy";
 import {ListingCard} from "../../src/listing-ui";
 import type {ListingDTO} from "../../src/listing-client";
 import {Action,Label,Page,ScreenHeading,SectionCard} from "../../src/ui";
+import {uiText} from "../../src/ui-copy";
 export default function Saved(){
  const {locale}=usePreferences(),{token}=useAuth(),{refresh}=useFavorites();
  const [items,setItems]=useState<ListingDTO[]>([]),[loading,setLoading]=useState(true),[error,setError]=useState("");
@@ -30,7 +31,7 @@ export default function Saved(){
   <Action kind="secondary" label={locale==="en"?"Shared property shortlists":locale==="fa"?"فهرست‌های مشترک ملک":"د ملکیتونو ګډ فهرستونه"} onPress={()=>router.push("/shortlists")}/>
   <Action kind="secondary" label={locale==="en"?"Saved searches & alerts":locale==="fa"?"جستجوهای ذخیره‌شده و اعلان‌ها":"خوندي پلټنې او خبرتیاوې"} onPress={()=>router.push("/saved-searches")}/>
   {!token?<SectionCard><Label>{dt(locale,"signin")}</Label>
-   <Action label={locale==="en"?"Sign in":"ورود"} onPress={()=>router.push({pathname:"/auth/[action]",params:{action:"login"}})}/>
+   <Action label={uiText(locale,"signIn")} onPress={()=>router.push({pathname:"/auth/[action]",params:{action:"login"}})}/>
   </SectionCard>:null}
   {loading?<SectionCard><ActivityIndicator color={colors.primary}/></SectionCard>:null}
   {error?<SectionCard><Label style={{color:colors.error}}>{error}</Label><Action label={dt(locale,"retry")} onPress={()=>void load()}/></SectionCard>:null}

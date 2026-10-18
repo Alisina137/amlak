@@ -59,3 +59,8 @@ Agency owners and managers now have **Agency → Agent performance & lead assign
 ### Phase 8 Step 6: automated QA and safe release preflight
 
 Run `pnpm qa:phase8` for structural preflight checks (safe default flags, ordered migrations, CI test/build/export checks and security test coverage). GitHub Actions also reruns migrations to detect non-repeatable SQL. The optional `pnpm qa:release` command additionally fails closed unless private, independently reviewable pilot evidence and real provider configuration are supplied. **Neither green CI nor self-attested evidence grants production release approval.** Live Android, EAS/FCM, local financial/legal approval and the Phase 7 human pilot remain external requirements. See [Step 6 QA runbook](docs/PHASE-8-STEP-6-QA.md).
+
+
+### Final completion Step 2: trilingual RTL/LTR UI
+
+The mobile app now uses a mirrored tab order, accessible locale-dependent back buttons, RTL-aware text inputs, LTR entry for numeric values and English-format contact fields, and shared trilingual labels for primary property and agency journeys. Run `pnpm qa:ui` to check text key parity and direction contracts. See [Step 2 RTL/LTR acceptance matrix](docs/FINAL-COMPLETION-STEP-2-RTL-UI.md); **physical Android, accessibility and translation reviews remain required**.

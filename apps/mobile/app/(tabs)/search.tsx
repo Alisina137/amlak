@@ -3,7 +3,7 @@ import {colors} from "@amlaklink/design-tokens";
 import {isRTL,t} from "@amlaklink/localization";
 import {useLocalSearchParams,router} from "expo-router";
 import {useCallback,useEffect,useMemo,useState} from "react";
-import {ActivityIndicator,Modal,Pressable,ScrollView,TextInput,View} from "react-native";
+import {ActivityIndicator,Modal,Pressable,ScrollView,View} from "react-native";
 import {usePreferences} from "../../src/context";
 import {useSearchFilters} from "../../src/search-context";
 import {cachedDiscovery,fetchDiscovery,queryString,type SearchFilters} from "../../src/discovery-client";
@@ -11,7 +11,8 @@ import {requestJson} from "../../src/auth";
 import {dt} from "../../src/discovery-copy";
 import {ListingCard} from "../../src/listing-ui";
 import type {ListingDTO} from "../../src/listing-client";
-import {Action,Label,Page,ScreenHeading,SectionCard} from "../../src/ui";
+import {Action,AppInput,Label,Page,ScreenHeading,SectionCard} from "../../src/ui";
+import {uiText} from "../../src/ui-copy";
 export default function Search(){
  const {locale,provinceId,setProvinceId}=usePreferences();
  const {filters,setFilters,reset,hydrated}=useSearchFilters();
@@ -46,7 +47,7 @@ export default function Search(){
  const intent=filters.intent||"sale";
  return <Page>
   <ScreenHeading title={t(locale,"search")} subtitle={findProvince(filters.provinceId||"kabul")?.names[locale]||dt(locale,"all")}/>
-  <TextInput accessibilityLabel={dt(locale,"searchPlaceholder")} value={query} onChangeText={setQuery}
+  <AppInput accessibilityLabel={dt(locale,"searchPlaceholder")} value={query} onChangeText={setQuery}
    placeholder={dt(locale,"searchPlaceholder")} autoCorrect={false}
    style={{minHeight:50,backgroundColor:colors.surface,borderRadius:12,borderColor:colors.border,borderWidth:1,padding:12,color:colors.text,fontSize:16,writingDirection:rtl?"rtl":"ltr",textAlign:rtl?"right":"left"}}/>
   <View style={{flexDirection:rtl?"row-reverse":"row",gap:8}}>
@@ -88,8 +89,8 @@ function FilterSheet({visible,close,filters,apply,clear,locale}:{visible:boolean
  const numericField=(key:keyof SearchFilters,label:string)=>{
   return <View style={{flex:1,minWidth:120,gap:6}}>
    <Label>{label}</Label>
-   <TextInput accessibilityLabel={label} keyboardType="decimal-pad" value={draft[key]||""} onChangeText={v=>update({[key]:v||undefined})}
-    style={{minHeight:46,borderColor:colors.border,borderWidth:1,borderRadius:10,paddingHorizontal:12,color:colors.text}}/>
+   <AppInput accessibilityLabel={label} keyboardType="decimal-pad" inputDirection="ltr" value={draft[key]||""} onChangeText={v=>update({[key]:v||undefined})}
+    style={{minHeight:48}}/>
   </View>;
  };
  const options=(label:string,key:keyof SearchFilters,items:{value:string;label:string}[])=>
@@ -114,10 +115,10 @@ function FilterSheet({visible,close,filters,apply,clear,locale}:{visible:boolean
      <View style={{gap:8}}>
       <Label weight="bold">{dt(locale,"region")}</Label>
       {options("", "provinceId",[{value:"",label:dt(locale,"all")},...searchProvinces(provinceSearch,locale).map(p=>({value:p.id,label:p.names[locale]}))])}
-      <TextInput placeholder={t(locale,"searchProvince")} accessibilityLabel={t(locale,"searchProvince")} value={provinceSearch} onChangeText={setProvinceSearch}
-       style={{borderWidth:1,borderColor:colors.border,padding:10,borderRadius:10,color:colors.text}}/>
+      <AppInput placeholder={t(locale,"searchProvince")} accessibilityLabel={t(locale,"searchProvince")} value={provinceSearch} onChangeText={setProvinceSearch}
+       style={{minHeight:48}}/>
       {(["city","district","neighborhood"] as const).map(key=><View key={key} style={{gap:4}}>
-       <Label>{dt(locale,key)}</Label><TextInput value={draft[key]||""} onChangeText={v=>update({[key]:v||undefined})}
+       <Label>{dt(locale,key)}</Label><AppInput value={draft[key]||""} onChangeText={v=>update({[key]:v||undefined})}
         style={{borderWidth:1,borderColor:colors.border,padding:10,borderRadius:10,color:colors.text}}/>
       </View>)}
      </View>
@@ -129,7 +130,7 @@ function FilterSheet({visible,close,filters,apply,clear,locale}:{visible:boolean
      </View>
      {(["furnished","parking","water","electricity"] as const).map(key=>
       <View key={key}>{options(dt(locale,key),key,[{value:"",label:dt(locale,"all")},{value:"true",label:"✓"},{value:"false",label:"✕"}])}</View>)}
-     {options(dt(locale,"professional"),"advertiser",[{value:"",label:dt(locale,"all")},{value:"private",label:locale==="en"?"Private":locale==="fa"?"شخصی":"شخصي"},{value:"independent_agent",label:locale==="en"?"Independent agent":"رهنمای مستقل"},{value:"agency",label:locale==="en"?"Agency":"دفتر"}])}
+     {options(dt(locale,"professional"),"advertiser",[{value:"",label:dt(locale,"all")},{value:"private",label:uiText(locale,"searchPrivate")},{value:"independent_agent",label:uiText(locale,"searchAgent")},{value:"agency",label:uiText(locale,"searchAgency")}])}
      {options(dt(locale,"verified"),"verifiedAgency",[{value:"",label:dt(locale,"all")},{value:"true",label:"✓"}])}
      {options(dt(locale,"sort"),"sort",[
       {value:"newest",label:dt(locale,"newest")},{value:"recent_confirmed",label:dt(locale,"recent")},

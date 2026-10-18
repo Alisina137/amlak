@@ -2,9 +2,11 @@ import {router,useLocalSearchParams} from "expo-router";
 import {useCallback,useEffect,useState} from "react";
 import {ActivityIndicator,View} from "react-native";
 import {colors} from "@amlaklink/design-tokens";
+import {formatNumber} from "@amlaklink/localization";
+import {leadStageLabel,uiText} from "../../../src/ui-copy";
 import {useAuth,requestJson} from "../../../src/auth";
 import {usePreferences} from "../../../src/context";
-import {Action,Label,Page,ScreenHeading,SectionCard} from "../../../src/ui";
+import {Action,BackButton,Label,Page,ScreenHeading,SectionCard} from "../../../src/ui";
 import {displayKabul} from "../../../src/engagement-client";
 type Metrics={total:number;unassigned:number;awaitingFirstReply:number;
  answeredWithin24h:number;avgFirstResponseMinutes:number|null;crmWon:number;viewings:number;open:number};
@@ -69,27 +71,27 @@ export default function AgencyPerformance(){
   [t.average,report.aggregates.avgFirstResponseMinutes],
   [t.crmWon,report.aggregates.crmWon],[t.viewing,report.aggregates.viewings]
  ]:[];
- return <Page><ScreenHeading title={t.title} subtitle={t.subtitle}/>
+ return <Page><BackButton onPress={()=>router.back()}/><ScreenHeading title={t.title} subtitle={t.subtitle}/>
   <SectionCard>
    <Label weight="bold">{t.period}</Label>
    <View style={{flexDirection:locale==="en"?"row":"row-reverse",gap:8}}>
     {([7,30,90] as const).map(d=><View key={d} style={{flex:1}}>
-     <Action kind={days===d?"primary":"secondary"} label={d+" "+t.days} onPress={()=>setDays(d)}/>
+     <Action kind={days===d?"primary":"secondary"} label={formatNumber(d,locale)+" "+t.days} onPress={()=>setDays(d)}/>
     </View>)}
    </View>
   </SectionCard>
   {busy?<ActivityIndicator color={colors.primary}/>:null}
   {error?<SectionCard><Label style={{color:colors.error}}>{error}</Label></SectionCard>:null}
   {pairs.map(([name,value])=><SectionCard key={String(name)}>
-   <Label weight="bold" style={{fontSize:24}}>{value===null?"—":Number(value).toLocaleString()}</Label>
+   <Label weight="bold" style={{fontSize:24}}>{value===null?"—":formatNumber(Number(value),locale)}</Label>
    <Label muted>{name}</Label>
   </SectionCard>)}
   <SectionCard>
    <Label weight="bold">{t.team}</Label>
    {report?.agents.map(a=><View key={a.userId} style={{paddingVertical:9,gap:4,borderBottomWidth:1,borderColor:colors.border}}>
-    <Label weight="bold">{a.displayName} · {a.role}</Label>
-    <Label muted>{t.assigned}: {a.assigned} · {t.pending}: {a.awaitingFirstReply}</Label>
-    <Label muted>{t.timely}: {a.answeredWithin24h} · {t.average}: {a.avgFirstResponseMinutes??"—"}</Label>
+    <Label weight="bold">{a.displayName} · {a.role==="owner"?uiText(locale,"localeAgencyRoleOwner"):a.role==="manager"?uiText(locale,"localeAgencyRoleManager"):uiText(locale,"localeAgencyRoleAgent")}</Label>
+    <Label muted>{t.assigned}: {formatNumber(a.assigned,locale)} · {t.pending}: {formatNumber(a.awaitingFirstReply,locale)}</Label>
+    <Label muted>{t.timely}: {formatNumber(a.answeredWithin24h,locale)} · {t.average}: {a.avgFirstResponseMinutes===null?"—":formatNumber(a.avgFirstResponseMinutes,locale)}</Label>
    </View>)}
   </SectionCard>
   <SectionCard>
@@ -101,9 +103,9 @@ export default function AgencyPerformance(){
    </View>
    {!queue.length?<Label muted>{t.empty}</Label>:queue.map(lead=><View key={lead.id}
     style={{gap:7,borderBottomWidth:1,borderColor:colors.border,paddingVertical:12}}>
-    <Label>{lead.status} · {lead.leadStatus} · {lead.assignedTo?t.assigned:t.unassigned}</Label>
+    <Label>{lead.status} · {leadStageLabel(locale,lead.leadStatus)} · {lead.assignedTo?t.assigned:t.unassigned}</Label>
     <Label muted>{t.time}: {displayKabul(lead.lastMessageAt,locale)}</Label>
-    <Action kind="secondary" label={locale==="en"?"Open conversation":"بازکردن گفتگو"}
+    <Action kind="secondary" label={uiText(locale,"openConversation")}
      onPress={()=>router.push({pathname:"/inquiries/[id]",params:{id:lead.id}})}/>
     {lead.assignedTo?<Action kind="secondary" label={t.remove} onPress={()=>void assign(lead,null)}/>:null}
     {report?.agents.map(a=>a.userId!==lead.assignedTo?<Action key={a.userId}
@@ -111,8 +113,7 @@ export default function AgencyPerformance(){
    </View>)}
   </SectionCard>
   {report?.sampled?<SectionCard><Label muted>{t.estimate}</Label></SectionCard>:null}
-  {report?<SectionCard><Label muted>{report.note}</Label></SectionCard>:null}
+  {report?<SectionCard><Label muted>{t.subtitle} {t.estimate}</Label></SectionCard>:null}
   <Action kind="secondary" label={t.load} onPress={()=>void load()}/>
-  <Action kind="secondary" label={t.back} onPress={()=>router.back()}/>
  </Page>;
 }
