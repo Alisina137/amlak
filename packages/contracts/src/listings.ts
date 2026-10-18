@@ -4,6 +4,19 @@ export const propertyTypes=["house","apartment","land","shop","office","commerci
 export const transactionTypes=["sale","rent","gharawi"] as const;
 export const currencyTypes=["AFN","USD"] as const;
 export const photoId=z.uuid();
+/** Structured, public-facing room information is part of a moderated listing revision.
+ * A cover image is always the first photoId; old listings require no migration. */
+export const photoRoomTypes=["living_room","bedroom","kitchen","bathroom","exterior","entrance","balcony","parking","floor_plan","land","other"] as const;
+export const photoRoomSchema=z.enum(photoRoomTypes);
+export const photoDetailSchema=z.object({
+ room:photoRoomSchema.default("other"),
+ caption:z.string().trim().max(100).default("")
+}).strict();
+export type PhotoDetail=z.infer<typeof photoDetailSchema>;
+export function photoInfoFor(data:Pick<ListingDraft,"photoDetails">,id:string):PhotoDetail {
+ return photoDetailSchema.parse(data.photoDetails[id]||{});
+}
+
 const optionalShort=z.string().trim().max(140);
 const optionalText=z.string().trim().max(3500);
 export const listingDraftSchema=z.object({
@@ -46,6 +59,7 @@ export const listingDraftSchema=z.object({
   negotiable:z.boolean().default(false)
  }).strict().prefault({}),
  photoIds:z.array(photoId).max(20).default([]),
+ photoDetails:z.record(photoId,photoDetailSchema).default({}),
  contact:z.object({
   phone:z.string().trim().regex(/^\+?[0-9]{7,16}$/).optional(),
   allowPhone:z.boolean().default(false),
@@ -82,6 +96,12 @@ export const listingSubmissionSchema=listingDraftSchema.superRefine((v,ctx)=>{
   if(!v.price.refundTerms || v.price.refundTerms.length<12)bad(["price","refundTerms"],"Gharawi refund terms required");
  }
  if(v.photoIds.length<1)bad(["photoIds"],"At least one validated property photo is required");
+ if(new Set(v.photoIds).size!==v.photoIds.length)bad(["photoIds"],"Duplicate photo IDs are not allowed");
+ // Labels must not be attached to an unrelated photo; the server also verifies ownership on submit.
+ const allowedPhotoIds=new Set(v.photoIds);
+ for(const key of Object.keys(v.photoDetails))if(!allowedPhotoIds.has(key))
+  bad(["photoDetails",key],"Photo label must belong to an included property photo");
+
  if(!v.contact.allowPhone && !v.contact.allowWhatsApp)bad(["contact"],"Enable at least one contact method");
  if(v.contact.allowPhone && !v.contact.phone)bad(["contact","phone"],"Call number required");
  if(v.contact.allowWhatsApp && !v.contact.whatsapp)bad(["contact","whatsapp"],"WhatsApp number required");
