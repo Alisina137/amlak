@@ -30,6 +30,8 @@ EXPO_PUBLIC_API_URL=<public-HTTPS-forward-to-localhost-4000>
 
 **Never invent a project UUID**. Run `eas init` for a real EAS project, provision FCM V1 server credentials on Expo/EAS, and create a physical-device Android development build using EAS Build or a local native build. Rebuild after changing config plugins/credentials.
 
+For the Android development build: `cd apps/mobile; npx eas-cli@latest login; npx eas-cli@latest init; npx eas-cli@latest build -p android --profile development`. After installing the APK on your device, run `pnpm dev:mobile:push` from the repo root. The existing `pnpm dev:mobile` still starts Expo Go and cannot test remote notifications on Android.
+
 Run `pnpm install`, `pnpm db:diagnose`, `pnpm db:migrate`. Start the API on **port 4000** with `pnpm dev:api` and use a publicly reachable API URL in the mobile Expo config. The ngrok web inspector at 4040 is unrelated.
 
 ## Background delivery operations
