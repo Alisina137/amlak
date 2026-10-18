@@ -6,7 +6,8 @@ import {drizzle as drizzleNeon} from "drizzle-orm/neon-serverless";
 import * as core from "./schema";
 import * as inventory from "./listing-schema";
 import * as discovery from "./discovery-schema";
-const schema={...core,...inventory,...discovery};
+import * as engagement from "./engagement-schema";
+const schema={...core,...inventory,...discovery,...engagement};
 
 /** TCP remains the default for local PostgreSQL and existing deployments. */
 function createTcp(databaseUrl:string){
