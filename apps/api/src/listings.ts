@@ -4,6 +4,7 @@ import {z} from "zod";
 import {type Database,schema} from "@amlaklink/database";
 import {createListingSchema,listingDraftSchema,listingSubmissionSchema,listingSubmitSchema,saveDraftSchema,reviewDecisionSchema,publicListingPayload} from "@amlaklink/contracts";
 import {canSubmitListing,HttpProblem,requireActor,requireAgencyMember,requireStaffRole,requireVerified} from "./access";
+import {cancelInactiveListingVisits} from "./engagement-lifecycle";
 type Listing=typeof schema.listings.$inferSelect;
 type Revision=typeof schema.revisions.$inferSelect;
 export function parse<T>(s:z.ZodType<T>,body:unknown):T{
@@ -151,6 +152,7 @@ export function registerListingRoutes(app:FastifyInstance,db:Database){
     .where(and(eq(schema.listings.id,l.id),eq(schema.listings.status,"published"))).returning();
   if(!row)throw new HttpProblem(409,"LISTING_NOT_PUBLISHED");
   await db.insert(schema.audit).values({actorType:"user",actorId:actor.id,action:"listing_paused",targetType:"listing",targetId:l.id});
+  await cancelInactiveListingVisits(db,l.id,false).catch(err=>app.log.error({err},"Failed to cancel pending visits after pause"));
   return {status:row.status};
  });
  app.post<{Params:{id:string}}>("/v1/listings/:id/resume",async request=>{
@@ -176,6 +178,7 @@ export function registerListingRoutes(app:FastifyInstance,db:Database){
     .where(and(eq(schema.listings.id,l.id),inArray(schema.listings.status,["published","paused"]))).returning();
   if(!row)throw new HttpProblem(409,"LISTING_NOT_ACTIVE");
   await db.insert(schema.audit).values({actorType:"user",actorId:actor.id,action:"listing_closed",targetType:"listing",targetId:l.id,reason:input.outcome});
+  await cancelInactiveListingVisits(db,l.id,true).catch(err=>app.log.error({err},"Failed to cancel visits after closure"));
   return {status:row.status};
  });
  app.get("/v1/properties",async request=>{
