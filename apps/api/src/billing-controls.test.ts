@@ -68,6 +68,28 @@ test("Step 4 finance: scoped history, replay protection, refunds and noncash cre
    }});
   assert.equal(ok.status,200);
   assert.equal((await call("POST",decisionPath,2,rejectData)).status,409);
+  // Rejected claims do not activate anything; a *new* external reference is
+  // necessary for resubmission and may not be recycled on a different invoice.
+  const [retryInvoice]=await db.insert(schema.growthInvoices).values({
+   ...invoiceValues,requestId:randomUUID(),status:"submitted"}).returning();
+  const [rejected]=await db.insert(schema.paymentClaims).values({
+   invoiceId:retryInvoice.id,submittedBy:people[0].id,method:"cash_deposit",
+   reference:"wrong-receipt-"+tag,
+   referenceHash:referenceHash("cash_deposit","wrong-receipt-"+tag)
+  }).returning();
+  const rejectResult=await call("POST","/v1/admin/billing/claims/"+rejected.id+"/decision",2,
+   {decision:"reject",reason:"No matching cash receipt could be found in the external ledger."});
+  assert.equal(rejectResult.status,200);
+  const rejectedClaims=await call("GET","/v1/invoices/"+retryInvoice.id+"/claims",0);
+  assert.equal(rejectedClaims.body.items[0].status,"rejected");
+  assert.match(rejectedClaims.body.items[0].reviewReason,/external ledger/);
+  assert.equal((await call("POST","/v1/invoices/"+retryInvoice.id+"/claims",0,
+   {method:"cash_deposit",reference:"wrong-receipt-"+tag})).body.status,"rejected");
+  const retried=await call("POST","/v1/invoices/"+retryInvoice.id+"/claims",0,
+   {method:"cash_deposit",reference:"correct-receipt-"+tag});
+  assert.equal(retried.status,200);assert.equal(retried.body.status,"submitted");
+  assert.equal((await call("POST","/v1/admin/billing/claims/"+retried.body.id+"/decision",2,
+   {decision:"reject",reason:"Customer needs an additional bank confirmation document."})).status,200);
   const safeHistory=await call("GET","/v1/invoices/"+claimInvoice.id+"/claims",0);
   assert.equal(safeHistory.status,200);
   assert.equal(safeHistory.body.items[0].status,"confirmed");
