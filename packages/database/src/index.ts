@@ -11,7 +11,8 @@ import * as safety from "./safety-schema";
 import * as growth from "./growth-schema";
 import * as collaboration from "./collaboration-schema";
 import * as support from "./support-schema";
-const schema={...core,...inventory,...discovery,...engagement,...safety,...growth,...collaboration,...support};
+import * as push from "./push-schema";
+const schema={...core,...inventory,...discovery,...engagement,...safety,...growth,...collaboration,...support,...push};
 
 /** TCP remains the default for local PostgreSQL and existing deployments. */
 function createTcp(databaseUrl:string){
