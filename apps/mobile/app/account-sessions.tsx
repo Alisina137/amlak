@@ -1,5 +1,5 @@
 import {router,useFocusEffect} from "expo-router";
-import {useCallback,useState} from "react";
+import {useCallback,useRef,useState} from "react";
 import {Alert,View} from "react-native";
 import {useAuth,requestJson} from "../src/auth";
 import {usePreferences} from "../src/context";
@@ -12,26 +12,31 @@ const copy={
 } as const;
 export default function AccountSessions(){
  const {token,signOut}=useAuth(),{locale}=usePreferences(),t=copy[locale];
- const [items,setItems]=useState<Session[]>([]),[busy,setBusy]=useState(false),[error,setError]=useState("");
+ const [snapshot,setSnapshot]=useState<{token:string|null;items:Session[]}>({token:null,items:[]});
+ const [busy,setBusy]=useState(false),[error,setError]=useState("");
+ const activeToken=useRef(token),epoch=useRef(0);
+ activeToken.current=token;
+ const visible=snapshot.token===token?snapshot.items:[];
  const load=useCallback(async()=>{
-  if(!token){setItems([]);return;}
+  const version=++epoch.current;
+  if(!token){setSnapshot({token:null,items:[]});return;}
   setBusy(true);
   try{
    const response=await requestJson<{items:Session[]}>("/v1/auth/sessions",{token});
-   setItems(response.items);setError("");
-  }catch{setError(t.error);}finally{setBusy(false);}
+   if(activeToken.current===token&&epoch.current===version){setSnapshot({token,items:response.items});setError("");}
+  }catch{if(activeToken.current===token&&epoch.current===version)setError(t.error);}
+  finally{if(activeToken.current===token&&epoch.current===version)setBusy(false);}
  },[token,t.error]);
- useFocusEffect(useCallback(()=>{void load();},[load]));
+ useFocusEffect(useCallback(()=>{void load();return()=>{epoch.current++;};},[load]));
  async function revoke(id?:string){
   if(!token||busy)return;setBusy(true);
   try{
    if(id)await requestJson("/v1/auth/sessions/"+id,{method:"DELETE",token});
    else await requestJson("/v1/auth/sessions/revoke-others",{method:"POST",token,body:{confirm:true}});
-   if(items.some(x=>x.id===id&&x.current)){await signOut();router.replace("/(tabs)/account");}
-   else await load();
+   if(visible.some(x=>x.id===id&&x.current)){await signOut();router.replace("/(tabs)/account");}
+   else void load();
   }catch{setError(t.error);}finally{setBusy(false);}
  }
- const visible=token?items:[];
  return <Page><BackButton onPress={()=>router.back()}/>
   <ScreenHeading title={t.title}/>
   {!token?<SectionCard><Label>{t.login}</Label></SectionCard>:null}
