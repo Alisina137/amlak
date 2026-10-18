@@ -79,3 +79,8 @@ Map search supports 3–12 point custom-drawn polygons and a visible-map rectang
 ### Final Completion Step 7: external push acceptance
 
 Push stays opt-in and disabled by default. Once a **real** EAS project, FCM V1 credentials, physical Android development build, and private scheduler are configured, verified users can open **Account → Push Notifications → Send a test notification**. The queue endpoint adds an in-app test notice; `pnpm ops:push --execute` sends eligible notifications and checks receipts on later runs. Lock-screen notification text is privacy-neutral and taps are scoped to the current account. `pnpm ops:push:preflight` checks the local server flag and EAS UUID, **not** the external credential vault or phone delivery. See [Step 7 runbook](docs/FINAL-COMPLETION-STEP-7-PUSH.md).
+
+
+### Final Completion Step 8: renewal automation
+
+Subscription reminders now use bounded cursor pagination and a monitored `--all` drain to prevent old first-page grants from starving newer reminders. `pnpm ops:renewals --dry-run --all` reports eligible counts without writing data; after staging sign-off, `pnpm ops:renewals --execute --all` creates deduplicated **in-app notices only**. A remaining backlog exits non-zero with a resume cursor. Paid quotas still expire exactly on schedule; the 3-day grace period does not grant premium access and existing listings are preserved. Billing remains off by default and **no automatic charges or renewals** are introduced. An external scheduler must be explicitly provisioned and monitored. See [Step 8 runbook](docs/FINAL-COMPLETION-STEP-8-SUBSCRIPTIONS.md).
