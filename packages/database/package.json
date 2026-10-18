@@ -13,9 +13,11 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "migrate": "tsx src/migrate.ts",
     "diagnose": "tsx src/diagnose.ts",
-    "test": "tsx --test src/backup-crypto.test.ts",
+    "test": "tsx --test src/*.test.ts",
     "backup": "tsx src/backup.ts",
-    "restore:staging": "tsx src/restore.ts"
+    "restore:staging": "tsx src/restore.ts",
+    "backup:verify": "tsx src/verify-backup.ts",
+    "integrity": "tsx src/check-integrity.ts"
   },
   "dependencies": {
     "dotenv": "^17.2.0",
