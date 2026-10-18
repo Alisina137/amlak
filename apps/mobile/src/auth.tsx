@@ -59,9 +59,17 @@ export function AuthProvider({children}:{children:ReactNode}){
  const [user,setUser]=useState<Account|null>(null),[token,setToken]=useState<string|null>(null),[loading,setLoading]=useState(true);
  // In-flight /me from a previous session must never revive a signed-out or switched account.
  const sessionEpoch=useRef(0);
+ const secureStoreQueue=useRef<Promise<void>>(Promise.resolve());
+ const queueCredentialWrite=(action:()=>Promise<void>)=>{
+  const result=secureStoreQueue.current.catch(()=>{}).then(action);
+  secureStoreQueue.current=result.catch(()=>{});
+  return result;
+ };
  const persist=useCallback(async(nextToken:string,nextUser:Account)=>{
    const epoch=++sessionEpoch.current;
-   await SecureStore.setItemAsync(KEY,nextToken);
+   await queueCredentialWrite(async()=>{
+    if(epoch===sessionEpoch.current)await SecureStore.setItemAsync(KEY,nextToken);
+   });
    if(epoch!==sessionEpoch.current)return;
    setToken(nextToken);setUser(nextUser);
  },[]);
@@ -76,7 +84,10 @@ export function AuthProvider({children}:{children:ReactNode}){
    // Offline is not a logout. Only an authoritative auth rejection invalidates stored credentials.
    if(epoch===sessionEpoch.current && err instanceof ApiError && [401,403].includes(err.status)){
     sessionEpoch.current++;
-    await SecureStore.deleteItemAsync(KEY);setToken(null);setUser(null);
+    setToken(null);setUser(null);
+    await queueCredentialWrite(async()=>{
+     if(epoch+1===sessionEpoch.current)await SecureStore.deleteItemAsync(KEY);
+    });
    }
   }
  },[token]);
@@ -94,12 +105,20 @@ export function AuthProvider({children}:{children:ReactNode}){
    await persist(data.token,data.user);
  },[persist]);
  const signOut=useCallback(async()=>{
-   // Invalidate all previous /me responses before calling the network.
-   sessionEpoch.current++;
+   // Clear this phone first, even when the network is down. A delayed logout
+   // must never erase the token of a newer sign-in.
+   const epoch=++sessionEpoch.current;
+   const oldToken=token;
    setToken(null);setUser(null);
-   if(token)await import("./push-client").then(p=>p.unregisterCurrentDevice(token)).catch(()=>{});
-   if(token)await requestJson("/v1/auth/logout",{method:"POST",token}).catch(()=>{});
-   await SecureStore.deleteItemAsync(KEY);setToken(null);setUser(null);
+   await queueCredentialWrite(async()=>{
+    if(epoch===sessionEpoch.current)await SecureStore.deleteItemAsync(KEY);
+   });
+   // Best-effort remote revocation, not a guarantee while offline. Users can
+   // revoke remote devices from Account > Sessions after reconnecting.
+   if(oldToken){
+    void import("./push-client").then(p=>p.unregisterCurrentDevice(oldToken)).catch(()=>{});
+    void requestJson("/v1/auth/logout",{method:"POST",token:oldToken,timeoutMs:4000}).catch(()=>{});
+   }
  },[token]);
  const value=useMemo(()=>({user,token,loading,signIn,verify,signOut,refresh}),[user,token,loading,signIn,verify,signOut,refresh]);
  return <Context.Provider value={value}>{children}</Context.Provider>;
