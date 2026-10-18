@@ -7,6 +7,7 @@ This phase is built on Phases 1–7 and **does not override the pilot launch gat
 - Persisted, user-private structured saved searches (max 12) with explicit in-app alert opt-in, opt-out and deletion. No raw GPS or cursor in saved filter records.
 - A bounded, restartable worker detecting new public saved-search matches and real same-currency asking-price reductions. Cursor includes updated timestamp and listing UUID; user notifications use a unique dedupe key tied to the approved revision. Run in **dry-run by default**.
 - Guest-accessible comparison of 2–4 *public* listings without foreign exchange assumptions, price conversions or title verification; users select items in Saved.
+- Invitation-only collaborative property shortlists (maximum five people including owner), verified email invitations, accept/leave/revoke, public-eligible listing additions, per-member votes and private notes. Revoked members lose read/write access; unavailable properties retain a non-revealing placeholder. Shortlist data never becomes public.
 - Proposed platform subscription entitlements: solo independent agent (15 listings), agency standard (50 listings/5 seats), agency growth (200 listings/15 seats); free capacity 3. A plan only becomes active after staff-confirmed platform fee; time windows are server-side; expiry preserves existing listings, leads and permissions but blocks over-limit new submissions and invitations.
 - Proposed AFN invoice and payment claim flow for **platform services only**, receipt reference deduplication, scoped billing review and audit, manual external reconciliation acknowledgement, reject/resubmit support. Confirmation activates entitlements or a seven-day featured placement within one database transaction. Already confirmed payment/claim cannot be reprocessed.
 - Public sponsored results in a **separately labeled** section of Search and subject to the normal published/fresh/active-author/active-agency visibility constraints. Placement expires automatically and cannot resurrect a paused, sold, held or stale listing.
@@ -49,7 +50,7 @@ Run `pnpm dev:api`, `pnpm dev:mobile` and `pnpm dev:admin` as usual; the API rem
 ## Remaining Phase 8 work
 
 - Expo **development-build push delivery and explicit OS permission UX**, push token lifecycle, preference controls and fallback; current alerts are **in-app only**.
-- Shared invitation-only shortlists, room-labeled media, customer support tickets, and optional drawn map regions after map-provider cost validation.
+- Room-labeled media, customer support tickets, and optional drawn map regions after map-provider cost validation.
 - Full E2E payment review and rejection/resubmission scenarios, refund/credit policy, grace/renewal notices and real pilot pricing validation.
 - Real-device accessibility/RTL QA, distribution to a controlled pilot, local business/legal validation and full production readiness review.
 
