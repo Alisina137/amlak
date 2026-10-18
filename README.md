@@ -2,14 +2,14 @@
 
 Afghanistan-only, Android-first real estate marketplace. Kabul first. Localized Dari (default), Pashto, English. Product behavior is governed by docs/PRODUCT-SPECIFICATION.md; delivery by docs/SOFTWARE-WORKFLOW-V4.md.
 
-## Current milestone — Phase 6: Trust, safety & verification
+## Current milestone — Phase 7: Pilot hardening & MVP readiness
 
 - Mobile: Expo SDK 57 + Expo Router. Five public marketplace tabs, offline 34-province catalog, and real email/password auth + verification/recovery/advertiser/agency/agent applications.
 - API: Fastify on **port 4000** with PostgreSQL identity persistence, email challenges, hashed sessions, protected agency memberships, staff MFA and audit.
 - Admin: Separate Next.js staff portal at http://localhost:3000/admin/login. Provisioned staff can review agency and independent-agent applications; ordinary mobile accounts cannot access staff routes.
 - Shared: localization, province catalog, contracts, design tokens and PostgreSQL/Drizzle schema.
 
-**Phase 3 now supports real moderated property listings**, structured sale/rent/gharawi pricing, optimized photo uploads, agency inventory and public approved property details. The advanced discovery and inquiry features follow in Phase 4–5.
+**Phase 3 now supports real moderated property listings**, structured sale/rent/gharawi pricing, optimized photo uploads, agency inventory and public approved property details. Advanced discovery, in-app inquiries/viewings, and trust/safety workflows were delivered in Phases 4–6.
 
 ## Local setup (PowerShell)
 
