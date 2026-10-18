@@ -7,7 +7,8 @@ import * as core from "./schema";
 import * as inventory from "./listing-schema";
 import * as discovery from "./discovery-schema";
 import * as engagement from "./engagement-schema";
-const schema={...core,...inventory,...discovery,...engagement};
+import * as safety from "./safety-schema";
+const schema={...core,...inventory,...discovery,...engagement,...safety};
 
 /** TCP remains the default for local PostgreSQL and existing deployments. */
 function createTcp(databaseUrl:string){

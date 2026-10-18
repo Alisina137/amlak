@@ -1,4 +1,4 @@
-import {pgTable,pgEnum,uuid,varchar,timestamp,text,integer,jsonb,index,uniqueIndex,bigint} from "drizzle-orm/pg-core";
+import {pgTable,pgEnum,uuid,varchar,timestamp,text,integer,jsonb,index,uniqueIndex,bigint,boolean} from "drizzle-orm/pg-core";
 import {users,agencies,staff} from "./schema";
 export const listingStatus=pgEnum("listing_status",["draft","pending_review","published","paused","sold","rented","rejected","archived"]);
 export const publisherKind=pgEnum("publisher_kind",["private","independent_agent","agency"]);
@@ -10,6 +10,7 @@ export const listings=pgTable("listings",{
  publisher:publisherKind("publisher").notNull(),
  clientRequestId:uuid("client_request_id").notNull(),
  status:listingStatus("status").notNull().default("draft"),
+ safetyHold:boolean("safety_hold").notNull().default(false),
  version:integer("version").notNull().default(1),
  currentRevisionId:uuid("current_revision_id"),
  approvedRevisionId:uuid("approved_revision_id"),
