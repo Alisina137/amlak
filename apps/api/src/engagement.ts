@@ -133,7 +133,6 @@ export function registerEngagementRoutes(app:FastifyInstance,db:Database){
   }
   return outcome;
  });
- });
  app.get("/v1/inquiries",async request=>{
   const actor=await requireActor(db,request,"user");await requireVerified(db,actor);
   const rows=await listAccessible(db,actor);
