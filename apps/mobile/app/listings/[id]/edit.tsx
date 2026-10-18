@@ -20,14 +20,15 @@ const steps={
  ps:["د ملکیت ډول","معامله","ځای","ځانګړنې","بیه","انځورونه","اړیکه","بیاکتنه"]
 };
 const labels={
- en:{title:"Title",description:"Description",province:"Province",city:"City",district:"District",neighborhood:"Neighborhood",address:"Street address (kept private)",area:"Area (m²)",bedrooms:"Bedrooms",bathrooms:"Bathrooms",floor:"Floor",floors:"Total floors",frontage:"Frontage (m)",currency:"Currency",salePrice:"Asking price",rent:"Monthly rent",deposit:"Refundable deposit / advance (0 allowed)",principal:"Refundable gharawi principal",duration:"Duration in months",refund:"Refund terms",maint:"Monthly maintenance",phone:"Telephone number",whatsapp:"WhatsApp number",enablePhone:"Allow telephone calls",enableWhatsapp:"Allow WhatsApp",precise:"Share exact coordinates publicly",photo:"Choose and upload a property photo",preview:"Preview / submission checks",save:"Save draft",next:"Save & next",back:"Previous",submit:"Submit for moderation",rejected:"This revision was rejected; edit and resubmit.",review:"Submitted for staff review. The approved public version stays unchanged.",pending:"Under review",approval:"Approved version visible publicly",required:"Complete required fields before submission",offline:"Offline draft saved on this device; server not yet updated.",conflict:"Draft changed elsewhere; reload before saving.",withdraw:"Withdraw submitted revision"},
- fa:{title:"عنوان",description:"توضیحات",province:"ولایت",city:"شهر",district:"ناحیه / ولسوالی",neighborhood:"محله / گذر",address:"آدرس دقیق (خصوصی)",area:"مساحت (متر مربع)",bedrooms:"اتاق خواب",bathrooms:"تشناب",floor:"طبقه",floors:"تعداد طبقات",frontage:"بر زمین (متر)",currency:"پول",salePrice:"قیمت فروش",rent:"کرایه ماهانه",deposit:"پول پیش / تضمین (صفر نیز مجاز)",principal:"اصل پول قابل بازپرداخت گروی",duration:"مدت به ماه",refund:"شرایط بازپرداخت گروی",maint:"مصرف ماهانه خدمات",phone:"شماره تماس",whatsapp:"شماره واتساپ",enablePhone:"تماس تلفنی فعال",enableWhatsapp:"واتساپ فعال",precise:"نمایش مختصات دقیق برای همه",photo:"انتخاب و بارگذاری عکس ملک",preview:"بررسی معلومات پیش از ارسال",save:"ذخیره پیش‌نویس",next:"ذخیره و ادامه",back:"قبلی",submit:"ارسال برای بررسی",rejected:"این نسخه رد شده است؛ اصلاح و دوباره ارسال کنید.",review:"برای بررسی مسئول ارسال شد. نسخهٔ نشرشده تغییر نمی‌کند.",pending:"در حال بررسی",approval:"نسخهٔ تأییدشده برای عموم قابل مشاهده است",required:"تمام معلومات ضروری را تکمیل کنید",offline:"نسخهٔ محلی ذخیره شد؛ هنوز به سرور نرسیده است.",conflict:"ملک در جای دیگری تغییر یافته؛ دوباره دریافت کنید.",withdraw:"پس گرفتن نسخهٔ ارسال‌شده"},
- ps:{title:"سرلیک",description:"تشریح",province:"ولایت",city:"ښار",district:"ولسوالي / ناحیه",neighborhood:"سیمه",address:"د کوڅې پته (خصوصي)",area:"مساحت (متر مربع)",bedrooms:"خوب خونې",bathrooms:"تشنابونه",floor:"پوړ",floors:"ټول پوړونه",frontage:"مخ (متر)",currency:"پیسې",salePrice:"د پلور بیه",rent:"میاشتنۍ کرایه",deposit:"بېرته ورکړه / مخکې ورکړه (صفر هم شونی)",principal:"د ګروۍ بېرته ورکړه",duration:"موده په میاشتو",refund:"د بېرته ورکولو شرطونه",maint:"میاشتنۍ خدمت فیس",phone:"تلیفون شمېره",whatsapp:"واټساپ شمېره",enablePhone:"تلیفون فعال",enableWhatsapp:"واټساپ فعال",precise:"دقیق ځای عام ښکاره کول",photo:"د ملک انځور واچوئ",preview:"د سپارلو معلومات وګورئ",save:"مسوده خوندي کړه",next:"خوندي او بل ګام",back:"مخکې",submit:"کتنې ته ولېږئ",rejected:"دا نسخه رد شوې. سمون او بیا یې وسپارئ.",review:"کتنې ته ولېږل شو. مخکینی خپور شوی معلومات پاتې دي.",pending:"د کتنې لاندې",approval:"منل شوی معلومات خلکو ته ښکاري",required:"ټول ضروري معلومات ډک کړئ",offline:"مسوده په دې وسیله خوندي شوه، سرور ته نه ده تللې.",conflict:"مسوده بل ځای بدله شوې، بیا یې راواخلئ.",withdraw:"سپارل شوې نسخه بېرته واخلئ"}
+ en:{title:"Title",description:"Description",province:"Province",city:"City",district:"District",neighborhood:"Neighborhood",address:"Street address (kept private)",area:"Area (m²)",bedrooms:"Bedrooms",bathrooms:"Bathrooms",floor:"Floor",floors:"Total floors",frontage:"Frontage (m)",currency:"Currency",salePrice:"Asking price",rent:"Monthly rent",deposit:"Refundable deposit / advance (0 allowed)",principal:"Refundable gharawi principal",duration:"Duration in months",refund:"Refund terms",maint:"Monthly maintenance",phone:"Telephone number",whatsapp:"WhatsApp number",enablePhone:"Allow telephone calls",enableWhatsapp:"Allow WhatsApp",precise:"Share exact coordinates publicly",photo:"Choose and upload a property photo",preview:"Preview / submission checks",save:"Save draft",next:"Save & next",back:"Previous",submit:"Submit for moderation",rejected:"This revision was rejected; edit and resubmit.",review:"Submitted for staff review. The approved public version stays unchanged.",pending:"Under review",approval:"Approved version visible publicly",required:"Complete required fields before submission",offline:"Offline draft saved on this device; server not yet updated.",conflict:"Draft changed elsewhere; reload before saving.",restoreLocal:"Restore my offline edits (overwrites newer draft after saving)",keepServer:"Keep server draft",withdraw:"Withdraw submitted revision"},
+ fa:{title:"عنوان",description:"توضیحات",province:"ولایت",city:"شهر",district:"ناحیه / ولسوالی",neighborhood:"محله / گذر",address:"آدرس دقیق (خصوصی)",area:"مساحت (متر مربع)",bedrooms:"اتاق خواب",bathrooms:"تشناب",floor:"طبقه",floors:"تعداد طبقات",frontage:"بر زمین (متر)",currency:"پول",salePrice:"قیمت فروش",rent:"کرایه ماهانه",deposit:"پول پیش / تضمین (صفر نیز مجاز)",principal:"اصل پول قابل بازپرداخت گروی",duration:"مدت به ماه",refund:"شرایط بازپرداخت گروی",maint:"مصرف ماهانه خدمات",phone:"شماره تماس",whatsapp:"شماره واتساپ",enablePhone:"تماس تلفنی فعال",enableWhatsapp:"واتساپ فعال",precise:"نمایش مختصات دقیق برای همه",photo:"انتخاب و بارگذاری عکس ملک",preview:"بررسی معلومات پیش از ارسال",save:"ذخیره پیش‌نویس",next:"ذخیره و ادامه",back:"قبلی",submit:"ارسال برای بررسی",rejected:"این نسخه رد شده است؛ اصلاح و دوباره ارسال کنید.",review:"برای بررسی مسئول ارسال شد. نسخهٔ نشرشده تغییر نمی‌کند.",pending:"در حال بررسی",approval:"نسخهٔ تأییدشده برای عموم قابل مشاهده است",required:"تمام معلومات ضروری را تکمیل کنید",offline:"نسخهٔ محلی ذخیره شد؛ هنوز به سرور نرسیده است.",conflict:"ملک در جای دیگری تغییر یافته؛ دوباره دریافت کنید.",restoreLocal:"بازیابی اصلاحات محلی (پس از ذخیره نسخهٔ جدید را جایگزین می‌کند)",keepServer:"حفظ نسخهٔ سرور",withdraw:"پس گرفتن نسخهٔ ارسال‌شده"},
+ ps:{title:"سرلیک",description:"تشریح",province:"ولایت",city:"ښار",district:"ولسوالي / ناحیه",neighborhood:"سیمه",address:"د کوڅې پته (خصوصي)",area:"مساحت (متر مربع)",bedrooms:"خوب خونې",bathrooms:"تشنابونه",floor:"پوړ",floors:"ټول پوړونه",frontage:"مخ (متر)",currency:"پیسې",salePrice:"د پلور بیه",rent:"میاشتنۍ کرایه",deposit:"بېرته ورکړه / مخکې ورکړه (صفر هم شونی)",principal:"د ګروۍ بېرته ورکړه",duration:"موده په میاشتو",refund:"د بېرته ورکولو شرطونه",maint:"میاشتنۍ خدمت فیس",phone:"تلیفون شمېره",whatsapp:"واټساپ شمېره",enablePhone:"تلیفون فعال",enableWhatsapp:"واټساپ فعال",precise:"دقیق ځای عام ښکاره کول",photo:"د ملک انځور واچوئ",preview:"د سپارلو معلومات وګورئ",save:"مسوده خوندي کړه",next:"خوندي او بل ګام",back:"مخکې",submit:"کتنې ته ولېږئ",rejected:"دا نسخه رد شوې. سمون او بیا یې وسپارئ.",review:"کتنې ته ولېږل شو. مخکینی خپور شوی معلومات پاتې دي.",pending:"د کتنې لاندې",approval:"منل شوی معلومات خلکو ته ښکاري",required:"ټول ضروري معلومات ډک کړئ",offline:"مسوده په دې وسیله خوندي شوه، سرور ته نه ده تللې.",conflict:"مسوده بل ځای بدله شوې، بیا یې راواخلئ.",restoreLocal:"زما محلي بدلونونه بېرته راوګرځوئ (له خوندي کولو وروسته نوې مسوده بدلوي)",keepServer:"د سرور مسوده وساتئ",withdraw:"سپارل شوې نسخه بېرته واخلئ"}
 } as const;
 type Key=keyof typeof labels.en;
 export default function ListingEditor(){
  const {id}=useLocalSearchParams<{id:string}>(),{locale}=usePreferences(),{token,user}=useAuth();
  const [pendingImage,setPendingImage]=useState<{uri:string;mime:string;bytes?:number}|null>(null);
+ const [pendingConflict,setPendingConflict]=useState<ListingDraft|null>(null);
  const [roomEditor,setRoomEditor]=useState<string|null>(null);
  const [data,setData]=useState<ListingDraft>(listingDraftSchema.parse({})),[status,setStatus]=useState("draft"),[revisionStatus,setRevisionStatus]=useState("draft"),[revisionReason,setRevisionReason]=useState("");
  const [version,setVersion]=useState(1),[step,setStep]=useState(0),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),
@@ -76,8 +77,12 @@ export default function ListingEditor(){
     try{
      const cached=JSON.parse(saved) as {version:number;data:unknown;unsynced:boolean};
      const result=listingDraftSchema.safeParse(cached.data);
-     if(result.success&&cached.version===response.version&&cached.unsynced&&
-      response.revisionStatus!=="submitted")doc=result.data;
+     if(result.success&&cached.unsynced&&response.revisionStatus!=="submitted"&&
+      !["sold","rented","archived"].includes(response.status)){
+      if(cached.version===response.version)doc=result.data;
+      else if(JSON.stringify(result.data)!==JSON.stringify(response.data))
+       setPendingConflict(result.data); // Never silently discard or overwrite divergent remote edits.
+     }
     }catch{}
    }
    if(activeScope.current!==requestScope)return;
@@ -114,7 +119,7 @@ export default function ListingEditor(){
  useEffect(()=>{
   loaded.current=false;lastHydrated.current=null;saveChain.current=Promise.resolve();cacheChain.current=Promise.resolve();
   offlineUntil.current=0;
-  setLoading(true);setNotice("");setError("");setPendingImage(null);
+  setLoading(true);setNotice("");setError("");setPendingImage(null);setPendingConflict(null);
   void refresh();
  },[id,token,user?.id]);
  async function save(manual=false){
@@ -336,6 +341,19 @@ export default function ListingEditor(){
   {revisionStatus==="rejected"?<SectionCard><Label>{tx("rejected")}</Label><Label muted>{revisionReason}</Label></SectionCard>:null}
   {status==="published"&&revisionStatus!=="submitted"?<SectionCard><Label style={{color:colors.success}}>{tx("approval")}</Label></SectionCard>:null}
   {mutable?form():null}
+  {pendingConflict?<SectionCard>
+   <Label style={{color:colors.warning}}>{tx("conflict")}</Label>
+   <Label muted>{tx("offline")}</Label>
+   <Action kind="secondary" label={tx("restoreLocal")} onPress={()=>{
+    if(!mutable)return;
+    const local=pendingConflict;setPendingConflict(null);change(local);
+    void cache(local,versionRef.current,true);
+   }}/>
+   <Action kind="secondary" label={tx("keepServer")} onPress={()=>{
+    setPendingConflict(null);
+    void AsyncStorage.removeItem(localKey).catch(()=>{});
+   }}/>
+  </SectionCard>:null}
   {error?<SectionCard><Label style={{color:colors.error}}>{error}</Label>
    <Action kind="secondary" disabled={busy} label={tx("save")}
     onPress={()=>void save(true).then(()=>refresh()).catch(()=>setNotice(tx("offline")))}/>
