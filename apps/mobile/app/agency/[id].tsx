@@ -1,11 +1,12 @@
 import {router,useLocalSearchParams} from "expo-router";
 import {useEffect,useState} from "react";
-import {TextInput,View} from "react-native";
+import {View} from "react-native";
 import {colors} from "@amlaklink/design-tokens";
 import {useAuth,requestJson} from "../../src/auth";
 import {authT} from "../../src/auth-copy";
 import {usePreferences} from "../../src/context";
-import {Action,Label,Page,ScreenHeading,SectionCard} from "../../src/ui";
+import {Action,AppInput,BackButton,DirectionalRow,Label,Page,ScreenHeading,SectionCard} from "../../src/ui";
+import {uiText} from "../../src/ui-copy";
 type Workspace={agency:{name:string;status:string};membership:{role:string};canManageMembers:boolean;canSubmitListing:boolean};
 type Member={id:string;displayName:string;role:string;status:string};
 export default function AgencyWorkspace(){
@@ -26,31 +27,31 @@ export default function AgencyWorkspace(){
   try{await requestJson("/v1/agencies/"+id+"/members",{token,method:"POST",body:{email,role}});
   setEmail("");await load();}catch{setError(t("attempt"));}finally{setBusy(false);}
  }
- return <Page><ScreenHeading title={workspace?.agency.name||t("workspace")} subtitle={t("join")}/>
+ return <Page><BackButton onPress={()=>router.back()}/><ScreenHeading title={workspace?.agency.name||t("workspace")} subtitle={t("join")}/>
  {workspace?<SectionCard>
   <Label weight="bold">{t("status")}: {workspace.agency.status} · {workspace.membership.role}</Label>
-  <Action label={locale==="en"?"Create agency listing":"ثبت ملک برای دفتر"} onPress={()=>router.push({pathname:"/listings/new",params:{agencyId:id}})}/>
-  <Action kind="secondary" label={locale==="en"?"Agency properties":"ملک‌های دفتر"} onPress={()=>router.push({pathname:"/agency/[id]/properties",params:{id}})}/>
-  <Action kind="secondary" label={locale==="en"?"Agency leads & inquiries":"مدیریت مشتریان و پرسش‌ها"} onPress={()=>router.push({pathname:"/agency/[id]/leads",params:{id}})}/>
+  {workspace.canSubmitListing?<Action label={uiText(locale,"agencyListing")} onPress={()=>router.push({pathname:"/listings/new",params:{agencyId:id}})}/>:null}
+  <Action kind="secondary" label={uiText(locale,"agencyProperties")} onPress={()=>router.push({pathname:"/agency/[id]/properties",params:{id}})}/>
+  <Action kind="secondary" label={uiText(locale,"agencyLeads")} onPress={()=>router.push({pathname:"/agency/[id]/leads",params:{id}})}/>
   {workspace.membership.role!=="agent"?<Action kind="secondary"
-   label={locale==="en"?"Agency activity reports":"گزارش فعالیت دفتر"}
+   label={uiText(locale,"agencyReports")}
    onPress={()=>router.push({pathname:"/agency/[id]/reports",params:{id}})}/>:null}
   {workspace.membership.role!=="agent"?<Action kind="secondary"
-   label={locale==="en"?"Agent performance & lead assignments":locale==="fa"?"عملکرد کارمندان و تخصیص مشتریان":"د کارکوونکو فعالیت او د غوښتنو سپارل"}
+   label={uiText(locale,"agentPerformance")}
    onPress={()=>router.push({pathname:"/agency/[id]/performance",params:{id}})}/>:null}
   {workspace.membership.role==="owner"?<Action kind="secondary"
-   label={locale==="en"?"Plans & billing":"اشتراک و پرداخت دفتر"}
+   label={uiText(locale,"agencyBilling")}
    onPress={()=>router.push({pathname:"/agency/[id]/billing",params:{id}})}/>:null}
   <Label weight="bold">{t("members")}</Label>
-  {members.map(m=><Label key={m.id}>{m.displayName} · {m.role}</Label>)}
+  {members.map(m=><Label key={m.id}>{m.displayName} · {m.role==="owner"?uiText(locale,"localeAgencyRoleOwner"):m.role==="manager"?uiText(locale,"localeAgencyRoleManager"):uiText(locale,"localeAgencyRoleAgent")}</Label>)}
   {workspace.canManageMembers?<View style={{gap:10}}>
    <Label weight="bold">{t("addMember")}</Label>
-   <TextInput accessibilityLabel={t("memberEmail")} placeholder={t("memberEmail")} value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address"
+   <AppInput inputDirection="ltr" accessibilityLabel={t("memberEmail")} placeholder={t("memberEmail")} value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address"
     style={{minHeight:46,borderColor:colors.border,borderWidth:1,borderRadius:12,padding:10,fontSize:16,color:colors.text}}/>
-   <View style={{flexDirection:"row",gap:8}}>
+   <DirectionalRow style={{gap:8}}>
     <View style={{flex:1}}><Action kind={role==="agent"?"primary":"secondary"} label={t("agent")} onPress={()=>setRole("agent")}/></View>
     <View style={{flex:1}}><Action kind={role==="manager"?"primary":"secondary"} label={t("manager")} onPress={()=>setRole("manager")}/></View>
-   </View>
+   </DirectionalRow>
    <Action disabled={busy||!email.includes("@")} label={t("addMember")} onPress={()=>void addMember()}/>
   </View>:null}
  </SectionCard>:null}
