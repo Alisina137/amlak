@@ -21,7 +21,7 @@ test("phase 5: inquiry, message retries, viewing consent, notifications and tena
  const [listing]=await db.insert(schema.listings).values({authorId:owner.id,publisher:"private",clientRequestId:randomUUID(),status:"published",publishedAt:now,lastConfirmedAt:now}).returning();
  const draft=listingDraftSchema.parse({
   title:"Two-bedroom home for Kabul viewing",description:"Excellent central home with water, secure electric supply and nearby market.",
-  propertyType:"house",transactionType:"rent",location:{provinceId:"kabul",city:"Kabul",district:"District 3",neighborhood:"Taimani"},
+  propertyType:"house",transactionType:"rent",location:{provinceId:"herat",city:"Herat",district:"District 3",neighborhood:"Taimani"},
   attributes:{areaM2:150,bedrooms:2},price:{currency:"AFN",monthlyRent:6000,refundableDeposit:20000},
   contact:{allowPhone:true,phone:"+93700000000"}
  });
@@ -88,8 +88,8 @@ test("phase 5 agency scope: managers own queue, agents assigned only, notes priv
  const [listing]=await db.insert(schema.listings).values({authorId:users[0].id,agencyId:agency.id,publisher:"agency",clientRequestId:randomUUID(),
   status:"published",publishedAt:now,lastConfirmedAt:now}).returning();
  const draft=listingDraftSchema.parse({title:"Agency residence for viewings",description:"A spacious property on a main road with convenient access.",
-  propertyType:"house",transactionType:"sale",location:{provinceId:"kabul",city:"Kabul",district:"District 4"},
-  attributes:{areaM2:120},price:{currency:"AFN",askingPrice:12345000}});
+  propertyType:"house",transactionType:"sale",location:{provinceId:"herat",city:"Herat",district:"District 4"},
+  attributes:{areaM2:120},price:{currency:"AFN",askingPrice:125000}});
  const [rev]=await db.insert(schema.revisions).values({listingId:listing.id,sequence:1,status:"approved",data:draft}).returning();
  await db.update(schema.listings).set({approvedRevisionId:rev.id}).where(eq(schema.listings.id,listing.id));
  const send=async(method:"GET"|"POST",path:string,userIdx:number,body?:object)=>{
