@@ -132,3 +132,61 @@ test("renewal API and worker: private scope, owner-only notice, dedupe, confirme
   assert.equal(stale.filter(n=>n.dedupeKey==="subscription:"+grant.id+":grace_ending").length,0);
  }finally{await app.close();await sql.end();}
 });
+
+test("renewal worker paginates large queues without repeating the first page, and never nags reactivated subscribers",{
+ skip:!process.env.DATABASE_URL},async()=>{
+ const {db,sql}=connectDatabase();
+ const now=new Date(),tag=randomUUID().slice(0,8);
+ try{
+  const accounts=await db.insert(schema.users).values([
+   {email:"renewal-page1-"+tag+"@example.test",displayName:"Paging one",passwordHash:"test",emailVerifiedAt:now},
+   {email:"renewal-page2-"+tag+"@example.test",displayName:"Paging two",passwordHash:"test",emailVerifiedAt:now},
+   {email:"renewal-gap-"+tag+"@example.test",displayName:"Gap subscriber",passwordHash:"test",emailVerifiedAt:now}
+  ]).returning();
+  for(const [index,user] of accounts.slice(0,2).entries()){
+   const [invoice]=await db.insert(schema.growthInvoices).values({
+    payerId:user.id,requestId:randomUUID(),productCode:"solo_agent",amountAfn:PRODUCTS.solo_agent.amountAfn,
+    status:"confirmed"
+   }).returning();
+   await db.insert(schema.growthEntitlements).values({
+    invoiceId:invoice.id,userId:user.id,planCode:"solo_agent",listingLimit:15,seatLimit:1,
+    startsAt:new Date(now.getTime()-23*DAY_MS),
+    expiresAt:new Date(now.getTime()+(6.9-index*0.1)*DAY_MS)
+   });
+  }
+  const first=await scanSubscriptionRenewals(db,{execute:false,now,limit:1});
+  assert.equal(first.scanned,1);
+  assert.equal(first.hasMore,true);
+  assert.ok(first.nextCursor);
+  const firstCursor=decodeRenewalCursor(first.nextCursor!);
+  const second=await scanSubscriptionRenewals(db,{execute:false,now,limit:1,cursor:first.nextCursor!});
+  assert.equal(second.scanned,1);
+  assert.ok(second.nextCursor!==first.nextCursor||!second.hasMore);
+  const secondCursor=second.nextCursor?decodeRenewalCursor(second.nextCursor):null;
+  if(secondCursor)assert.ok(secondCursor.expiresAt<=firstCursor.expiresAt);
+
+  const [oldInvoice,newInvoice]=await db.insert(schema.growthInvoices).values([
+   {payerId:accounts[2].id,requestId:randomUUID(),productCode:"solo_agent",
+    amountAfn:PRODUCTS.solo_agent.amountAfn,status:"confirmed"},
+   {payerId:accounts[2].id,requestId:randomUUID(),productCode:"solo_agent",
+    amountAfn:PRODUCTS.solo_agent.amountAfn,status:"confirmed"}
+  ]).returning();
+  const oldEnd=new Date(now.getTime()-2*DAY_MS);
+  const [oldGrant]=await db.insert(schema.growthEntitlements).values({
+   invoiceId:oldInvoice.id,userId:accounts[2].id,planCode:"solo_agent",
+   listingLimit:15,seatLimit:1,startsAt:new Date(now.getTime()-32*DAY_MS),expiresAt:oldEnd
+  }).returning();
+  // Staff verified a paid renewal after a one-day gap.
+  await db.insert(schema.growthEntitlements).values({
+   invoiceId:newInvoice.id,userId:accounts[2].id,planCode:"solo_agent",
+   listingLimit:15,seatLimit:1,startsAt:new Date(now.getTime()-DAY_MS),
+   expiresAt:new Date(now.getTime()+29*DAY_MS)
+  });
+  assert.equal((await readSubscription(db,{userId:accounts[2].id},now)).status,"active");
+  const scanned=await scanSubscriptionRenewals(db,{execute:true,now,limit:100});
+  assert.ok(scanned.skippedRenewed>=1);
+  const notifications=await db.select().from(schema.notifications);
+  assert.equal(notifications.filter(n=>n.dedupeKey==="subscription:"+oldGrant.id+":grace_started").length,0);
+  assert.equal(notifications.filter(n=>n.dedupeKey==="subscription:"+oldGrant.id+":grace_ending").length,0);
+ }finally{await sql.end();}
+});
