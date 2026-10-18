@@ -6,6 +6,16 @@ import {cancelInactiveListingVisits} from "./engagement-lifecycle";
 const DAY=86_400_000,MAX_BATCH=100;
 export const FRESHNESS_REMIND_DAYS=14,FRESHNESS_EXPIRE_DAYS=30;
 const cutoff=(now:Date,days:number)=>new Date(now.getTime()-days*DAY);
+export function freshnessNotice(locale:string,action:"remind"|"pause"){
+ if(locale==="ps")return action==="remind"?
+  "مهرباني وکړئ د خپل ملکیت شتون یو ځل بیا تایید کړئ.":
+  "ستاسو د ملکیت اعلان د ۳۰ ورځو راهیسې د شتون نه تاییدېدو له امله درول شوی دی.";
+ if(locale==="fa")return action==="remind"?
+  "لطفاً موجودی ملک خود را دوباره تأیید کنید.":
+  "آگهی ملک شما به دلیل تأیید نشدن موجودی در ۳۰ روز گذشته متوقف شد.";
+ return action==="remind"?"Please reconfirm your property's availability.":
+  "Your property was paused because its availability was not confirmed for 30 days.";
+}
 export function freshnessAction(confirmed:Date|null,now:Date):"pause"|"remind"|null{
  if(!confirmed||confirmed.getTime()<=cutoff(now,FRESHNESS_EXPIRE_DAYS).getTime())return "pause";
  if(confirmed.getTime()<=cutoff(now,FRESHNESS_REMIND_DAYS).getTime())return "remind";
@@ -25,12 +35,15 @@ export async function freshnessSweep(db:Database,options:{execute:boolean;limit?
   const action=freshnessAction(item.lastConfirmedAt,now);
   if(!action)continue;
   const cycle=item.lastConfirmedAt?.toISOString()||"never";
+  let ownerLocale="fa";
+  if(options.execute){const [owner]=await db.select({locale:schema.users.locale}).from(schema.users)
+   .where(eq(schema.users.id,item.authorId)).limit(1);ownerLocale=owner?.locale||"fa";}
   if(action==="remind"){
    result.dueReminder++;
    if(options.execute){
     const [inserted]=await db.insert(schema.notifications).values({userId:item.authorId,kind:"freshness",
      referenceId:item.id,dedupeKey:"freshness:remind:"+item.id+":"+cycle,
-     title:"Please reconfirm that your property is still available."}).onConflictDoNothing()
+     title:freshnessNotice(ownerLocale,"remind")}).onConflictDoNothing()
       .returning({id:schema.notifications.id});
     if(inserted)result.reminded++;
    }
@@ -48,7 +61,7 @@ export async function freshnessSweep(db:Database,options:{execute:boolean;limit?
      targetType:"listing",targetId:item.id,reason:"Availability unconfirmed for 30 days"});
     await db.insert(schema.notifications).values({userId:item.authorId,kind:"freshness",referenceId:item.id,
      dedupeKey:"freshness:paused:"+item.id+":"+cycle,
-     title:"Your property was paused after 30 days without an availability confirmation."}).onConflictDoNothing();
+     title:freshnessNotice(ownerLocale,"pause")}).onConflictDoNothing();
     result.visitCancellations+=await cancelInactiveListingVisits(db,item.id,false);
    }
   }
@@ -63,7 +76,7 @@ export async function pilotScorecard(db:Database,now=new Date()){
  const [agencyTotal,agencyActive,kabulPublished,kabulFresh14,fresh30,stalePublished,pendingReview,
  openCases,highRisk,inquiries30,viewings30]=await Promise.all([
   count(db.select({n}).from(schema.agencies)),
-  count(db.select({n}).from(schema.agencies).where(eq(schema.agencies.status,"active"))),
+  count(db.select({n}).from(schema.agencies).where(and(eq(schema.agencies.status,"active"),eq(schema.agencies.provinceId,"kabul")))),
   count(db.select({n}).from(schema.listings)
    .innerJoin(schema.revisions,eq(schema.revisions.id,schema.listings.approvedRevisionId))
    .where(and(eq(schema.listings.status,"published"),eq(loc,"kabul")))),

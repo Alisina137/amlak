@@ -4,7 +4,7 @@ import test from "node:test";
 import {and,eq} from "drizzle-orm";
 import {connectDatabase,schema} from "@amlaklink/database";
 import {buildApp} from "./app";
-import {freshnessAction,freshnessSweep,pilotScorecard} from "./pilot";
+import {freshnessAction,freshnessNotice,freshnessSweep,pilotScorecard} from "./pilot";
 import {hashToken,newToken,encryptTotp,newTotpSecret} from "./security";
 
 test("freshness boundaries and no premature pause",()=>{
@@ -13,6 +13,9 @@ test("freshness boundaries and no premature pause",()=>{
  assert.equal(freshnessAction(new Date("2026-10-04T12:00:00Z"),now),"remind");
  assert.equal(freshnessAction(new Date("2026-09-18T12:00:00Z"),now),"pause");
  assert.equal(freshnessAction(null,now),"pause");
+ assert.match(freshnessNotice("fa","remind"),/تأیید/);
+ assert.match(freshnessNotice("ps","pause"),/۳۰/);
+ assert.match(freshnessNotice("en","remind"),/availability/);
 });
 test("pilot freshness job: scoped, safe dry-run, deduped reminders, stale pause, roles",{skip:!process.env.DATABASE_URL},async()=>{
  const {db,sql}=connectDatabase(),app=buildApp({db});
