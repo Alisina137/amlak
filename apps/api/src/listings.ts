@@ -158,7 +158,7 @@ export function registerListingRoutes(app:FastifyInstance,db:Database){
  app.post<{Params:{id:string}}>("/v1/listings/:id/resume",async request=>{
   const l=await getListing(db,request.params.id),actor=await requireEditor(db,request,l);
   const [row]=await db.update(schema.listings).set({status:"published",lastConfirmedAt:new Date(),updatedAt:new Date()})
-    .where(and(eq(schema.listings.id,l.id),eq(schema.listings.status,"paused"))).returning();
+    .where(and(eq(schema.listings.id,l.id),eq(schema.listings.status,"paused"),eq(schema.listings.safetyHold,false))).returning();
   if(!row||!row.approvedRevisionId)throw new HttpProblem(409,"LISTING_NOT_PAUSED");
   await db.insert(schema.audit).values({actorType:"user",actorId:actor.id,action:"listing_resumed",targetType:"listing",targetId:l.id});
   return {status:row.status};
@@ -175,7 +175,7 @@ export function registerListingRoutes(app:FastifyInstance,db:Database){
   const l=await getListing(db,request.params.id),actor=await requireEditor(db,request,l);
   const input=parse(z.object({outcome:z.enum(["sold","rented"])}).strict(),request.body);
   const [row]=await db.update(schema.listings).set({status:input.outcome,updatedAt:new Date()})
-    .where(and(eq(schema.listings.id,l.id),inArray(schema.listings.status,["published","paused"]))).returning();
+    .where(and(eq(schema.listings.id,l.id),inArray(schema.listings.status,["published","paused"]),eq(schema.listings.safetyHold,false))).returning();
   if(!row)throw new HttpProblem(409,"LISTING_NOT_ACTIVE");
   await db.insert(schema.audit).values({actorType:"user",actorId:actor.id,action:"listing_closed",targetType:"listing",targetId:l.id,reason:input.outcome});
   await cancelInactiveListingVisits(db,l.id,true).catch(err=>app.log.error({err},"Failed to cancel visits after closure"));
@@ -215,7 +215,7 @@ export function registerListingRoutes(app:FastifyInstance,db:Database){
    const [r]=await tx.update(schema.revisions).set({status:input.decision==="approve"?"approved":"rejected",moderatorId:actor.id,reason:input.reason,reviewedAt:new Date()})
     .where(and(eq(schema.revisions.id,input.revisionId),eq(schema.revisions.listingId,listingId),eq(schema.revisions.status,"submitted"))).returning();
    if(!r)throw new HttpProblem(409,"REVIEW_CONFLICT");
-   const status:Listing["status"]=input.decision==="reject"?(l.approvedRevisionId?l.status:"rejected"):(["paused","sold","rented"].includes(l.status)?l.status:"published");
+   const status:Listing["status"]=input.decision==="reject"?(l.approvedRevisionId?l.status:"rejected"):(l.safetyHold||["paused","sold","rented"].includes(l.status)?l.status:"published");
    await tx.update(schema.listings).set({status,version:l.version+1,updatedAt:new Date(),
     currentRevisionId:input.decision==="approve"?null:r.id,approvedRevisionId:input.decision==="approve"?r.id:l.approvedRevisionId,
     publishedAt:input.decision==="approve"?(l.publishedAt||new Date()):l.publishedAt,
