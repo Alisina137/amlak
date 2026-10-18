@@ -46,6 +46,14 @@ test("offline drafts are isolated, versioned and never silently overwrite diverg
  assert.match(s,/REQUEST_TIMEOUT|offlineUntil/);
  assert.match(s,/mutableBase&&!pendingConflict/);
 });
+test("image upload retries are deduplicated under agency/listing lock",()=>{
+ const server=file("apps/api/src/photos.ts"),editor=file("apps/mobile/app/listings/[id]/edit.tsx");
+ assert.match(server,/schema.photos.fingerprint/);
+ assert.match(server,/pg_advisory_xact_lock/);
+ assert.match(server,/reused:true/);
+ assert.match(server,/removePhoto\(stored.key,stored.mode\)/);
+ assert.match(editor,/photoIds.includes\(response.id\)/);
+});
 test("network awareness and retry controls respond to foreground and offline errors",()=>{
  const status=file("apps/mobile/src/api.ts"),feed=file("apps/mobile/src/listing-ui.tsx");
  assert.match(status,/AppState\.addEventListener/);
