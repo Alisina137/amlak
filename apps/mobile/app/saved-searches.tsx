@@ -14,17 +14,17 @@ const translations={
   label:"Search name",name:"My property search",save:"Save current search",alerts:"New match & price-drop alerts",
   open:"Use filters",remove:"Delete search",empty:"No saved searches yet.",login:"Sign in to save searches.",
   fail:"Could not update saved searches. Try again.",max:"Up to 12 saved searches.",current:"Current filters",
-  back:"Back to search",deleteTitle:"Delete saved search?",yes:"Delete",cancel:"Cancel"},
+  back:"Back to search",deleteTitle:"Delete saved search?",yes:"Delete",cancel:"Cancel",viewport:"A moved-map rectangle cannot be saved. Draw a custom area on the map or clear the map filter first."},
  fa:{heading:"جستجوهای ذخیره‌شده",sub:"فیلترها را ذخیره کنید و اعلان‌های داخل برنامه را فعال کنید.",
   label:"نام جستجو",name:"جستجوی ملک من",save:"ذخیره جستجوی فعلی",alerts:"اعلان ملک جدید یا کاهش قیمت",
   open:"اعمال فیلترها",remove:"حذف جستجو",empty:"هنوز جستجویی ذخیره نشده است.",login:"برای ذخیره جستجو وارد شوید.",
   fail:"ذخیره یا تغییر جستجو ممکن نشد.",max:"حداکثر ۱۲ جستجو",current:"فیلترهای فعلی",
-  back:"بازگشت به جستجو",deleteTitle:"جستجو حذف شود؟",yes:"حذف",cancel:"انصراف"},
+  back:"بازگشت به جستجو",deleteTitle:"جستجو حذف شود؟",yes:"حذف",cancel:"انصراف",viewport:"محدودهٔ مستطیلی نقشه قابل ذخیره نیست. محدودهٔ دلخواه رسم کنید یا فیلتر نقشه را پاک کنید."},
  ps:{heading:"خوندي شوې پلټنې",sub:"فلټرونه خوندي کړئ او د اپ دننه خبرتیاوې فعالې کړئ.",
   label:"د پلټنې نوم",name:"زما د ملکیت پلټنه",save:"اوسنۍ پلټنه خوندي کړه",alerts:"د نوې پایلې او بیې کمېدو خبرتیا",
   open:"فلټرونه وکاروه",remove:"پلټنه ړنګه کړه",empty:"تر اوسه هېڅ پلټنه نشته.",login:"لومړی ننوزئ.",
   fail:"پلټنه خوندي یا بدله نشوه.",max:"تر ۱۲ پلټنو پورې",current:"اوسني فلټرونه",
-  back:"پلټنې ته ورشه",deleteTitle:"پلټنه ړنګه شي؟",yes:"ړنګه کړه",cancel:"لغوه"}
+  back:"پلټنې ته ورشه",deleteTitle:"پلټنه ړنګه شي؟",yes:"ړنګه کړه",cancel:"لغوه",viewport:"د نقشې مستطیلي سیمه نه خوندي کېږي. ځانګړې ساحه رسم یا چاڼ لرې کړئ."}
 };
 export default function SavedSearches(){
  const {locale}=usePreferences(),copy=translations[locale],rtl=isRTL(locale);
@@ -38,7 +38,7 @@ export default function SavedSearches(){
  },[token,copy.fail]);
  useFocusEffect(useCallback(()=>{void load();},[load]));
  async function create(){
-  if(!token||!title.trim()||busy)return;setBusy(true);
+  if(!token||!title.trim()||busy||filters.viewport)return;setBusy(true);
   try{
    const normalized=Object.fromEntries(Object.entries(filters).filter(([,v])=>v!==undefined&&v!=="")
     .map(([k,v])=>[k,String(v)]));
@@ -77,7 +77,8 @@ export default function SavedSearches(){
      <Switch accessibilityLabel={copy.alerts} value={alertsEnabled} onValueChange={setAlertsEnabled}/>
      <View style={{flex:1}}><Label>{copy.alerts}</Label></View>
     </View>
-    <Action label={copy.save} disabled={busy||items.length>=12||!title.trim()} onPress={()=>void create()}/>
+    {filters.viewport?<Label muted>{copy.viewport}</Label>:null}
+    <Action label={copy.save} disabled={busy||items.length>=12||!title.trim()||!!filters.viewport} onPress={()=>void create()}/>
     <Label muted>{copy.max}</Label>
    </SectionCard>
    {items.length===0?<SectionCard><Label>{copy.empty}</Label></SectionCard>:null}
