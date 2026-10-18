@@ -11,6 +11,8 @@ export default async function AdminHome(){
    {["verification","admin","super_admin"].includes(staff.role)?
     <div style={{display:"flex",gap:24,flexWrap:"wrap"}}><Link href="/admin/agencies">بررسی درخواست‌های ثبت دفتر ←</Link><Link href="/admin/agents">درخواست‌های رهنمای معاملات مستقل ←</Link></div>:
     <p>ماژول‌های بیشتر طبق صلاحیت شما در مراحل بعدی فعال می‌شوند.</p>}
+  {["moderator","support","verification","admin","super_admin"].includes(staff.role)?
+    <p><Link href="/admin/safety">ایمنی، گزارش‌ها، اعتراض و تأیید اسناد ←</Link></p>:null}
   </section>
  </main>;
 }
