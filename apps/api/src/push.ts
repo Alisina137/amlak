@@ -1,4 +1,4 @@
-import {createHash} from "node:crypto";
+import {createHash,randomUUID} from "node:crypto";
 import {and,eq,sql} from "drizzle-orm";
 import type {FastifyInstance} from "fastify";
 import {z} from "zod";
@@ -77,6 +77,24 @@ export function registerPushRoutes(app:FastifyInstance,db:Database){
   await db.delete(schema.pushDevices).where(and(
    eq(schema.pushDevices.userId,actor.id),eq(schema.pushDevices.installationId,installationId)));
   return {unregistered:true};
+ });
+ /** Explicit opt-in test. Produces a private in-app message; only the separately
+  * scheduled worker can send a remote push, so never claim immediate delivery. */
+ app.post("/v1/push/test",{config:{rateLimit:{max:2,timeWindow:"15 minutes"}}},async request=>{
+  const actor=await requireActor(db,request,"user");await requireVerified(db,actor);
+  if(!pushEnabled())throw new HttpProblem(503,"PUSH_NOT_CONFIGURED");
+  const [prefs]=await db.select().from(schema.pushPreferences)
+   .where(eq(schema.pushPreferences.userId,actor.id)).limit(1);
+  if(!prefs?.enabled)throw new HttpProblem(409,"PUSH_OPT_IN_REQUIRED");
+  const [device]=await db.select({id:schema.pushDevices.id}).from(schema.pushDevices)
+   .where(and(eq(schema.pushDevices.userId,actor.id),eq(schema.pushDevices.active,true))).limit(1);
+  if(!device)throw new HttpProblem(409,"PUSH_DEVICE_REQUIRED");
+  const [notification]=await db.insert(schema.notifications).values({
+   userId:actor.id,kind:"push_test",title:"Push test requested. Check your device notifications.",
+   dedupeKey:"push-test:"+randomUUID()
+  }).returning({id:schema.notifications.id});
+  return {queued:true,notificationId:notification.id,
+   note:"The scheduled worker must process this private in-app notification; push delivery is not guaranteed."};
  });
  app.patch("/v1/push/preferences",async request=>{
   const actor=await requireActor(db,request,"user");await requireVerified(db,actor);
