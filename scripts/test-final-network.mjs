@@ -30,7 +30,7 @@ test("filter changes discard stale results and sponsored cards never use offline
  const s=file("apps/mobile/app/(tabs)/search.tsx");
  assert.match(s,/loadEpoch\.current/);
  assert.match(s,/filterKeyRef\.current!==key/);
- assert.match(s,/if\(response.fromCache\)\{setFeatured\(\[\]\);return;\}/);
+ assert.match(s,/if\(response.fromCache\|\|filters.polygon\|\|filters.viewport\)\{setFeatured\(\[\]\);return;\}/);
  assert.match(s,/const visibleItems=resultKey===filterKey\?items:\[\]/);
  assert.match(s,/visibleCursor/);
 });
