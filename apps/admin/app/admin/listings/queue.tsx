@@ -5,7 +5,7 @@ type Listing={
  submittedAt:string;data:{title:string;description:string;propertyType:string;transactionType:string;
  location:{provinceId:string;city:string;district:string;precision:string};
  price:Record<string,string|number|boolean|undefined>;attributes:{areaM2:number};
- photoIds:string[];contact:Record<string,unknown>};
+ photoIds:string[];photoDetails?:Record<string,{room?:string;caption?:string}>;contact:Record<string,unknown>};
 };
 export function ListingQueue(){
  const [items,setItems]=useState<Listing[]>([]),[loading,setLoading]=useState(true),[error,setError]=useState("");
@@ -43,7 +43,16 @@ export function ListingQueue(){
    <p>{item.data.description}</p>
    <p>مساحت: {item.data.attributes.areaM2} m² · قیمت: {JSON.stringify(item.data.price)}</p>
    <div style={{display:"flex",gap:10,overflowX:"auto",margin:"16px 0"}}>
-    {item.data.photoIds.map(photo=><img key={photo} alt="تصویر آگهی در حال بررسی" src={"/api/photos/"+photo} style={{width:168,height:130,objectFit:"cover",borderRadius:12}} />)}
+    {item.data.photoIds.map((photo,index)=>{
+     const meta=item.data.photoDetails?.[photo];
+     return <figure key={photo} style={{margin:0,minWidth:168,maxWidth:220,display:"grid",gap:5}}>
+      <img alt={meta?.caption||"تصویر آگهی در حال بررسی"} src={"/api/photos/"+photo}
+       style={{width:168,height:130,objectFit:"cover",borderRadius:12}}/>
+      <figcaption style={{fontSize:13,overflowWrap:"anywhere"}}>
+       {index===0?"عکس اصلی · ":""}{meta?.room||"other"}{meta?.caption?" · "+meta.caption:""}
+      </figcaption>
+     </figure>;
+    })}
    </div>
    <label htmlFor={"reason-"+item.id}>دلیل تصمیم (حداقل ۸ حرف)</label>
    <textarea id={"reason-"+item.id} maxLength={500} value={reasons[item.id]||""} onChange={e=>setReasons(p=>({...p,[item.id]:e.target.value}))}/>
