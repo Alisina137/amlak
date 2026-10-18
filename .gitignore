@@ -16,3 +16,8 @@ coverage/
 
 .amlak-backups/
 *.pg.enc
+
+# Private local Phase 8 pilot signoffs and QA reports. Do not commit evidence or customer data.
+.amlak-qa/
+.amlak-release-evidence*.json
+.amlak-qa-report*.json
