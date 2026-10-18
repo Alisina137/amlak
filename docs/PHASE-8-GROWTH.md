@@ -53,7 +53,7 @@ Run `pnpm dev:api`, `pnpm dev:mobile` and `pnpm dev:admin` as usual; the API rem
 
 - Expo **development-build push implementation is in Step 1**: token lifecycle, explicit OS permission UX, preferences, delivery tickets and receipt tracking. Still requires EAS/FCM configuration and physical-device acceptance; remote push is **disabled by default**. See docs/PHASE-8-STEP-1-PUSH.md.
 - Optional drawn map regions after map-provider cost validation. Room-labeled media and reviewed photo captions are implemented in Step 2 (see docs/PHASE-8-STEP-2-MEDIA.md), pending real-device QA.
-- Full E2E payment review and rejection/resubmission scenarios, refund/credit policy and real pilot pricing validation. **Step 3 adds renewal/grace policy and in-app reminders** (see docs/PHASE-8-STEP-3-SUBSCRIPTIONS.md), pending real-device and operational acceptance.
+- **Step 4 implementation:** independent AFN reconciliation, owner-scoped refund/credit requests, two-reviewer external refund settlement, noncash credit memos, finance history and review reasons. Credits are not redeemable until policy approval. The **real pilot payment provider, chargeback/credit redemption/refund policy and local pricing validation remain pending**. See docs/PHASE-8-STEP-4-BILLING.md. **Step 3** renewal/grace rules and notices still need pilot acceptance (docs/PHASE-8-STEP-3-SUBSCRIPTIONS.md).
 - Real-device accessibility/RTL QA, distribution to a controlled pilot, local business/legal validation and full production readiness review.
 
 Do not represent Phase 8 or the marketplace as production-complete until these are finished and the Phase 7 human pilot gate is met.

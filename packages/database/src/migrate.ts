@@ -16,7 +16,7 @@ async function migrate(){
  lifecycle=conn.sql;
  // Check connection before attempting schema writes or parsing migration files.
  await conn.db.execute(drizzleSql`SELECT 1`);
- for(const name of ["0001_identity.sql","0002_inventory.sql","0003_discovery.sql","0004_engagement.sql","0005_safety.sql","0006_professional_growth.sql","0007_collaboration.sql","0008_support.sql","0009_push.sql"]){
+ for(const name of ["0001_identity.sql","0002_inventory.sql","0003_discovery.sql","0004_engagement.sql","0005_safety.sql","0006_professional_growth.sql","0007_collaboration.sql","0008_support.sql","0009_push.sql","0010_billing_controls.sql"]){
   const path=fileURLToPath(new URL("../migrations/"+name,import.meta.url));
   await conn.sql.unsafe(readFileSync(path,"utf8"));
   console.log("Applied "+name);

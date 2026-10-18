@@ -72,6 +72,7 @@ export function routeForNotification(data:Record<string,unknown>){
    data.referenceId:null;
  if(kind==="subscription_agency"&&ref)return {pathname:"/agency/[id]/billing" as const,params:{id:ref}};
  if(kind==="subscription_solo")return "/upgrade" as const;
+ if(kind==="billing")return "/(tabs)/account" as const;
  if(kind==="saved_search"&&ref)return {pathname:"/property/[id]" as const,params:{id:ref}};
  if(kind==="safety")return "/safety" as const;
  if(kind==="freshness")return "/my-listings" as const;

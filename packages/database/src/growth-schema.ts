@@ -1,4 +1,4 @@
-import {pgTable,uuid,varchar,integer,timestamp,jsonb,boolean,uniqueIndex,index} from "drizzle-orm/pg-core";
+import {pgTable,uuid,varchar,integer,timestamp,date,jsonb,boolean,uniqueIndex,index} from "drizzle-orm/pg-core";
 import {users,agencies,staff} from "./schema";
 import {listings} from "./listing-schema";
 
@@ -32,6 +32,9 @@ export const paymentClaims=pgTable("growth_payment_claims",{
  reference:varchar("reference",{length:120}).notNull(),
  referenceHash:varchar("reference_hash",{length:64}).notNull(),
  status:varchar("status",{length:16}).$type<"submitted"|"confirmed"|"rejected">().notNull().default("submitted"),
+ reconciliationReferenceHash:varchar("reconciliation_reference_hash",{length:64}),
+ reconciliationAmountAfn:integer("reconciliation_amount_afn"),
+ reconciliationDate:date("reconciliation_date",{mode:"string"}),
  reviewReason:varchar("review_reason",{length:700}),
  reviewedBy:uuid("reviewed_by").references(()=>staff.id),
  reviewedAt:timestamp("reviewed_at",{withTimezone:true}),
