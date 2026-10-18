@@ -18,6 +18,7 @@
     "db:diagnose": "pnpm --filter @amlaklink/database diagnose",
     "ops:freshness": "pnpm --filter @amlaklink/api ops:freshness",
     "db:backup": "pnpm --filter @amlaklink/database backup",
-    "db:restore:staging": "pnpm --filter @amlaklink/database restore:staging"
+    "db:restore:staging": "pnpm --filter @amlaklink/database restore:staging",
+    "pilot:smoke": "node scripts/pilot-smoke.mjs"
   }
 }
