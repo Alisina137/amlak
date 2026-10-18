@@ -49,3 +49,8 @@ Read-only subscription status, queued verified renewals, localized expiry warnin
 ### Phase 8 Step 4: billing verification and adjustments
 
 Billing stays **OFF by default**. Finance staff must enter an independently verified financial statement reference, amount, and date before marking a platform-fee claim paid. Users can view rejected-claim reasons and request a refund review or noncash credit memo on a verified AmlakLink fee. An approved refund requires another billing staff member to record the **actual external settlement**; the app never transfers money. Credit memos are **not redeemable or withdrawable** until formal policy approval. New database migration: `pnpm db:migrate`. See [Step 4 details](docs/PHASE-8-STEP-4-BILLING.md).
+
+
+### Phase 8 Step 5: advanced agency reporting
+
+Agency owners and managers now have **Agency → Agent performance & lead assignments**, with 7/30/90-day in-app response metrics, an assignment queue and team scorecards. Agents remain restricted to their assigned inquiries. No inferred sale or external call completion is counted. See [Step 5](docs/PHASE-8-STEP-5-AGENCIES.md).

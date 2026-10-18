@@ -35,6 +35,9 @@ export default function AgencyWorkspace(){
   {workspace.membership.role!=="agent"?<Action kind="secondary"
    label={locale==="en"?"Agency activity reports":"گزارش فعالیت دفتر"}
    onPress={()=>router.push({pathname:"/agency/[id]/reports",params:{id}})}/>:null}
+  {workspace.membership.role!=="agent"?<Action kind="secondary"
+   label={locale==="en"?"Agent performance & lead assignments":locale==="fa"?"عملکرد کارمندان و تخصیص مشتریان":"د کارکوونکو فعالیت او د غوښتنو سپارل"}
+   onPress={()=>router.push({pathname:"/agency/[id]/performance",params:{id}})}/>:null}
   {workspace.membership.role==="owner"?<Action kind="secondary"
    label={locale==="en"?"Plans & billing":"اشتراک و پرداخت دفتر"}
    onPress={()=>router.push({pathname:"/agency/[id]/billing",params:{id}})}/>:null}
