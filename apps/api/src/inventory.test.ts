@@ -108,7 +108,7 @@ test("real DB: advertiser draft→photo→review→publish→pause; edits never 
   const feed=await call("GET","/v1/properties?provinceId=kabul");assert.equal((feed.body.items as {id:string}[]).some(x=>x.id===id),false);
   assert.equal((await call("POST","/v1/listings/"+id+"/resume",tokens[0])).status,200);
   const owned=await call("GET","/v1/listings/"+id,tokens[0]);const v=owned.body.version as number;
-  const changed=await call("PUT","/v1/listings/"+id+"/draft",tokens[0],{expectedVersion:v,data:{...approvedData,price:{currency:"AFN",askingPrice:7200000}}});
+  const changed=await call("PUT","/v1/listings/"+id+"/draft",tokens[0],{expectedVersion:v,data:{...approvedData,photoDetails:{[photoId]:{room:"bathroom",caption:"New metadata still under review"}},price:{currency:"AFN",askingPrice:7200000}}});
   assert.equal(changed.status,200);
   assert.equal((await call("POST","/v1/listings/"+id+"/submit",tokens[0],{expectedVersion:changed.body.version})).status,200);
   const approvedBeforeDecision=await call("GET","/v1/properties/"+id);
@@ -118,7 +118,10 @@ test("real DB: advertiser draft→photo→review→publish→pause; edits never 
   const revision=(reviews.body.items as {id:string;revisionId:string}[]).find(x=>x.id===id);
   assert.ok(revision);
   assert.equal((await call("POST","/v1/admin/listings/"+id+"/decision",tokens[2],{revisionId:revision!.revisionId,decision:"reject",reason:"Price update requires documentary correction"})).status,200);
-  assert.equal((await call("GET","/v1/properties/"+id)).body.data.price.askingPrice,6500000);
+  const afterRejection=await call("GET","/v1/properties/"+id);
+  assert.equal(afterRejection.body.data.price.askingPrice,6500000);
+  assert.equal(afterRejection.body.photos[0].room,"living_room");
+  assert.equal(afterRejection.body.photos[0].caption,"Bright and open living room");
   assert.equal((await call("POST","/v1/listings/"+id+"/pause",tokens[1])).status,403);
   await db.update(schema.users).set({status:"suspended"}).where(eq(schema.users.id,owner.id));
   assert.equal((await call("GET","/v1/properties/"+id)).status,404);
