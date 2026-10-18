@@ -136,7 +136,7 @@ export function registerBillingControlRoutes(app:FastifyInstance,db:Database){
  app.post<{Params:{id:string}}>("/v1/admin/billing/adjustments/:id/settle",async request=>{
   const actor=await requireActor(db,request,"staff");requireStaffRole(actor,permissions);
   const id=validId(request.params.id),input=parse(settleRefund,request.body);
-  const hash=referenceHash("refund:"+input.method,input.reference);
+  const hash=referenceHash("refund_settlement",input.reference);
   return db.transaction(async tx=>{
    const [entry]=await tx.select().from(schema.billingAdjustments)
     .where(eq(schema.billingAdjustments.id,id)).for("update");
