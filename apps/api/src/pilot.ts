@@ -1,4 +1,4 @@
-import {and,asc,eq,gte,isNull,lt,lte,or,sql,type SQL} from "drizzle-orm";
+import {and,asc,eq,gte,inArray,isNull,lt,lte,or,sql,type SQL} from "drizzle-orm";
 import type {FastifyInstance,FastifyRequest} from "fastify";
 import {type Database,schema} from "@amlaklink/database";
 import {requireActor,requireStaffRole} from "./access";
@@ -11,10 +11,13 @@ export function freshnessAction(confirmed:Date|null,now:Date):"pause"|"remind"|n
  if(confirmed.getTime()<=cutoff(now,FRESHNESS_REMIND_DAYS).getTime())return "remind";
  return null;
 }
-export async function freshnessSweep(db:Database,options:{execute:boolean;limit?:number;now?:Date}){
+export async function freshnessSweep(db:Database,options:{execute:boolean;limit?:number;now?:Date;listingIds?:string[]}){
  const now=options.now||new Date(),limit=Math.max(1,Math.min(options.limit||MAX_BATCH,MAX_BATCH));
+ const duePause=or(isNull(schema.listings.lastConfirmedAt),lte(schema.listings.lastConfirmedAt,cutoff(now,FRESHNESS_EXPIRE_DAYS)));
+ const newReminder=and(lte(schema.listings.lastConfirmedAt,cutoff(now,FRESHNESS_REMIND_DAYS)),
+  sql.raw("NOT EXISTS (SELECT 1 FROM user_notifications fn WHERE fn.reference_id = listings.id AND fn.kind = 'freshness' AND fn.dedupe_key LIKE 'freshness:remind:%' AND fn.created_at >= listings.last_confirmed_at)"));
  const rows=await db.select().from(schema.listings).where(and(eq(schema.listings.status,"published"),
-  or(isNull(schema.listings.lastConfirmedAt),lte(schema.listings.lastConfirmedAt,cutoff(now,FRESHNESS_REMIND_DAYS)))))
+  or(duePause,newReminder),options.listingIds?inArray(schema.listings.id,options.listingIds):undefined))
   .orderBy(asc(schema.listings.lastConfirmedAt),asc(schema.listings.id)).limit(limit);
  const result={inspected:rows.length,dueReminder:0,duePause:0,reminded:0,paused:0,visitCancellations:0,
   executed:options.execute,limit,at:now.toISOString()};
