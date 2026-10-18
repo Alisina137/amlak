@@ -7,6 +7,12 @@ type Listing={
  price:Record<string,string|number|boolean|undefined>;attributes:{areaM2:number};
  photoIds:string[];photoDetails?:Record<string,{room?:string;caption?:string}>;contact:Record<string,unknown>};
 };
+const roomNames:Record<string,string>={
+ living_room:"اتاق نشیمن",bedroom:"اتاق خواب",kitchen:"آشپزخانه",
+ bathroom:"تشناب",exterior:"نمای بیرونی",entrance:"ورودی",
+ balcony:"بالکن",parking:"پارکینگ",floor_plan:"نقشه طبقات",
+ land:"زمین",other:"سایر"
+};
 export function ListingQueue(){
  const [items,setItems]=useState<Listing[]>([]),[loading,setLoading]=useState(true),[error,setError]=useState("");
  const [reasons,setReasons]=useState<Record<string,string>>({}),[working,setWorking]=useState<string|null>(null);
@@ -49,7 +55,7 @@ export function ListingQueue(){
       <img alt={meta?.caption||"تصویر آگهی در حال بررسی"} src={"/api/photos/"+photo}
        style={{width:168,height:130,objectFit:"cover",borderRadius:12}}/>
       <figcaption style={{fontSize:13,overflowWrap:"anywhere"}}>
-       {index===0?"عکس اصلی · ":""}{meta?.room||"other"}{meta?.caption?" · "+meta.caption:""}
+       {index===0?"عکس اصلی · ":""}{roomNames[meta?.room||"other"]||roomNames.other}{meta?.caption?" · "+meta.caption:""}
       </figcaption>
      </figure>;
     })}
