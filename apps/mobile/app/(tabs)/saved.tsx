@@ -27,6 +27,7 @@ export default function Saved(){
  const compareLabel=locale==="en"?"Compare selected":locale==="fa"?"مقایسه موارد انتخاب‌شده":"ټاکل شوي پرتله کړئ";
  const selectLabel=locale==="en"?"Select to compare":locale==="fa"?"انتخاب برای مقایسه":"د پرتله لپاره وټاکئ";
  return <Page><ScreenHeading title={t(locale,"saved")} subtitle={dt(locale,"savedHistory")}/>
+  <Action kind="secondary" label={locale==="en"?"Shared property shortlists":locale==="fa"?"فهرست‌های مشترک ملک":"د ملکیتونو ګډ فهرستونه"} onPress={()=>router.push("/shortlists")}/>
   <Action kind="secondary" label={locale==="en"?"Saved searches & alerts":locale==="fa"?"جستجوهای ذخیره‌شده و اعلان‌ها":"خوندي پلټنې او خبرتیاوې"} onPress={()=>router.push("/saved-searches")}/>
   {!token?<SectionCard><Label>{dt(locale,"signin")}</Label>
    <Action label={locale==="en"?"Sign in":"ورود"} onPress={()=>router.push({pathname:"/auth/[action]",params:{action:"login"}})}/>
