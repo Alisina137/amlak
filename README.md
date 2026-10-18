@@ -54,3 +54,8 @@ Billing stays **OFF by default**. Finance staff must enter an independently veri
 ### Phase 8 Step 5: advanced agency reporting
 
 Agency owners and managers now have **Agency → Agent performance & lead assignments**, with 7/30/90-day in-app response metrics, an assignment queue and team scorecards. Agents remain restricted to their assigned inquiries. No inferred sale or external call completion is counted. See [Step 5](docs/PHASE-8-STEP-5-AGENCIES.md).
+
+
+### Phase 8 Step 6: automated QA and safe release preflight
+
+Run `pnpm qa:phase8` for structural preflight checks (safe default flags, ordered migrations, CI test/build/export checks and security test coverage). GitHub Actions also reruns migrations to detect non-repeatable SQL. The optional `pnpm qa:release` command additionally fails closed unless private, independently reviewable pilot evidence and real provider configuration are supplied. **Neither green CI nor self-attested evidence grants production release approval.** Live Android, EAS/FCM, local financial/legal approval and the Phase 7 human pilot remain external requirements. See [Step 6 QA runbook](docs/PHASE-8-STEP-6-QA.md).
