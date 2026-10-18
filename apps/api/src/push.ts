@@ -45,6 +45,8 @@ export function registerPushRoutes(app:FastifyInstance,db:Database){
    throw new HttpProblem(422,"PUSH_PROJECT_MISMATCH");
   const tokenHash=tokenDigest(input.expoToken);
   return db.transaction(async tx=>{
+   // Serialize per-account device limits across simultaneous app installs.
+   await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${actor.id}::text))`);
    // Reject a device token owned by another account instead of silently transferring access.
    const [other]=await tx.select().from(schema.pushDevices)
     .where(eq(schema.pushDevices.tokenHash,tokenHash)).limit(1);
