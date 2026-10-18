@@ -58,8 +58,11 @@ export default function Inbox(){
   </SectionCard>)}
   {token&&tab==="notifications"&&<Action kind="secondary" label={et(locale,"allRead")} onPress={()=>void readAllAlerts(token).then(refresh).catch(()=>setError(et(locale,"unknown")))}/>}
   {token&&tab==="notifications"&&alerts.length===0&&!busy?<SectionCard><Label>{et(locale,"empty")}</Label></SectionCard>:null}
-  {token&&tab==="notifications"&&alerts.map(n=><Pressable accessibilityRole="button" key={n.id} onPress={()=>{if(token)void readAlert(n.id,token).then(()=>refresh()).catch(()=>{});if(n.referenceId)router.push({pathname:"/inquiries/[id]",params:{id:n.referenceId}});}}>
-   <SectionCard><Label weight={n.isRead?"regular":"bold"}>{n.kind==="viewing"?et(locale,"viewings"):n.kind==="lead"?et(locale,"lead"):et(locale,"inquiries")}</Label>
+  {token&&tab==="notifications"&&alerts.map(n=><Pressable accessibilityRole="button" key={n.id} onPress={()=>{if(token)void readAlert(n.id,token).then(()=>refresh()).catch(()=>{});if(n.referenceId){
+      if(n.kind==="safety")router.push({pathname:"/safety",params:{listingId:n.referenceId}});
+      else router.push({pathname:"/inquiries/[id]",params:{id:n.referenceId}});
+     }}}>
+   <SectionCard><Label weight={n.isRead?"regular":"bold"}>{n.kind==="viewing"?et(locale,"viewings"):n.kind==="lead"?et(locale,"lead"):n.kind==="safety"?(locale==="en"?"Safety notice":locale==="fa"?"اطلاعیهٔ ایمنی":"د خوندیتوب خبرتیا"):et(locale,"inquiries")}</Label>
     <Label muted>{displayKabul(n.createdAt,locale)} {n.isRead?"":"●"}</Label>
    </SectionCard>
   </Pressable>)}
