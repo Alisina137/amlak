@@ -33,6 +33,7 @@ export default function ListingEditor(){
  const [version,setVersion]=useState(1),[step,setStep]=useState(0),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),
  [error,setError]=useState(""),[notice,setNotice]=useState(""),[provinceQuery,setProvinceQuery]=useState("");
  const latest=useRef(data),versionRef=useRef(1),saveChain=useRef<Promise<void>>(Promise.resolve()),loaded=useRef(false);
+ const lastHydrated=useRef<ListingDraft|null>(null);
  const tx=(key:Key)=>labels[locale][key],media=mediaCopy[locale];
  // Private contact details and drafts must never be shared between accounts on one phone.
  const localKey="amlak:draft:v5:"+user?.id+":"+id;
@@ -80,6 +81,7 @@ export default function ListingEditor(){
     }catch{}
    }
    if(activeScope.current!==requestScope)return;
+   lastHydrated.current=doc;
    change(doc);versionRef.current=response.version;setVersion(response.version);
    setStatus(response.status);setRevisionStatus(response.revisionStatus||"approved");
    setRevisionReason(response.revisionReason||"");loaded.current=true;
@@ -97,6 +99,7 @@ export default function ListingEditor(){
      const parsed=listingDraftSchema.safeParse(cached.data);
      if(parsed.success&&Number.isInteger(cached.version)&&cached.version>0&&
       cached.revisionStatus!=="submitted"&&!["archived","sold","rented"].includes(cached.status||"")){
+      lastHydrated.current=parsed.data;
       change(parsed.data);versionRef.current=cached.version;setVersion(cached.version);
       setStatus(cached.status||"draft");setRevisionStatus(cached.revisionStatus||"draft");
       setRevisionReason(cached.revisionReason||"");loaded.current=true;
@@ -109,7 +112,7 @@ export default function ListingEditor(){
   }finally{if(activeScope.current===requestScope)setLoading(false);}
  }
  useEffect(()=>{
-  loaded.current=false;saveChain.current=Promise.resolve();cacheChain.current=Promise.resolve();
+  loaded.current=false;lastHydrated.current=null;saveChain.current=Promise.resolve();cacheChain.current=Promise.resolve();
   offlineUntil.current=0;
   setLoading(true);setNotice("");setError("");setPendingImage(null);
   void refresh();
@@ -128,7 +131,7 @@ export default function ListingEditor(){
     offlineUntil.current=0;
     const changed=latest.current!==snapshot;
     await cache(changed?latest.current:snapshot,r.version,changed);
-    if(!changed)setNotice("");
+    if(!changed){lastHydrated.current=snapshot;setNotice("");}
    }catch(err){
     if(activeScope.current!==ownerScope)return;
     if(err instanceof ApiError&&err.status===0){
@@ -145,7 +148,7 @@ export default function ListingEditor(){
   return saveChain.current;
  }
  useEffect(()=>{
-  if(!loaded.current||!mutable||!token||!user?.id)return;
+  if(!loaded.current||!mutable||!token||!user?.id||lastHydrated.current===data)return;
   void cache(data,versionRef.current,true);
   const timer=setTimeout(()=>{
    if(activeScope.current===scope)void save(false).catch(()=>{});
@@ -154,7 +157,12 @@ export default function ListingEditor(){
  },[data,id,token,user?.id,mutable]);
  async function next(){
   if(busy)return;setBusy(true);setError("");setNotice("");
-  try{await save(true);setStep(s=>Math.min(s+1,7));}catch{setError(tx("conflict"));}finally{setBusy(false);}
+  try{await save(true);setStep(s=>Math.min(s+1,7));}
+  catch(err){
+   if(err instanceof ApiError&&err.status===0){
+    setStep(s=>Math.min(s+1,7));setNotice(tx("offline"));
+   }else setError(tx("conflict"));
+  }finally{setBusy(false);}
  }
  async function submit(){
   if(busy||!token)return;setBusy(true);setError("");setNotice("");
@@ -328,7 +336,10 @@ export default function ListingEditor(){
   {revisionStatus==="rejected"?<SectionCard><Label>{tx("rejected")}</Label><Label muted>{revisionReason}</Label></SectionCard>:null}
   {status==="published"&&revisionStatus!=="submitted"?<SectionCard><Label style={{color:colors.success}}>{tx("approval")}</Label></SectionCard>:null}
   {mutable?form():null}
-  {error?<SectionCard><Label style={{color:colors.error}}>{error}</Label></SectionCard>:null}
+  {error?<SectionCard><Label style={{color:colors.error}}>{error}</Label>
+   <Action kind="secondary" disabled={busy} label={tx("save")}
+    onPress={()=>void save(true).then(()=>refresh()).catch(()=>setNotice(tx("offline")))}/>
+  </SectionCard>:null}
   {notice?<SectionCard><Label muted>{notice}</Label></SectionCard>:null}
   {mutable?<View style={{gap:10}}>
    {step===7?<Action disabled={busy} label={busy?"…":tx("submit")} onPress={()=>void submit()}/>:<Action disabled={busy} label={busy?"…":tx("next")} onPress={()=>void next()}/>}
