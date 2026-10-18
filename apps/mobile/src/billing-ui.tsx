@@ -6,6 +6,7 @@ import {isRTL} from "@amlaklink/localization";
 import {useAuth,requestJson} from "./auth";
 import {usePreferences} from "./context";
 import {Action,Label,Page,ScreenHeading,SectionCard} from "./ui";
+import {BillingAdjustmentUI} from "./billing-adjustment-ui";
 type Product={code:string;kind:string;amountAfn:number;listingLimit:number;seatLimit:number;days:number};
 type Plans={billingEnabled:boolean;illustrativePricing:boolean;products:Product[];disclaimer:string};
 type SubscriptionState={plan:string;listingLimit:number;seatLimit:number;expiresAt:string|null;
@@ -146,6 +147,7 @@ export function BillingScreen({agencyId,listingId}:{agencyId?:string;listingId?:
       writingDirection:rtl?"rtl":"ltr",textAlign:rtl?"right":"left"}}/>
    <Action disabled={busy||reference.trim().length<8} label={t.send} onPress={()=>void claim()}/>
   </SectionCard>:null}
+  {token?<BillingAdjustmentUI token={token} invoices={invoices}/>:null}
   {message?<SectionCard><Label style={{color:colors.success}}>{message}</Label></SectionCard>:null}
   {error?<SectionCard><Label style={{color:colors.error}}>{error}</Label></SectionCard>:null}
   <Action kind="secondary" label={t.return} disabled={busy} onPress={()=>void load()}/>
