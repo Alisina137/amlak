@@ -27,3 +27,5 @@ Phase 4 search, favorites, map/list configuration and external call handling are
 If migrations fail with `CONNECT_TIMEOUT`, follow docs/DATABASE-CONNECTIVITY.md and run `pnpm db:diagnose` before retrying. Neon port-443 WebSocket transport is optionally supported via root `.env` `DATABASE_TRANSPORT=websocket`.
 
 For Phase 5 messages, viewings, agency lead queues, and in-app alerts, see docs/PHASE-5-ENGAGEMENT.md. Check `pnpm db:diagnose` for the earlier Neon connection timeout before running `pnpm db:migrate`.
+
+For Phase 6 reporting, appeals, staff verification, safety moderation and migration 0005_safety.sql, see docs/PHASE-6-SAFETY.md. Always run pnpm db:diagnose before migrating your own Neon instance.
