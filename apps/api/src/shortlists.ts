@@ -142,7 +142,7 @@ export function registerShortlistRoutes(app:FastifyInstance,db:Database){
   return db.transaction(async tx=>{
    await tx.select().from(schema.shortlists).where(eq(schema.shortlists.id,id)).for("update");
    // Check access inside lock to prevent a concurrent revocation from being ignored.
-   await shortlistAccess(tx as Database,id,actor.id);
+   await shortlistAccess(tx as unknown as Database,id,actor.id);
    const [count]=await tx.select({n:sql<number>`count(*)::integer`}).from(schema.shortlistItems)
     .where(eq(schema.shortlistItems.shortlistId,id));
    const [existing]=await tx.select().from(schema.shortlistItems)
