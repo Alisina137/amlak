@@ -57,6 +57,18 @@ test("phase 5: inquiry, message retries, viewing consent, notifications and tena
   assert.equal((await send("POST","/v1/inquiries/"+threadId+"/viewings",1,request)).body.id,visitId);
   assert.equal((await send("POST","/v1/viewings/"+visitId+"/decision",1,{action:"confirm",slot:future1,expectedVersion:1})).status,403);
   assert.equal((await send("POST","/v1/viewings/"+visitId+"/decision",0,{action:"confirm",slot:future1,expectedVersion:1})).body.status,"confirmed");
+  // The listing cannot confirm two different seekers for the exact same time.
+  const otherInquiry=await send("POST","/v1/properties/"+listing.id+"/inquiries",2,
+    {clientRequestId:randomUUID(),body:"Another interested visitor"});
+  assert.equal(otherInquiry.status,200);
+  const otherVisit=await send("POST","/v1/inquiries/"+otherInquiry.body.id+"/viewings",2,
+    {clientRequestId:randomUUID(),proposedSlots:[future1,future2]});
+  assert.equal(otherVisit.status,200);
+  assert.equal((await send("POST","/v1/viewings/"+otherVisit.body.id+"/decision",0,
+    {action:"confirm",slot:future1,expectedVersion:1})).status,409);
+  assert.equal((await send("POST","/v1/viewings/"+otherVisit.body.id+"/decision",0,
+    {action:"confirm",slot:future2,expectedVersion:1})).body.status,"confirmed");
+
   assert.equal((await send("POST","/v1/viewings/"+visitId+"/decision",0,{action:"confirm",slot:future1,expectedVersion:1})).status,409);
   assert.equal((await send("POST","/v1/viewings/"+visitId+"/decision",1,{action:"cancel",expectedVersion:2})).body.status,"cancelled");
   assert.equal((await send("POST","/v1/viewings/"+visitId+"/decision",0,{action:"confirm",slot:future2,expectedVersion:3})).status,409);
