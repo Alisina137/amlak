@@ -6,7 +6,7 @@ import {Image,Pressable,ScrollView,View,ActivityIndicator} from "react-native";
 import {colors} from "@amlaklink/design-tokens";
 import {findProvince,searchProvinces} from "@amlaklink/catalog";
 import {listingDraftSchema,photoInfoFor,type ListingDraft,type PhotoDetail} from "@amlaklink/contracts";
-import {useAuth,requestJson} from "../../../src/auth";
+import {useAuth,requestJson,ApiError} from "../../../src/auth";
 import {usePreferences} from "../../../src/context";
 import {PropertyLocationPicker} from "../../../src/location-picker";
 import {lt,priceSummary} from "../../../src/listing-ui";
@@ -26,7 +26,7 @@ const labels={
 } as const;
 type Key=keyof typeof labels.en;
 export default function ListingEditor(){
- const {id}=useLocalSearchParams<{id:string}>(),{locale}=usePreferences(),{token}=useAuth();
+ const {id}=useLocalSearchParams<{id:string}>(),{locale}=usePreferences(),{token,user}=useAuth();
  const [pendingImage,setPendingImage]=useState<{uri:string;mime:string;bytes?:number}|null>(null);
  const [roomEditor,setRoomEditor]=useState<string|null>(null);
  const [data,setData]=useState<ListingDraft>(listingDraftSchema.parse({})),[status,setStatus]=useState("draft"),[revisionStatus,setRevisionStatus]=useState("draft"),[revisionReason,setRevisionReason]=useState("");
@@ -34,7 +34,20 @@ export default function ListingEditor(){
  [error,setError]=useState(""),[notice,setNotice]=useState(""),[provinceQuery,setProvinceQuery]=useState("");
  const latest=useRef(data),versionRef=useRef(1),saveChain=useRef<Promise<void>>(Promise.resolve()),loaded=useRef(false);
  const tx=(key:Key)=>labels[locale][key],media=mediaCopy[locale];
- const localKey="amlak:draft:"+id;
+ // Private contact details and drafts must never be shared between accounts on one phone.
+ const localKey="amlak:draft:v5:"+user?.id+":"+id;
+ const scope=token+":"+user?.id+":"+id;
+ const activeScope=useRef(scope),cacheChain=useRef<Promise<void>>(Promise.resolve()),offlineUntil=useRef(0);
+ activeScope.current=scope;
+ const cache=async(snapshot:ListingDraft,serverVersion:number,unsynced:boolean)=>{
+  const key=localKey,ownerScope=scope;
+  cacheChain.current=cacheChain.current.catch(()=>{}).then(async()=>{
+   if(activeScope.current!==ownerScope)return;
+   await AsyncStorage.setItem(key,JSON.stringify({version:serverVersion,data:snapshot,unsynced,
+    status,revisionStatus,revisionReason})).catch(()=>{});
+  });
+  await cacheChain.current;
+ };
  const mutable=revisionStatus!=="submitted" && !["sold","rented","archived"].includes(status);
  const change=(value:ListingDraft)=>{latest.current=value;setData(value);};
  const setPhotoDetail=(photoId:string,updates:Partial<PhotoDetail>)=>{
@@ -50,48 +63,103 @@ export default function ListingEditor(){
   change({...latest.current,[section]:{...latest.current[section],[key]:value}});
  };
  async function refresh(){
-  if(!token||!id)return;
+  if(!token||!id||!user?.id)return;
+  const requestScope=scope;
   setLoading(true);setError("");
   try{
    const response=await getOwned(id,token);
+   if(activeScope.current!==requestScope)return;
    const saved=await AsyncStorage.getItem(localKey).catch(()=>null);
    let doc=response.data;
    if(saved){
-    try{const cached=JSON.parse(saved) as {version:number;data:unknown;unsynced:boolean};
+    try{
+     const cached=JSON.parse(saved) as {version:number;data:unknown;unsynced:boolean};
      const result=listingDraftSchema.safeParse(cached.data);
-     if(result.success && cached.version===response.version && cached.unsynced && response.revisionStatus!=="submitted")doc=result.data;
+     if(result.success&&cached.version===response.version&&cached.unsynced&&
+      response.revisionStatus!=="submitted")doc=result.data;
     }catch{}
    }
+   if(activeScope.current!==requestScope)return;
    change(doc);versionRef.current=response.version;setVersion(response.version);
-   setStatus(response.status);setRevisionStatus(response.revisionStatus||"approved");setRevisionReason(response.revisionReason||"");loaded.current=true;
-  }catch{setError(tx("offline"));}
-  finally{setLoading(false);}
+   setStatus(response.status);setRevisionStatus(response.revisionStatus||"approved");
+   setRevisionReason(response.revisionReason||"");loaded.current=true;
+   offlineUntil.current=0;
+  }catch(err){
+   if(activeScope.current!==requestScope)return;
+   // Only a network/timeout failure is eligible for offline edits. Authorization
+   // or stale-version errors must not resurrect an inaccessible property.
+   const network=err instanceof ApiError&&(err.status===0||[502,503,504].includes(err.status));
+   const saved=network?await AsyncStorage.getItem(localKey).catch(()=>null):null;
+   if(saved&&activeScope.current===requestScope){
+    try{
+     const cached=JSON.parse(saved) as {version:number;data:unknown;unsynced:boolean;
+      status?:string;revisionStatus?:string;revisionReason?:string};
+     const parsed=listingDraftSchema.safeParse(cached.data);
+     if(parsed.success&&Number.isInteger(cached.version)&&cached.version>0&&
+      cached.revisionStatus!=="submitted"&&!["archived","sold","rented"].includes(cached.status||"")){
+      change(parsed.data);versionRef.current=cached.version;setVersion(cached.version);
+      setStatus(cached.status||"draft");setRevisionStatus(cached.revisionStatus||"draft");
+      setRevisionReason(cached.revisionReason||"");loaded.current=true;
+      offlineUntil.current=Date.now()+10000;setNotice(tx("offline"));
+      return;
+     }
+    }catch{}
+   }
+   setError(network?tx("offline"):(err as Error).message);
+  }finally{if(activeScope.current===requestScope)setLoading(false);}
  }
- useEffect(()=>{void refresh();},[id,token]);
- async function save(){
-  if(!token||!id||!loaded.current||!mutable)return;
-  const snapshot=latest.current;
+ useEffect(()=>{
+  loaded.current=false;saveChain.current=Promise.resolve();cacheChain.current=Promise.resolve();
+  offlineUntil.current=0;
+  setLoading(true);setNotice("");setError("");setPendingImage(null);
+  void refresh();
+ },[id,token,user?.id]);
+ async function save(manual=false){
+  if(!token||!id||!user?.id||!loaded.current||!mutable)return;
+  if(!manual&&Date.now()<offlineUntil.current)return;
+  const snapshot=latest.current,ownerScope=scope;
   saveChain.current=saveChain.current.catch(()=>{}).then(async()=>{
-    const r=await requestJson<{version:number;status:string}>("/v1/listings/"+id+"/draft",{method:"PUT",token,body:{expectedVersion:versionRef.current,data:snapshot}});
+   if(activeScope.current!==ownerScope) return;
+   try{
+    const r=await requestJson<{version:number;status:string}>("/v1/listings/"+id+"/draft",
+     {method:"PUT",token,body:{expectedVersion:versionRef.current,data:snapshot}});
+    if(activeScope.current!==ownerScope)return;
     versionRef.current=r.version;setVersion(r.version);setStatus(r.status);
-    await AsyncStorage.setItem(localKey,JSON.stringify({version:r.version,data:snapshot,unsynced:false})).catch(()=>{});
+    offlineUntil.current=0;
+    const changed=latest.current!==snapshot;
+    await cache(changed?latest.current:snapshot,r.version,changed);
+    if(!changed)setNotice("");
+   }catch(err){
+    if(activeScope.current!==ownerScope)return;
+    if(err instanceof ApiError&&err.status===0){
+     offlineUntil.current=Date.now()+10000;
+     await cache(latest.current,versionRef.current,true);
+     setNotice(tx("offline"));
+    }else if(err instanceof ApiError&&err.status===409){
+     await cache(latest.current,versionRef.current,true);
+     setError(tx("conflict"));
+    }
+    throw err;
+   }
   });
   return saveChain.current;
  }
  useEffect(()=>{
-  if(!loaded.current||!mutable)return;
-  void AsyncStorage.setItem(localKey,JSON.stringify({version:versionRef.current,data,unsynced:true})).catch(()=>{});
-  const timer=setTimeout(()=>{void save().catch(()=>setNotice(tx("offline")));},1800);
+  if(!loaded.current||!mutable||!token||!user?.id)return;
+  void cache(data,versionRef.current,true);
+  const timer=setTimeout(()=>{
+   if(activeScope.current===scope)void save(false).catch(()=>{});
+  },1800);
   return()=>clearTimeout(timer);
- },[data,id,token,mutable]);
+ },[data,id,token,user?.id,mutable]);
  async function next(){
   if(busy)return;setBusy(true);setError("");setNotice("");
-  try{await save();setStep(s=>Math.min(s+1,7));}catch{setError(tx("conflict"));}finally{setBusy(false);}
+  try{await save(true);setStep(s=>Math.min(s+1,7));}catch{setError(tx("conflict"));}finally{setBusy(false);}
  }
  async function submit(){
   if(busy||!token)return;setBusy(true);setError("");setNotice("");
   try{
-   await save();
+   await save(true);
    await requestJson("/v1/listings/"+id+"/submit",{method:"POST",token,body:{expectedVersion:versionRef.current}});
    setRevisionStatus("submitted");setStatus(s=>s==="published"?"published":"pending_review");setNotice(tx("review"));
    await AsyncStorage.removeItem(localKey).catch(()=>{});
@@ -265,7 +333,7 @@ export default function ListingEditor(){
   {mutable?<View style={{gap:10}}>
    {step===7?<Action disabled={busy} label={busy?"…":tx("submit")} onPress={()=>void submit()}/>:<Action disabled={busy} label={busy?"…":tx("next")} onPress={()=>void next()}/>}
    {step>0?<Action kind="secondary" disabled={busy} label={tx("back")} onPress={()=>setStep(s=>s-1)}/>:null}
-   <Action kind="secondary" disabled={busy} label={tx("save")} onPress={()=>void save().then(()=>setNotice(tx("save"))).catch(()=>setError(tx("offline")))}/>
+   <Action kind="secondary" disabled={busy} label={tx("save")} onPress={()=>void save(true).then(()=>setNotice(tx("save"))).catch(()=>setError(tx("offline")))}/>
   </View>:null}
   <Action kind="secondary" label={uiText(locale,"editorMyListings")} onPress={()=>router.replace("/my-listings")}/>
  </Page>;
