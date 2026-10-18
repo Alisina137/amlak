@@ -68,7 +68,7 @@ export default function Inbox(){
     <Label weight={n.isRead?"regular":"bold"}>{n.kind==="freshness"?
      (locale==="en"?"Availability":locale==="fa"?"تأیید موجودی":"د شتون تایید"):
      n.kind==="safety"?(locale==="en"?"Safety":locale==="fa"?"ایمنی":"خوندیتوب"):
-     n.kind==="saved_search"?(locale==="en"?"Saved search":locale==="fa"?"جستجوی ذخیره‌شده":"خوندي پلټنه"):n.kind==="support"?(locale==="en"?"Support":locale==="fa"?"پشتیبانی":"ملاتړ"):n.kind==="viewing"?et(locale,"viewings"):n.kind==="lead"?et(locale,"lead"):et(locale,"inquiries")}</Label>
+     (n.kind==="subscription_agency"||n.kind==="subscription_solo")?(locale==="en"?"Subscription":locale==="fa"?"اشتراک":"ګډون"):n.kind==="saved_search"?(locale==="en"?"Saved search":locale==="fa"?"جستجوی ذخیره‌شده":"خوندي پلټنه"):n.kind==="support"?(locale==="en"?"Support":locale==="fa"?"پشتیبانی":"ملاتړ"):n.kind==="viewing"?et(locale,"viewings"):n.kind==="lead"?et(locale,"lead"):et(locale,"inquiries")}</Label>
     <Label>{n.title}</Label>
     <Label muted>{displayKabul(n.createdAt,locale)} {n.isRead?"":"●"}</Label>
    </SectionCard>
