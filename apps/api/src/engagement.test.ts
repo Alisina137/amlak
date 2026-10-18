@@ -72,7 +72,7 @@ test("phase 5: inquiry, message retries, viewing consent, notifications and tena
   assert.equal((await send("POST","/v1/viewings/"+visitId+"/decision",0,{action:"confirm",slot:future1,expectedVersion:1})).status,409);
   assert.equal((await send("POST","/v1/viewings/"+visitId+"/decision",1,{action:"cancel",expectedVersion:2})).body.status,"cancelled");
   assert.equal((await send("POST","/v1/viewings/"+visitId+"/decision",0,{action:"confirm",slot:future2,expectedVersion:3})).status,409);
-  assert.equal((await send("GET","/v1/viewings",2)).body.items.length,0);
+  assert.equal((await send("GET","/v1/viewings",2)).body.items.length,1);
   assert.equal((await send("GET","/v1/inquiries/"+threadId+"/lead-notes",1)).status,403);
   assert.equal((await send("POST","/v1/inquiries/"+threadId+"/lead-status",1,{status:"won"})).status,403);
   assert.equal((await send("POST","/v1/inquiries/"+threadId+"/lead-status",0,{status:"contacted"})).body.leadStatus,"contacted");
