@@ -1,17 +1,18 @@
 import {useEffect,useState} from "react";
 import {requestJson} from "../../src/auth";
 import {router,useLocalSearchParams} from "expo-router";
-import {ActivityIndicator,Image,Linking,Pressable,ScrollView,Share,View} from "react-native";
+import {ActivityIndicator,Linking,Pressable,Share,View} from "react-native";
 import {colors} from "@amlaklink/design-tokens";
 import {findProvince} from "@amlaklink/catalog";
 import {usePreferences} from "../../src/context";
-import {getPublic,photoSource,type ListingDTO} from "../../src/listing-client";
+import {getPublic,type ListingDTO} from "../../src/listing-client";
 import {advertiserId,advertiserKind,getContact} from "../../src/discovery-client";
 import {dt} from "../../src/discovery-copy";
 import {et} from "../../src/engagement-copy";
 import {st} from "../../src/safety-copy";
 import {useFavorites} from "../../src/favorites";
 import {lt,priceSummary} from "../../src/listing-ui";
+import {PropertyGallery} from "../../src/property-gallery";
 import {Action,Label,Page,ScreenHeading,SectionCard} from "../../src/ui";
 export default function PropertyDetails(){
  const {id}=useLocalSearchParams<{id:string}>(),{locale}=usePreferences(),{isSaved,toggle}=useFavorites();
@@ -63,11 +64,7 @@ export default function PropertyDetails(){
      <Pressable accessibilityRole="button" accessibilityLabel={dt(locale,"share")} onPress={()=>void share()} style={{padding:12,minHeight:44}}><Label>↗</Label></Pressable>
     </View>
    </View>
-   <ScrollView horizontal showsHorizontalScrollIndicator={false} snapToInterval={297} decelerationRate="fast">
-    {data.photos.length?data.photos.map(photo=><Image key={photo.id} source={photoSource(photo.id)} resizeMode="cover"
-      accessibilityLabel={d.title} style={{width:285,height:238,marginEnd:12,borderRadius:16,backgroundColor:colors.border}}/>):
-     <SectionCard><Label>⌂</Label></SectionCard>}
-   </ScrollView>
+   <PropertyGallery photos={data.photos} title={d.title}/>
    <ScreenHeading title={d.title} subtitle={lt(locale,d.transactionType)+" · "+lt(locale,d.propertyType)}/>
    <Label style={{color:canContact?colors.success:colors.warning}}>{canContact?dt(locale,"active"):dt(locale,"unavailable")}</Label>
    <SectionCard>
