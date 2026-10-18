@@ -40,6 +40,12 @@ async function checkBlocks(db:Database,a:string,b:string){
  )).limit(1);
  if(block)throw new HttpProblem(403,"CONVERSATION_BLOCKED");
 }
+async function checkConversationBlocks(db:Database,thread:Inquiry,actorId:string){
+ await checkBlocks(db,thread.seekerId,thread.advertiserId);
+ if(thread.assignedTo && thread.assignedTo!==thread.advertiserId)await checkBlocks(db,thread.seekerId,thread.assignedTo);
+ if(actorId!==thread.seekerId && actorId!==thread.advertiserId && actorId!==thread.assignedTo)
+  await checkBlocks(db,thread.seekerId,actorId);
+}
 async function lookup(db:Database,id:string){
  const [row]=await db.select().from(schema.inquiries).where(eq(schema.inquiries.id,validId(id))).limit(1);
  if(!row)throw new HttpProblem(404,"INQUIRY_NOT_FOUND");
@@ -149,7 +155,7 @@ export function registerEngagementRoutes(app:FastifyInstance,db:Database){
   const row=await lookup(db,request.params.id),permission=await access(db,request,row);
   const input=parse(messageInput,request.body);
   if(["closed","blocked"].includes(row.status))throw new HttpProblem(409,"INQUIRY_CLOSED");
-  await checkBlocks(db,row.seekerId,row.advertiserId);
+  await checkConversationBlocks(db,row,permission.actor.id);
   // Ensure seller membership is evaluated on each request; no stale JWT permissions.
   const [created]=await db.insert(schema.messages).values({inquiryId:row.id,authorId:permission.actor.id,
    clientRequestId:input.clientRequestId,body:input.body}).onConflictDoNothing().returning();
@@ -169,11 +175,22 @@ export function registerEngagementRoutes(app:FastifyInstance,db:Database){
    .where(and(eq(schema.inquiries.id,row.id),inArray(schema.inquiries.status,["new","open","responded"])));
   return {status:"closed"};
  });
+ app.post<{Params:{id:string}}>("/v1/inquiries/:id/reopen",async request=>{
+  const row=await lookup(db,request.params.id),p=await access(db,request,row);
+  if(p.side!=="seeker")throw new HttpProblem(403,"SEEKER_ONLY");
+  await checkConversationBlocks(db,row,p.actor.id);
+  await validListing(db,await getListing(db,row.listingId));
+  const [updated]=await db.update(schema.inquiries).set({status:"open",updatedAt:new Date()})
+   .where(and(eq(schema.inquiries.id,row.id),eq(schema.inquiries.status,"closed"))).returning();
+  if(!updated)throw new HttpProblem(409,"INQUIRY_NOT_CLOSED");
+  await notifyOthers(db,row,p.actor.id,"inquiry",row.id+":reopened","Property inquiry reopened");
+  return {status:"open"};
+ });
  app.post<{Params:{id:string}}>("/v1/inquiries/:id/viewings",{config:{rateLimit:{max:6,timeWindow:"1 minute"}}},async request=>{
   const inquiry=await lookup(db,request.params.id),permission=await access(db,request,inquiry);
   if(permission.side!=="seeker")throw new HttpProblem(403,"ONLY_SEEKER_REQUESTS_VIEWING");
   if(["blocked","closed"].includes(inquiry.status))throw new HttpProblem(409,"INQUIRY_CLOSED");
-  await checkBlocks(db,inquiry.seekerId,inquiry.advertiserId);
+  await checkConversationBlocks(db,inquiry,permission.actor.id);
   await validListing(db,await getListing(db,inquiry.listingId));
   const input=parse(viewingInput,request.body);
   if(!slotsValid(input.proposedSlots))throw new HttpProblem(422,"INVALID_VIEWING_TIMES");
@@ -199,8 +216,8 @@ export function registerEngagementRoutes(app:FastifyInstance,db:Database){
  app.post<{Params:{id:string}}>("/v1/viewings/:id/decision",async request=>{
   const v=await getViewing(db,request.params.id),thread=await lookup(db,v.inquiryId);
   const p=await access(db,request,thread),input=parse(decisionInput,request.body);
-  await checkBlocks(db,thread.seekerId,thread.advertiserId);
-  return db.transaction(async tx=>{
+  await checkConversationBlocks(db,thread,p.actor.id);
+  const outcome=await db.transaction(async tx=>{
    const [locked]=await tx.select().from(schema.viewings).where(eq(schema.viewings.id,v.id)).for("update");
    if(!locked||locked.version!==input.expectedVersion)throw new HttpProblem(409,"VIEWING_VERSION_CONFLICT");
    const action=input.action;
@@ -226,14 +243,24 @@ export function registerEngagementRoutes(app:FastifyInstance,db:Database){
      confirmedSlot=counterSlot;status="confirmed";
     }else throw new HttpProblem(403,"VIEWING_ACTION_NOT_ALLOWED");
    }
+   // Lock the listing for atomic time-slot reservation across different inquiries.
+   if(status==="confirmed" && confirmedSlot){
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${thread.listingId}::text))`);
+    const booked=await tx.select({id:schema.viewings.id}).from(schema.viewings)
+     .innerJoin(schema.inquiries,eq(schema.inquiries.id,schema.viewings.inquiryId))
+     .where(and(eq(schema.inquiries.listingId,thread.listingId),eq(schema.viewings.status,"confirmed"),
+       eq(schema.viewings.confirmedSlot,confirmedSlot))).limit(1);
+    if(booked.length)throw new HttpProblem(409,"VIEWING_TIME_CONFLICT");
+   }
    const [updated]=await tx.update(schema.viewings).set({status,counterSlot,confirmedSlot,version:locked.version+1,updatedAt:new Date()})
     .where(and(eq(schema.viewings.id,v.id),eq(schema.viewings.version,input.expectedVersion))).returning();
    if(!updated)throw new HttpProblem(409,"VIEWING_VERSION_CONFLICT");
    await tx.insert(schema.audit).values({actorType:"user",actorId:p.actor.id,action:"viewing_"+action,
     targetType:"viewing",targetId:v.id,reason:status});
-   await notifyOthers(db,thread,p.actor.id,"viewing",v.id+":"+updated.version,"Property viewing updated");
    return {id:v.id,status,version:updated.version,confirmedSlot:updated.confirmedSlot,counterSlot:updated.counterSlot};
   });
+  await notifyOthers(db,thread,p.actor.id,"viewing",v.id+":"+outcome.version,"Property viewing updated");
+  return outcome;
  });
  app.post<{Params:{id:string}}>("/v1/inquiries/:id/assign",async request=>{
   const row=await lookup(db,request.params.id),p=await access(db,request,row);
@@ -241,6 +268,7 @@ export function registerEngagementRoutes(app:FastifyInstance,db:Database){
    throw new HttpProblem(403,"AGENCY_MANAGER_REQUIRED");
   const input=parse(z.object({assignedTo:z.uuid().nullable()}).strict(),request.body);
   if(input.assignedTo){
+   await checkBlocks(db,row.seekerId,input.assignedTo);
    const [member]=await db.select().from(schema.memberships).where(and(eq(schema.memberships.userId,input.assignedTo),
     eq(schema.memberships.agencyId,row.agencyId),eq(schema.memberships.status,"active"))).limit(1);
    if(!member||!["agent","manager","owner"].includes(member.role))throw new HttpProblem(422,"ASSIGNEE_NOT_ACTIVE");

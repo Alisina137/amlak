@@ -4,7 +4,7 @@ import {Pressable,TextInput,View,ActivityIndicator} from "react-native";
 import {colors} from "@amlaklink/design-tokens";
 import {useAuth,requestJson} from "../../src/auth";
 import {usePreferences} from "../../src/context";
-import {addLeadNote,assignInquiry,blockUser,closeInquiry,displayKabul,fetchLeadNotes,inquiry,requestId,sendMessage,updateLeadStatus,
+import {addLeadNote,assignInquiry,blockUser,closeInquiry,reopenInquiry,displayKabul,fetchLeadNotes,inquiry,requestId,sendMessage,updateLeadStatus,
  type InquiryDetail,type LeadNote} from "../../src/engagement-client";
 import {et} from "../../src/engagement-copy";
 import {Action,Label,Page,ScreenHeading,SectionCard} from "../../src/ui";
@@ -105,6 +105,7 @@ export default function InquiryDetailPage(){
   </SectionCard>:null}
   <SectionCard><Label muted>{et(locale,"safety")}</Label>
    {canSend?<Action kind="secondary" disabled={busy} label={et(locale,"close")} onPress={()=>void act(()=>closeInquiry(data.id,token!))}/>:null}
+   {data.status==="closed"&&data.side==="seeker"?<Action kind="secondary" disabled={busy} label={et(locale,"reopen")} onPress={()=>void act(()=>reopenInquiry(data.id,token!))}/>:null}
    <Action kind="secondary" disabled={busy} label={et(locale,"block")} onPress={()=>void act(()=>blockUser(data.side==="seeker"?data.advertiserId:data.seekerId,token!))}/>
   </SectionCard>
  </>:null}

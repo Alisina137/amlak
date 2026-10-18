@@ -15,6 +15,7 @@ export function inbox(token:string){return requestJson<{items:InquirySummary[]}>
 export function openInquiry(listingId:string,token:string,body:string,clientRequestId:string){return requestJson<{id:string;reused:boolean}>("/v1/properties/"+listingId+"/inquiries",{method:"POST",token,body:{body,clientRequestId}});}
 export function inquiry(id:string,token:string){return requestJson<InquiryDetail>("/v1/inquiries/"+id,{token});}
 export function sendMessage(id:string,token:string,body:string,clientRequestId:string){return requestJson<{id:string;reused:boolean}>("/v1/inquiries/"+id+"/messages",{method:"POST",token,body:{body,clientRequestId}});}
+export function reopenInquiry(id:string,token:string){return requestJson("/v1/inquiries/"+id+"/reopen",{method:"POST",token});}
 export function closeInquiry(id:string,token:string){return requestJson<{status:string}>("/v1/inquiries/"+id+"/close",{method:"POST",token});}
 export function fetchViewings(token:string){return requestJson<{items:Viewing[]}>("/v1/viewings",{token});}
 export function requestViewing(id:string,token:string,slots:string[],note:string,clientRequestId:string){
