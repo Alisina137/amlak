@@ -64,3 +64,8 @@ Run `pnpm qa:phase8` for structural preflight checks (safe default flags, ordere
 ### Final completion Step 2: trilingual RTL/LTR UI
 
 The mobile app now uses a mirrored tab order, accessible locale-dependent back buttons, RTL-aware text inputs, LTR entry for numeric values and English-format contact fields, and shared trilingual labels for primary property and agency journeys. Run `pnpm qa:ui` to check text key parity and direction contracts. See [Step 2 RTL/LTR acceptance matrix](docs/FINAL-COMPLETION-STEP-2-RTL-UI.md); **physical Android, accessibility and translation reviews remain required**.
+
+
+### Final Completion Step 5: database and media recovery hardening
+
+New read-only checks: `pnpm db:integrity` and `pnpm ops:media:audit --limit=10`. Backups can be verified offline with `pnpm db:backup:verify <file.pg.enc>`. Staging restores require a separate `STAGING_DATABASE_URL`, exact `RESTORE_EXPECT_DATABASE` and explicit operator confirmation, and never target the production database. Remote PostgreSQL backup/restore tools validate TLS hostnames. Media deletion avoids removing bytes before the DB transaction is committed. These checks do not replace a live staging-restore exercise or a separate S3 backup. See [Step 5 runbook](docs/FINAL-COMPLETION-STEP-5-DATABASE-MEDIA.md).

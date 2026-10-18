@@ -8,7 +8,7 @@ export function postgresEnv(urlValue:string){
  const localhost=["localhost","127.0.0.1","[::1]"].includes(url.hostname);
  return {PGHOST:url.hostname,PGPORT:url.port||"5432",PGUSER:decodeURIComponent(url.username),
   PGPASSWORD:decodeURIComponent(url.password),PGDATABASE:decodeURIComponent(url.pathname.slice(1)),
-  PGSSLMODE:localhost?"disable":"require"};
+  PGSSLMODE:localhost?"disable":"verify-full"};
 }
 export async function runCommand(command:string,args:string[],env:Record<string,string>,inputFile?:string){
  const {spawn}=await import("node:child_process");

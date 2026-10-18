@@ -48,19 +48,41 @@ export function registerPhotoRoutes(app:FastifyInstance,db:Database){
   }
  });
  app.delete<{Params:{id:string;photoId:string}}>("/v1/listings/:id/photos/:photoId",async request=>{
-  const l=await getListing(db,request.params.id);
-  await requireEditor(db,request,l);
-  const [photo]=await db.select().from(schema.photos).where(and(eq(schema.photos.listingId,l.id),eq(schema.photos.id,validId(request.params.photoId)))).limit(1);
-  if(!photo)throw new HttpProblem(404,"PHOTO_NOT_FOUND");
-  for(const revisionId of [l.approvedRevisionId,l.currentRevisionId]){
-   if(!revisionId)continue;
-   const rev=await getRevision(db,revisionId);
-   if((rev.status==="approved"||rev.status==="submitted") && listingDraftSchema.parse(rev.data).photoIds.includes(photo.id))
-    throw new HttpProblem(409,"PHOTO_IN_APPROVED_OR_REVIEW_VERSION");
+  const initial=await getListing(db,request.params.id);
+  await requireEditor(db,request,initial);
+  const id=validId(request.params.photoId);
+  const result=await db.transaction(async tx=>{
+   // Lock the listing to serialize photo deletion against revision save/submit.
+   const [locked]=await tx.select().from(schema.listings)
+    .where(eq(schema.listings.id,initial.id)).for("update");
+   if(!locked)throw new HttpProblem(404,"LISTING_NOT_FOUND");
+   await requireEditor(tx as unknown as Database,request,locked);
+   const [photo]=await tx.select().from(schema.photos)
+    .where(and(eq(schema.photos.listingId,locked.id),eq(schema.photos.id,id))).for("update");
+   if(!photo)throw new HttpProblem(404,"PHOTO_NOT_FOUND");
+   for(const revisionId of [locked.approvedRevisionId,locked.currentRevisionId]){
+    if(!revisionId)continue;
+    const [revision]=await tx.select().from(schema.revisions)
+     .where(eq(schema.revisions.id,revisionId)).limit(1);
+    if(revision && (revision.status==="approved"||revision.status==="submitted") &&
+     listingDraftSchema.parse(revision.data).photoIds.includes(photo.id))
+     throw new HttpProblem(409,"PHOTO_IN_APPROVED_OR_REVIEW_VERSION");
+   }
+   // Removing the DB row first preserves the media file if a DB write fails.
+   // Failed media cleanup may leave an orphan, but cannot leave a published
+   // listing pointing to a physically deleted object.
+   await tx.delete(schema.photos).where(and(eq(schema.photos.id,photo.id),
+    eq(schema.photos.listingId,locked.id)));
+   return {storageKey:photo.storageKey,storageMode:photo.storageMode};
+  });
+  let mediaCleanupPending=false;
+  try{await removePhoto(result.storageKey,result.storageMode);}
+  catch(error){
+   // Treat failed cleanup as a maintenance issue; never claim full deletion.
+   mediaCleanupPending=true;
+   app.log.warn({listingId:initial.id,photoId:id},"Storage cleanup pending after database photo deletion");
   }
-  await removePhoto(photo.storageKey,photo.storageMode);
-  await db.delete(schema.photos).where(and(eq(schema.photos.id,photo.id),eq(schema.photos.listingId,l.id)));
-  return {success:true};
+  return {success:true,mediaCleanupPending};
  });
  app.get<{Params:{id:string}}>("/v1/photos/:id",async(request,reply)=>{
   const [photo]=await db.select().from(schema.photos).where(eq(schema.photos.id,validId(request.params.id))).limit(1);
