@@ -6,7 +6,8 @@ import {useCallback,useEffect,useMemo,useState} from "react";
 import {ActivityIndicator,Modal,Pressable,ScrollView,TextInput,View} from "react-native";
 import {usePreferences} from "../../src/context";
 import {useSearchFilters} from "../../src/search-context";
-import {cachedDiscovery,fetchDiscovery,type SearchFilters} from "../../src/discovery-client";
+import {cachedDiscovery,fetchDiscovery,queryString,type SearchFilters} from "../../src/discovery-client";
+import {requestJson} from "../../src/auth";
 import {dt} from "../../src/discovery-copy";
 import {ListingCard} from "../../src/listing-ui";
 import type {ListingDTO} from "../../src/listing-client";
@@ -16,7 +17,7 @@ export default function Search(){
  const {filters,setFilters,reset,hydrated}=useSearchFilters();
  const params=useLocalSearchParams<{intent?:string}>();
  const [query,setQuery]=useState(filters.q||"");
- const [items,setItems]=useState<ListingDTO[]>([]),[cursor,setCursor]=useState<string|null>(null),[loading,setLoading]=useState(true),[more,setMore]=useState(false);
+ const [items,setItems]=useState<ListingDTO[]>([]),[featured,setFeatured]=useState<ListingDTO[]>([]),[cursor,setCursor]=useState<string|null>(null),[loading,setLoading]=useState(true),[more,setMore]=useState(false);
  const [error,setError]=useState(""),[cached,setCached]=useState<number|null>(null),[sheet,setSheet]=useState(false);
  const rtl=isRTL(locale);
  useEffect(()=>{if(params.intent && ["buy","rent","gharawi"].includes(params.intent)){
@@ -27,8 +28,10 @@ export default function Search(){
  const load=useCallback(async()=>{
   if(!hydrated)return;
   setLoading(true);setError("");setCached(null);
-  try{const response=await cachedDiscovery(filters);setItems(response.items);setCursor(response.nextCursor);setCached(response.cacheDate);}
-  catch{setItems([]);setCursor(null);setError(dt(locale,"unknown"));}
+  try{const response=await cachedDiscovery(filters);setItems(response.items);setCursor(response.nextCursor);setCached(response.cacheDate);
+   requestJson<{items:ListingDTO[]}>("/v1/promotions/featured?"+queryString(filters))
+    .then(promotions=>setFeatured(promotions.items)).catch(()=>setFeatured([]));}
+  catch{setItems([]);setFeatured([]);setCursor(null);setError(dt(locale,"unknown"));}
   finally{setLoading(false);}
  },[filters,hydrated,locale]);
  useEffect(()=>{void load();},[load]);
@@ -55,6 +58,7 @@ export default function Search(){
    <View style={{flex:1}}><Action kind="secondary" label={"⚙ "+dt(locale,"filter")} onPress={()=>setSheet(true)}/></View>
    <View style={{flex:1}}><Action kind="secondary" label={"⌖ "+dt(locale,"map")} onPress={()=>router.push("/search-map")}/></View>
   </View>
+  <Action kind="secondary" label={locale==="en"?"Save this search / manage alerts":locale==="fa"?"ذخیره جستجو و مدیریت اعلان‌ها":"پلټنه خوندي کړئ / خبرتیاوې"} onPress={()=>router.push("/saved-searches")}/>
   <View style={{flexDirection:rtl?"row-reverse":"row",gap:8,alignItems:"center",justifyContent:"space-between"}}>
    <Label weight="bold" style={{fontSize:18}}>{dt(locale,"results")} · {items.length}{cursor?"+":""}</Label>
    <Pressable accessibilityRole="button" style={{padding:10}} onPress={()=>void load()}>
@@ -65,7 +69,12 @@ export default function Search(){
   {loading?<SectionCard><ActivityIndicator color={colors.primary}/><Label muted>{dt(locale,"loading")}</Label></SectionCard>:null}
   {!loading&&error?<SectionCard><Label style={{color:colors.error}}>{error}</Label><Action kind="secondary" label={dt(locale,"retry")} onPress={()=>void load()}/></SectionCard>:null}
   {!loading&&!items.length&&!error?<SectionCard><Label weight="bold">{dt(locale,"noResults")}</Label><Label muted>{dt(locale,"relax")}</Label><Action kind="secondary" label={dt(locale,"reset")} onPress={reset}/></SectionCard>:null}
-  {items.map(item=><ListingCard key={item.id} item={item}/>)}
+  {featured.length>0&&!loading?<SectionCard>
+   <Label weight="bold">{locale==="en"?"Sponsored listings":locale==="fa"?"آگهی‌های تبلیغاتی":"تمویل شوي اعلانونه"}</Label>
+   <Label muted>{locale==="en"?"Paid placements. Availability and moderation checks still apply.":locale==="fa"?"نمایش پولی؛ شرط موجودیت و بررسی همچنان برقرار است.":"پیسې ورکړل شوې؛ د شتون او ارزونې شرطونه لا هم پلي دي."}</Label>
+   {featured.map(item=><View key={item.id} style={{gap:6}}><Label muted>{locale==="en"?"Sponsored":locale==="fa"?"تبلیغاتی":"تمویل شوی"}</Label><ListingCard item={item}/></View>)}
+  </SectionCard>:null}
+  {items.filter(item=>!featured.some(promoted=>promoted.id===item.id)).map(item=><ListingCard key={item.id} item={item}/>)}
   {cursor?<Action disabled={more} label={more?dt(locale,"loading"):dt(locale,"showMore")} onPress={()=>void loadMore()}/>:null}
   <FilterSheet visible={sheet} close={()=>setSheet(false)} filters={filters} apply={next=>{setFilters(next);setSheet(false);}} clear={()=>{reset();setSheet(false);}} locale={locale}/>
  </Page>;
