@@ -125,7 +125,16 @@ test("phase 5 agency scope: managers own queue, agents assigned only, notes priv
   assert.equal((await send("GET","/v1/inquiries/"+thread+"/lead-notes",2)).status,403);
   assert.equal((await send("GET","/v1/inquiries/"+thread+"/lead-notes",0)).data.items[0].body,"Internal meeting follow-up");
   assert.equal((await send("POST","/v1/inquiries/"+thread+"/assign",0,{assignedTo:users[3].id})).status,422);
-  assert.equal((await send("POST","/v1/agencies/"+agency.id+"/members/"+members[1].id+"/revoke",0)).status,200);
+  // Assignment and member revocation use the same agency-scoped transaction lock.
+  // Whichever request acquires the lock first, a revoked agent must never remain assigned.
+  const [concurrentAssignment,concurrentRevoke]=await Promise.all([
+   send("POST","/v1/inquiries/"+thread+"/assign",0,{assignedTo:users[1].id}),
+   send("POST","/v1/agencies/"+agency.id+"/members/"+members[1].id+"/revoke",0)
+  ]);
+  assert.equal(concurrentRevoke.status,200);
+  assert.ok([200,422].includes(concurrentAssignment.status));
+  assert.equal((await send("POST","/v1/inquiries/"+thread+"/assign",0,{assignedTo:users[1].id})).status,422);
+  assert.equal((await send("POST","/v1/inquiries/"+thread+"/assign",0,{assignedTo:null})).status,200);
   assert.equal((await send("GET","/v1/inquiries/"+thread,0)).data.assignedTo,null);
   assert.equal((await send("GET","/v1/inquiries/"+thread,1)).status,403);
   assert.equal((await send("GET","/v1/inquiries",1)).data.items.length,0);

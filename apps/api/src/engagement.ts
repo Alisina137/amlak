@@ -288,15 +288,38 @@ export function registerEngagementRoutes(app:FastifyInstance,db:Database){
   if(!row.agencyId||p.side!=="advertiser"||!["owner","manager"].includes(p.role))
    throw new HttpProblem(403,"AGENCY_MANAGER_REQUIRED");
   const input=parse(z.object({assignedTo:z.uuid().nullable()}).strict(),request.body);
-  if(input.assignedTo){
-   await checkBlocks(db,row.seekerId,input.assignedTo);
-   const [member]=await db.select().from(schema.memberships).where(and(eq(schema.memberships.userId,input.assignedTo),
-    eq(schema.memberships.agencyId,row.agencyId),eq(schema.memberships.status,"active"))).limit(1);
-   if(!member||!["agent","manager","owner"].includes(member.role))throw new HttpProblem(422,"ASSIGNEE_NOT_ACTIVE");
-  }
-  await db.update(schema.inquiries).set({assignedTo:input.assignedTo,updatedAt:new Date()}).where(eq(schema.inquiries.id,row.id));
-  await db.insert(schema.audit).values({actorType:"user",actorId:p.actor.id,action:"lead_assigned",targetType:"inquiry",targetId:row.id});
-  if(input.assignedTo)await alert(db,input.assignedTo,"lead",row.id,"lead:"+row.id+":"+input.assignedTo,"A property inquiry was assigned to you");
+  // The same agency lock is used when inviting, accepting or revoking members.
+  // Never assign a lead to someone revoked between validation and the write.
+  const result=await db.transaction(async tx=>{
+   await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${row.agencyId}::text))`);
+   const [manager]=await tx.select().from(schema.memberships).where(and(
+    eq(schema.memberships.agencyId,row.agencyId!),
+    eq(schema.memberships.userId,p.actor.id),eq(schema.memberships.status,"active"))).limit(1);
+   if(!manager||!["owner","manager"].includes(manager.role))
+    throw new HttpProblem(403,"AGENCY_MANAGER_REQUIRED");
+   const [lockedLead]=await tx.select().from(schema.inquiries)
+    .where(eq(schema.inquiries.id,row.id)).for("update");
+   if(!lockedLead||lockedLead.agencyId!==row.agencyId)
+    throw new HttpProblem(409,"INQUIRY_CHANGED");
+   if(input.assignedTo){
+    await checkBlocks(tx as unknown as Database,lockedLead.seekerId,input.assignedTo);
+    const [member]=await tx.select().from(schema.memberships).where(and(
+     eq(schema.memberships.userId,input.assignedTo),
+     eq(schema.memberships.agencyId,row.agencyId!),
+     eq(schema.memberships.status,"active"))).limit(1);
+    if(!member||!["agent","manager","owner"].includes(member.role))
+     throw new HttpProblem(422,"ASSIGNEE_NOT_ACTIVE");
+   }
+   if(lockedLead.assignedTo===input.assignedTo)return {changed:false};
+   await tx.update(schema.inquiries).set({assignedTo:input.assignedTo,updatedAt:new Date()})
+    .where(eq(schema.inquiries.id,row.id));
+   await tx.insert(schema.audit).values({actorType:"user",actorId:p.actor.id,
+    action:"lead_assigned",targetType:"inquiry",targetId:row.id});
+   return {changed:true};
+  });
+  if(result.changed&&input.assignedTo)
+   await alert(db,input.assignedTo,"lead",row.id,"lead:"+row.id+":"+input.assignedTo,
+    "A property inquiry was assigned to you");
   return {assignedTo:input.assignedTo};
  });
  app.post<{Params:{id:string}}>("/v1/inquiries/:id/lead-status",async request=>{

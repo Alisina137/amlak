@@ -1,5 +1,5 @@
 import * as SecureStore from "expo-secure-store";
-import {createContext,useCallback,useContext,useEffect,useMemo,useState,type ReactNode} from "react";
+import {createContext,useCallback,useContext,useEffect,useMemo,useRef,useState,type ReactNode} from "react";
 const BASE_URL=(process.env.EXPO_PUBLIC_API_URL||"").replace(/\/+$/,"");
 const KEY="amlaklink:user-session:v1";
 export type Account={id:string;displayName:string;email:string;verified:boolean;advertiserEnabled:boolean;independentAgentStatus:"none"|"pending"|"approved"|"rejected";locale:string;status:string};
@@ -34,32 +34,46 @@ export async function requestJson<T>(path:string,options:{method?:string;body?:o
 }
 export function AuthProvider({children}:{children:ReactNode}){
  const [user,setUser]=useState<Account|null>(null),[token,setToken]=useState<string|null>(null),[loading,setLoading]=useState(true);
+ // In-flight /me from a previous session must never revive a signed-out or switched account.
+ const sessionEpoch=useRef(0);
  const persist=useCallback(async(nextToken:string,nextUser:Account)=>{
-   await SecureStore.setItemAsync(KEY,nextToken);setToken(nextToken);setUser(nextUser);
+   const epoch=++sessionEpoch.current;
+   await SecureStore.setItemAsync(KEY,nextToken);
+   if(epoch!==sessionEpoch.current)return;
+   setToken(nextToken);setUser(nextUser);
  },[]);
  const refresh=useCallback(async()=>{
+  const epoch=sessionEpoch.current;
   const saved=token||await SecureStore.getItemAsync(KEY);
-  if(!saved)return;
+  if(epoch!==sessionEpoch.current||!saved)return;
   try{
    const res=await requestJson<{user:Account}>("/v1/me",{token:saved});
-   setToken(saved);setUser(res.user);
+   if(epoch===sessionEpoch.current){setToken(saved);setUser(res.user);}
   }catch(err){
    // Offline is not a logout. Only an authoritative auth rejection invalidates stored credentials.
-   if(err instanceof ApiError && [401,403].includes(err.status)){
+   if(epoch===sessionEpoch.current && err instanceof ApiError && [401,403].includes(err.status)){
+    sessionEpoch.current++;
     await SecureStore.deleteItemAsync(KEY);setToken(null);setUser(null);
    }
   }
  },[token]);
  useEffect(()=>{let mounted=true;void (async()=>{try{await refresh();}finally{if(mounted)setLoading(false);}})();return()=>{mounted=false;};},[]); // once at launch
  const signIn=useCallback(async(email:string,password:string)=>{
+   const epoch=sessionEpoch.current;
    const data=await requestJson<{token:string;user:Account}>("/v1/auth/login",{method:"POST",body:{email,password}});
+   if(epoch!==sessionEpoch.current)return;
    await persist(data.token,data.user);
  },[persist]);
  const verify=useCallback(async(email:string,code:string)=>{
+   const epoch=sessionEpoch.current;
    const data=await requestJson<{token:string;user:Account}>("/v1/auth/verify",{method:"POST",body:{email,code}});
+   if(epoch!==sessionEpoch.current)return;
    await persist(data.token,data.user);
  },[persist]);
  const signOut=useCallback(async()=>{
+   // Invalidate all previous /me responses before calling the network.
+   sessionEpoch.current++;
+   setToken(null);setUser(null);
    if(token)await import("./push-client").then(p=>p.unregisterCurrentDevice(token)).catch(()=>{});
    if(token)await requestJson("/v1/auth/logout",{method:"POST",token}).catch(()=>{});
    await SecureStore.deleteItemAsync(KEY);setToken(null);setUser(null);
