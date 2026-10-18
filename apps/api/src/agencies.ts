@@ -96,14 +96,28 @@ export function registerAgencyRoutes(app:FastifyInstance,db:Database){
   // Owner transfer requires an audited dedicated workflow. Disallow revoking any owner here.
   if(member.role==="owner" || (member.role==="manager" && manager.role!=="owner"))throw new HttpProblem(403,"OWNER_APPROVAL_REQUIRED");
   await db.transaction(async tx=>{
+   // Serialize revocation with invitation accept and lead reassignment.
+   // The preflight membership lookup above is for friendly errors only;
+   // authorization/target status are rechecked after acquiring the lock.
+   await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${id}::text))`);
+   const [currentManager]=await tx.select().from(schema.memberships).where(and(
+    eq(schema.memberships.agencyId,id),eq(schema.memberships.userId,actor.id),
+    eq(schema.memberships.status,"active"))).limit(1);
+   if(!currentManager||!["owner","manager"].includes(currentManager.role))
+    throw new HttpProblem(403,"AGENCY_ACCESS_DENIED");
+   const [current]=await tx.select().from(schema.memberships).where(and(
+    eq(schema.memberships.id,memberId),eq(schema.memberships.agencyId,id))).limit(1);
+   if(!current||current.status==="revoked")throw new HttpProblem(404,"MEMBER_NOT_ACTIVE");
+   if(current.role==="owner"||(current.role==="manager"&&currentManager.role!=="owner"))
+    throw new HttpProblem(403,"OWNER_APPROVAL_REQUIRED");
    await tx.update(schema.memberships).set({status:"revoked",updatedAt:new Date()})
-      .where(and(eq(schema.memberships.id,memberId),eq(schema.memberships.agencyId,id)));
+    .where(eq(schema.memberships.id,memberId));
    // Removing a member returns their lead assignments to the manager's
    // unassigned queue without revealing these leads to former members.
    await tx.update(schema.inquiries).set({assignedTo:null,updatedAt:new Date()})
-     .where(and(eq(schema.inquiries.agencyId,id),eq(schema.inquiries.assignedTo,member.userId)));
+    .where(and(eq(schema.inquiries.agencyId,id),eq(schema.inquiries.assignedTo,current.userId)));
    await tx.insert(schema.audit).values({actorType:"user",actorId:actor.id,action:"agency_member_revoked",
-    targetType:"agency",targetId:id,reason:member.userId});
+    targetType:"agency",targetId:id,reason:current.userId});
   });
   return {success:true};
  });
