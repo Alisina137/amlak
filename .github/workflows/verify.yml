@@ -1,4 +1,4 @@
-name: AmlakLink Quality Gate (Phases 1–7)
+name: AmlakLink Quality Gate (Phases 1–8)
 on:
   push:
     branches: [main]
