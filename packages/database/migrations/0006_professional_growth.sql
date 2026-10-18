@@ -2,7 +2,7 @@
 CREATE TABLE IF NOT EXISTS saved_searches(
  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),user_id uuid NOT NULL REFERENCES users(id),
  title varchar(80) NOT NULL,filters jsonb NOT NULL,alerts_enabled boolean NOT NULL DEFAULT false,
- last_scanned_at timestamptz NOT NULL DEFAULT now(),created_at timestamptz NOT NULL DEFAULT now()
+ last_scanned_at timestamptz NOT NULL DEFAULT now(),last_listing_id uuid,created_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS saved_search_owner_idx ON saved_searches(user_id,created_at);
 CREATE TABLE IF NOT EXISTS growth_invoices(
