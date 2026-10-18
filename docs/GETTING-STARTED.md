@@ -29,3 +29,5 @@ If migrations fail with `CONNECT_TIMEOUT`, follow docs/DATABASE-CONNECTIVITY.md 
 For Phase 5 messages, viewings, agency lead queues, and in-app alerts, see docs/PHASE-5-ENGAGEMENT.md. Check `pnpm db:diagnose` for the earlier Neon connection timeout before running `pnpm db:migrate`.
 
 For Phase 6 reporting, appeals, staff verification, safety moderation and migration 0005_safety.sql, see docs/PHASE-6-SAFETY.md. Always run pnpm db:diagnose before migrating your own Neon instance.
+
+See **docs/PHASE-7-PILOT.md** for the pilot dashboard, freshness sweep dry-run/execute, encrypted database backup, staging-only restore and operational acceptance checklist. Run `pnpm pilot:smoke` after starting the local API.

@@ -25,3 +25,8 @@ In other terminals: `corepack pnpm dev:mobile` and `corepack pnpm dev:admin`. Be
 Read docs/PHASE-2-IDENTITY.md for identity, docs/PHASE-3-INVENTORY.md for property inventory, docs/PHASE-4-DISCOVERY.md for discovery, and docs/PHASE-5-ENGAGEMENT.md for inquiries and viewings, and docs/PHASE-6-SAFETY.md for reports, verification, appeals and safety holds. Run `corepack pnpm check` to execute typechecks and tests; GitHub CI additionally runs PostgreSQL integration tests, admin build and Android Expo export.
 
 Never commit identity records, actual credentials, MFA secrets, user uploads or payments.
+
+
+## Phase 7 — Pilot readiness
+
+Before launch, follow **docs/PHASE-7-PILOT.md** for the staff pilot scorecard, 14-day freshness reminders, 30-day auto-pause, encrypted backup/staging restore, read-only smoke testing and **human go/no-go checklist**. The application is *not* yet approved for production release.
