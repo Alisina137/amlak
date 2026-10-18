@@ -1,5 +1,5 @@
 import * as Crypto from "expo-crypto";
-import {useCallback,useEffect,useState} from "react";
+import {useCallback,useEffect,useRef,useState} from "react";
 import {TextInput,View} from "react-native";
 import {colors} from "@amlaklink/design-tokens";
 import {isRTL} from "@amlaklink/localization";
@@ -43,21 +43,33 @@ const strings={
 };
 export function BillingAdjustmentUI({token,invoices}:{token:string;invoices:PlatformInvoice[]}){
  const {locale}=usePreferences(),t=strings[locale],rtl=isRTL(locale);
- const [items,setItems]=useState<Adjustment[]>([]),[claims,setClaims]=useState<Claim[]>([]);
+ const [snapshot,setSnapshot]=useState<{token:string;items:Adjustment[]}>({token:"",items:[]});
+ const items=snapshot.token===token?snapshot.items:[];
+ const [claimSnapshot,setClaimSnapshot]=useState<{key:string;items:Claim[]}>({key:"",items:[]});
  const [invoiceId,setInvoiceId]=useState<string|null>(null),[historyId,setHistoryId]=useState<string|null>(null);
+ const claims=claimSnapshot.key===token+":"+historyId?claimSnapshot.items:[];
+ const liveToken=useRef(token),loadEpoch=useRef(0),pendingRequests=useRef<Record<string,string>>({});
+ liveToken.current=token;
  const [kind,setKind]=useState<"refund"|"credit">("refund"),[amount,setAmount]=useState(""),[reason,setReason]=useState("");
  const [busy,setBusy]=useState(false),[error,setError]=useState(""),[message,setMessage]=useState("");
  const refresh=useCallback(async()=>{
+  const epoch=++loadEpoch.current;
   try{const r=await requestJson<{items:Adjustment[]}>("/v1/billing/adjustments",{token});
-   setItems(r.items);setError("");
-  }catch{setError(t.error);}
+   if(liveToken.current!==token||loadEpoch.current!==epoch)return;
+   setSnapshot({token,items:r.items});setError("");
+  }catch{if(liveToken.current===token&&loadEpoch.current===epoch)setError(t.error);}
  },[token,t.error]);
- useEffect(()=>{void refresh();},[refresh]);
+ useEffect(()=>{void refresh();return()=>{loadEpoch.current++;};},[refresh]);
+ useEffect(()=>{
+  setInvoiceId(null);setHistoryId(null);setAmount("");setReason("");setMessage("");setError("");
+ },[token]);
  useEffect(()=>{
   let active=true;
-  if(!historyId){setClaims([]);return;}
+  if(!historyId){setClaimSnapshot({key:token+":null",items:[]});return;}
+  const key=token+":"+historyId;
   void requestJson<{items:Claim[]}>("/v1/invoices/"+historyId+"/claims",{token})
-   .then(r=>{if(active)setClaims(r.items);}).catch(()=>{if(active)setError(t.error);});
+   .then(r=>{if(active&&liveToken.current===token)setClaimSnapshot({key,items:r.items});})
+   .catch(()=>{if(active&&liveToken.current===token)setError(t.error);});
   return ()=>{active=false;};
  },[historyId,token,t.error]);
  const available=invoices.filter(i=>i.status==="confirmed");
@@ -68,12 +80,17 @@ export function BillingAdjustmentUI({token,invoices}:{token:string;invoices:Plat
   const value=Number(amount.trim());
   if(!chosen||busy||!Number.isInteger(value)||value<=0||value>chosen.amountAfn-used||reason.trim().length<15)return;
   setBusy(true);setMessage("");setError("");
+  const key=token+":"+chosen.id+":"+kind+":"+value+":"+reason.trim();
+  const requestId=pendingRequests.current[key]||Crypto.randomUUID();
+  pendingRequests.current[key]=requestId;
   try{
    await requestJson("/v1/invoices/"+chosen.id+"/adjustments",{
-    token,method:"POST",body:{requestId:Crypto.randomUUID(),kind,
+    token,method:"POST",body:{requestId,kind,
      amountAfn:value,reason:reason.trim()}});
-   setAmount("");setReason("");setMessage(t.accepted);await refresh();
-  }catch{setError(t.error);}finally{setBusy(false);}
+   delete pendingRequests.current[key];
+   if(liveToken.current===token){setAmount("");setReason("");setMessage(t.accepted);await refresh();}
+  }catch{if(liveToken.current===token)setError(t.error);}
+  finally{setBusy(false);}
  }
  const inputStyle={color:colors.text,borderColor:colors.border,borderWidth:1,borderRadius:10,
   padding:12,minHeight:48,writingDirection:rtl?"rtl" as const:"ltr" as const,

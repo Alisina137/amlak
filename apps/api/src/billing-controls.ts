@@ -1,4 +1,4 @@
-import {and,desc,eq,inArray,ne,sql} from "drizzle-orm";
+import {and,desc,eq,inArray,isNull,ne,or,sql} from "drizzle-orm";
 import type {FastifyInstance} from "fastify";
 import {z} from "zod";
 import {type Database,schema} from "@amlaklink/database";
@@ -112,6 +112,57 @@ export function registerBillingControlRoutes(app:FastifyInstance,db:Database){
    feesMinusExternallySettledRefundsAfn:fees-returns,
    pendingClaimCount:Number(pending[0]?.count||0),
    notice:"Internal AmlakLink platform-fee records only, not a bank statement, reconciliation certification, escrow or property transaction."};
+ });
+ /** Exception queue compares internal fee records only. It does not query a
+  * bank and must never be presented as independent financial reconciliation. */
+ app.get("/v1/admin/billing/exceptions",async request=>{
+  const actor=await requireActor(db,request,"staff");requireStaffRole(actor,permissions);
+  const [withoutClaim,incompleteClaims,missingEntitlements,missingPromotions,
+   incompleteRefunds]=await Promise.all([
+   db.select({id:schema.growthInvoices.id}).from(schema.growthInvoices)
+    .leftJoin(schema.paymentClaims,and(
+     eq(schema.paymentClaims.invoiceId,schema.growthInvoices.id),
+     eq(schema.paymentClaims.status,"confirmed")))
+    .where(and(eq(schema.growthInvoices.status,"confirmed"),isNull(schema.paymentClaims.id)))
+    .limit(50),
+   db.select({id:schema.paymentClaims.id}).from(schema.paymentClaims)
+    .innerJoin(schema.growthInvoices,eq(schema.paymentClaims.invoiceId,schema.growthInvoices.id))
+    .where(and(eq(schema.paymentClaims.status,"confirmed"),
+     or(isNull(schema.paymentClaims.reconciliationReferenceHash),
+      isNull(schema.paymentClaims.reconciliationAmountAfn),
+      isNull(schema.paymentClaims.reconciliationDate),
+      sql`${schema.paymentClaims.reconciliationAmountAfn}<>${schema.growthInvoices.amountAfn}`)))
+    .limit(50),
+   db.select({id:schema.growthInvoices.id}).from(schema.growthInvoices)
+    .leftJoin(schema.growthEntitlements,eq(schema.growthEntitlements.invoiceId,schema.growthInvoices.id))
+    .where(and(eq(schema.growthInvoices.status,"confirmed"),
+     inArray(schema.growthInvoices.productCode,["solo_agent","agency_standard","agency_growth"]),
+     isNull(schema.growthEntitlements.id))).limit(50),
+   db.select({id:schema.growthInvoices.id}).from(schema.growthInvoices)
+    .leftJoin(schema.growthPromotions,eq(schema.growthPromotions.invoiceId,schema.growthInvoices.id))
+    .where(and(eq(schema.growthInvoices.status,"confirmed"),
+     eq(schema.growthInvoices.productCode,"featured_7d"),isNull(schema.growthPromotions.id)))
+    .limit(50),
+   db.select({id:schema.billingAdjustments.id}).from(schema.billingAdjustments)
+    .where(and(eq(schema.billingAdjustments.kind,"refund"),
+     eq(schema.billingAdjustments.status,"settled"),
+     or(isNull(schema.billingAdjustments.settledBy),
+      isNull(schema.billingAdjustments.settledAt),
+      isNull(schema.billingAdjustments.settlementReferenceHash),
+      isNull(schema.billingAdjustments.settlementMethod))))
+    .limit(50)
+  ]);
+  const categories={
+   confirmedInvoiceWithoutConfirmedClaim:withoutClaim.map(x=>x.id),
+   confirmedClaimWithIncompleteEvidence:incompleteClaims.map(x=>x.id),
+   confirmedPlanWithoutEntitlement:missingEntitlements.map(x=>x.id),
+   confirmedPromotionWithoutPlacement:missingPromotions.map(x=>x.id),
+   refundWithoutSettlementEvidence:incompleteRefunds.map(x=>x.id)
+  };
+  const counts=Object.fromEntries(Object.entries(categories).map(([key,ids])=>[key,ids.length]));
+  return {passed:Object.values(counts).every(n=>n===0),counts,categories,
+   cappedAt:50,limited:true,readOnly:true,
+   notice:"Potential inconsistencies in internal AmlakLink platform-service records only. Not a bank reconciliation, external proof of payment, refund transfer, or permission to alter records automatically."};
  });
  app.get("/v1/admin/billing/history",async request=>{
   const actor=await requireActor(db,request,"staff");requireStaffRole(actor,permissions);

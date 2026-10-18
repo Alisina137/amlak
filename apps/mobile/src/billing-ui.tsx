@@ -55,6 +55,7 @@ export function BillingScreen({agencyId,listingId}:{agencyId?:string;listingId?:
  // Never show one account's plan, receipts or invoices during an account switch.
  const scope=(token||"guest")+":"+(agencyId||"solo")+":"+(listingId||"all");
  const scopeRef=useRef(scope),loadEpoch=useRef(0);
+ const pendingInvoiceRequests=useRef<Record<string,string>>({});
  scopeRef.current=scope;
  const [snapshot,setSnapshot]=useState<{scope:string;plans:Plans|null;invoices:Invoice[];
   entitlement:SubscriptionState|null}>({scope:"",plans:null,invoices:[],entitlement:null});
@@ -94,11 +95,15 @@ export function BillingScreen({agencyId,listingId}:{agencyId?:string;listingId?:
  },[load]);
  async function invoice(code:string){
   if(!token||!scoped||busy)return;setBusy(true);setError("");setMessage("");
+  const attempt=scope+"|"+code;
+  const requestId=pendingInvoiceRequests.current[attempt]||Crypto.randomUUID();
+  pendingInvoiceRequests.current[attempt]=requestId;
   try{
    const row=await requestJson<Invoice>("/v1/invoices",{token,method:"POST",
-    body:{productCode:code,requestId:Crypto.randomUUID(),...(agencyId?{agencyId}:{}),...(listingId?{listingId}:{})}});
+    body:{productCode:code,requestId,...(agencyId?{agencyId}:{}),...(listingId?{listingId}:{})}});
+   delete pendingInvoiceRequests.current[attempt];
    if(scopeRef.current===scope){setSelectedInvoice(row.id);setMessage(row.id);await load();}
-  }catch{setError(t.fail);}finally{setBusy(false);}
+  }catch{if(scopeRef.current===scope)setError(t.fail);}finally{setBusy(false);}
  }
  async function claim(){
   if(!token||!scoped||!selectedInvoice||reference.trim().length<8||busy)return;
