@@ -66,7 +66,7 @@ export function registerGrowthRoutes(app:FastifyInstance,db:Database){
    notice:"Prices are original asking terms. No conversion, verified purchase price or property-title guarantee."};
  });
  app.get<{Querystring:{provinceId?:string;intent?:string}}>("/v1/promotions/featured",async request=>{
-  const filters=parseDiscovery({provinceId:request.query?.provinceId,intent:request.query?.intent,limit:3});
+  const filters=parseDiscovery({...request.query,limit:3});
   const now=new Date();
   const rows=await db.select({listing:schema.listings,revision:schema.revisions})
    .from(schema.growthPromotions).innerJoin(schema.listings,eq(schema.listings.id,schema.growthPromotions.listingId))
