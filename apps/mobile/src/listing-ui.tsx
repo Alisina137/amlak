@@ -57,7 +57,7 @@ export function ListingCard({item}:{item:ListingDTO}){
   </View>
  </Pressable>;
 }
-export function ListingFeed({provinceId}:{provinceId?:string}){
+export function ListingFeed({provinceId,reconnectEpoch=0}:{provinceId?:string;reconnectEpoch?:number}){
  const [items,setItems]=useState<ListingDTO[]>([]),[loading,setLoading]=useState(true),[error,setError]=useState(""),[retry,setRetry]=useState(0);
  const {locale}=usePreferences();
  useEffect(()=>{let active=true;setLoading(true);setError("");
@@ -65,7 +65,7 @@ export function ListingFeed({provinceId}:{provinceId?:string}){
   .catch(()=>{if(active)setError(uiText(locale,"feedError"))})
   .finally(()=>{if(active)setLoading(false);});
   return()=>{active=false;};
- },[provinceId,locale,retry]);
+ },[provinceId,locale,retry,reconnectEpoch]);
  if(loading)return <SectionCard><ActivityIndicator color={colors.primary}/><Label muted>{uiText(locale,"feedLoading")}</Label></SectionCard>;
  if(error)return <SectionCard><Label style={{color:colors.error}}>{error}</Label>
   <Action kind="secondary" label={dt(locale,"retry")} onPress={()=>setRetry(v=>v+1)}/>
