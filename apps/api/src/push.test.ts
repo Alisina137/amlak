@@ -5,7 +5,7 @@ import {eq} from "drizzle-orm";
 import {connectDatabase,schema} from "@amlaklink/database";
 import {buildApp} from "./app";
 import {tokenDigest,pushCategory,pushEnabled} from "./push";
-import {expoPayload,pushAllowed,scanPushDeliveries} from "./push-worker";
+import {expoPayload,pushAllowed,scanPushDeliveries,retryableExpoError} from "./push-worker";
 import {hashToken,newToken} from "./security";
 
 test("push policy maps kinds to private opt-in categories",()=>{
@@ -19,8 +19,15 @@ test("push policy maps kinds to private opt-in categories",()=>{
  assert.equal(pushAllowed({...p,enabled:false},"inquiry",new Date(time.getTime()+1000)),false);
  assert.equal(pushAllowed(p,"saved_search",new Date(time.getTime()+1000)),true);
  const notif=expoPayload("ExpoPushToken[12345678901234567890]",
-  {id:randomUUID(),kind:"saved_search",title:"Safe notification",referenceId:randomUUID()});
- assert.equal(notif.ttl,86400);
+  {id:randomUUID(),userId:randomUUID(),kind:"saved_search",title:"PRIVATE PATIENT PHONE NUMBER",referenceId:randomUUID()});
+ assert.equal(notif.ttl,3600);
+ assert.equal(notif.channelId,"amlaklink-alerts");
+ assert.ok(!JSON.stringify(notif).includes("PRIVATE PATIENT PHONE NUMBER"));
+ assert.match(String(notif.data.recipientId),/^[0-9a-f-]{36}$/i);
+ assert.equal(retryableExpoError("MessageRateExceeded"),true);
+ assert.equal(retryableExpoError("ServiceUnavailable"),true);
+ assert.equal(retryableExpoError("DeviceNotRegistered"),false);
+ assert.equal(retryableExpoError("MessageTooBig"),false);
  assert.ok(!("url" in notif.data));
  assert.equal(tokenDigest("x"),tokenDigest("x"));
  assert.notEqual(tokenDigest("x"),tokenDigest("y"));
@@ -51,6 +58,8 @@ test("push routes enforce user consent, token ownership and in-app fallback",{sk
   assert.equal((await call("GET","/v1/push/preferences")).code,401);
   const init=await call("GET","/v1/push/preferences",0);
   assert.equal(init.body.preferences.enabled,false);
+  assert.equal((await call("POST","/v1/push/test")).code,401);
+  assert.equal((await call("POST","/v1/push/test",0)).code,409);
   assert.equal((await call("PATCH","/v1/push/preferences",0,{enabled:true})).code,409);
   const installationId=randomUUID(),expoToken="ExpoPushToken[1234567890123456789012345678]";
   assert.equal((await call("POST","/v1/push/devices",0,{
@@ -86,6 +95,17 @@ test("push routes enforce user consent, token ownership and in-app fallback",{sk
   assert.ok(receipt.expoDelivered>=1);assert.ok(receipts>=1);
   const pushes=await db.select().from(schema.pushDeliveries).where(eq(schema.pushDeliveries.notificationId,notice.id));
   assert.equal(pushes[0].status,"delivered");
+  const testSend=await call("POST","/v1/push/test",0);
+  assert.equal(testSend.code,200);
+  assert.equal(testSend.body.queued,true);
+  const [testNotice]=await db.select().from(schema.notifications)
+   .where(eq(schema.notifications.id,testSend.body.notificationId)).limit(1);
+  assert.equal(testNotice.kind,"push_test");
+  assert.equal(testNotice.userId,accounts[0].id);
+  const testDelivery=await scanPushDeliveries(db,{execute:true,
+   now:new Date(Date.now()+21*60_000),fetcher:fakeFetch});
+  assert.equal(testDelivery.expoAccepted,1);
+  assert.equal((await call("POST","/v1/push/test",1)).code,409);
   assert.equal((await call("PATCH","/v1/push/preferences",0,{enabled:false})).code,200);
   const countBefore=sends;
   const disabled=await scanPushDeliveries(db,{execute:true,now:new Date(Date.now()+25*60_000),fetcher:fakeFetch});

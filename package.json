@@ -20,6 +20,7 @@
     "ops:freshness": "pnpm --filter @amlaklink/api ops:freshness",
     "ops:alerts": "pnpm --filter @amlaklink/api ops:alerts",
     "ops:push": "pnpm --filter @amlaklink/api ops:push",
+    "ops:push:preflight": "pnpm --filter @amlaklink/api ops:push:preflight",
     "ops:renewals": "pnpm --filter @amlaklink/api ops:renewals",
     "db:backup": "pnpm --filter @amlaklink/database backup",
     "db:restore:staging": "pnpm --filter @amlaklink/database restore:staging",
