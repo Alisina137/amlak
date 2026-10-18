@@ -1,4 +1,4 @@
-import {and,asc,eq,gt,gte,inArray,isNull,lt,lte,or} from "drizzle-orm";
+import {and,asc,desc,eq,gt,gte,inArray,isNull,lt,lte,or} from "drizzle-orm";
 import {type Database,schema} from "@amlaklink/database";
 import {pushCategory,pushEnabled} from "./push";
 
@@ -54,7 +54,7 @@ export async function scanPushDeliveries(db:Database,options:{execute:boolean;no
   .where(and(eq(schema.users.status,"active"),eq(schema.pushPreferences.enabled,true),
    gte(schema.notifications.createdAt,new Date(now.getTime()-RECENT_MS)),
    eq(schema.notifications.isRead,false)))
-  .orderBy(descendingAge()).limit(1000);
+  .orderBy(desc(schema.notifications.createdAt)).limit(1000);
  metrics.candidateNotifications=notifications.length;
  for(const {notice,preferences,user} of notifications){
   if(!user.emailVerifiedAt||!pushAllowed(preferences,notice.kind,notice.createdAt))continue;
@@ -158,4 +158,3 @@ export async function scanPushDeliveries(db:Database,options:{execute:boolean;no
  }
  return metrics;
 }
-function descendingAge(){return asc(schema.notifications.createdAt);}
