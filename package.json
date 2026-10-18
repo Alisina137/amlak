@@ -23,6 +23,8 @@
     "ops:renewals": "pnpm --filter @amlaklink/api ops:renewals",
     "db:backup": "pnpm --filter @amlaklink/database backup",
     "db:restore:staging": "pnpm --filter @amlaklink/database restore:staging",
-    "pilot:smoke": "node scripts/pilot-smoke.mjs"
+    "pilot:smoke": "node scripts/pilot-smoke.mjs",
+    "qa:phase8": "node --test scripts/test-phase8-release-gate.mjs && node scripts/phase8-release-gate.mjs --ci",
+    "qa:release": "node scripts/phase8-release-gate.mjs --release"
   }
 }
