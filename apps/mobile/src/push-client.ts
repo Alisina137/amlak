@@ -70,6 +70,8 @@ export function routeForNotification(data:Record<string,unknown>){
  const kind=typeof data.kind==="string"?data.kind:"";
  const ref=typeof data.referenceId==="string"&&/^[0-9a-f-]{36}$/i.test(data.referenceId)?
    data.referenceId:null;
+ if(kind==="subscription_agency"&&ref)return {pathname:"/agency/[id]/billing" as const,params:{id:ref}};
+ if(kind==="subscription_solo")return "/upgrade" as const;
  if(kind==="saved_search"&&ref)return {pathname:"/property/[id]" as const,params:{id:ref}};
  if(kind==="safety")return "/safety" as const;
  if(kind==="freshness")return "/my-listings" as const;

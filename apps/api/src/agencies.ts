@@ -113,13 +113,30 @@ export function registerAgencyRoutes(app:FastifyInstance,db:Database){
   const id=getId(request.params.id);
   const [org]=await db.select().from(schema.agencies).where(eq(schema.agencies.id,id)).limit(1);
   if(!org || org.status!=="active")throw new HttpProblem(403,"AGENCY_INACTIVE");
-  const changed=await db.update(schema.memberships).set({status:"active",updatedAt:new Date()})
-    .where(and(eq(schema.memberships.agencyId,id),eq(schema.memberships.userId,actor.id),
-      eq(schema.memberships.status,"pending"),ne(schema.memberships.role,"owner")))
-    .returning({id:schema.memberships.id,role:schema.memberships.role});
-  if(!changed.length)throw new HttpProblem(404,"INVITATION_NOT_FOUND");
-  await db.insert(schema.audit).values({actorType:"user",actorId:actor.id,action:"agency_invitation_accepted",targetType:"agency",targetId:id});
-  return {success:true,role:changed[0].role};
+  return db.transaction(async tx=>{
+   // Pending invitations granted while a paid plan was active must not bypass a
+   // later downgrade/expiry. Existing ACTIVE users are never revoked by a plan ending.
+   await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${id}::text))`);
+   const [pending]=await tx.select().from(schema.memberships).where(and(
+    eq(schema.memberships.agencyId,id),eq(schema.memberships.userId,actor.id),
+    eq(schema.memberships.status,"pending"),ne(schema.memberships.role,"owner"))).limit(1);
+   if(!pending)throw new HttpProblem(404,"INVITATION_NOT_FOUND");
+   const now=new Date();
+   const [grant]=await tx.select({seats:schema.growthEntitlements.seatLimit})
+    .from(schema.growthEntitlements).where(and(eq(schema.growthEntitlements.agencyId,id),
+     lte(schema.growthEntitlements.startsAt,now),gt(schema.growthEntitlements.expiresAt,now)))
+    .orderBy(desc(schema.growthEntitlements.seatLimit)).limit(1);
+   const [count]=await tx.select({n:sql<number>`count(*)::integer`}).from(schema.memberships)
+    .where(and(eq(schema.memberships.agencyId,id),eq(schema.memberships.status,"active")));
+   if(Number(count?.n||0)>=(grant?.seats||3))throw new HttpProblem(409,"AGENCY_SEAT_LIMIT_REACHED");
+   const [changed]=await tx.update(schema.memberships).set({status:"active",updatedAt:now})
+    .where(and(eq(schema.memberships.id,pending.id),eq(schema.memberships.status,"pending")))
+    .returning({role:schema.memberships.role});
+   if(!changed)throw new HttpProblem(409,"INVITATION_CHANGED");
+   await tx.insert(schema.audit).values({actorType:"user",actorId:actor.id,
+    action:"agency_invitation_accepted",targetType:"agency",targetId:id});
+   return {success:true,role:changed.role};
+  });
  });
  app.get("/v1/admin/agencies",async request=>{
   const actor=await requireActor(db,request,"staff");
