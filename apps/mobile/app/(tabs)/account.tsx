@@ -58,6 +58,9 @@ export default function Account(){
    </SectionCard>
    <SectionCard><Label weight="bold">{copy("agent")}</Label>
     {user.independentAgentStatus==="approved"?<Label style={{color:colors.success}}>{copy("agentApproved")}</Label>:user.independentAgentStatus==="pending"?<Label muted>{copy("agentPending")}</Label>:<Action kind="secondary" label={copy("agentApplication")} onPress={()=>router.push("/agent/apply")}/>}
+    {user.independentAgentStatus==="approved"?
+     <Action kind="secondary" label={locale==="en"?"Professional plan":"اشتراک حرفه‌ای"}
+      onPress={()=>router.push("/upgrade")}/>:null}
    </SectionCard>
    <SectionCard>
     <Label weight="bold">{copy("agency")}</Label>
