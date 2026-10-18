@@ -19,6 +19,7 @@ import {registerVerificationRoutes} from "./verification";
 import {registerPilotRoutes} from "./pilot";
 import {registerGrowthRoutes} from "./growth";
 import {registerBillingRoutes} from "./billing";
+import {registerBillingControlRoutes} from "./billing-controls";
 import {registerShortlistRoutes} from "./shortlists";
 import {registerSupportRoutes} from "./support";
 import {registerPushRoutes} from "./push";
@@ -53,7 +54,7 @@ export function buildApp(options:{db?:Database;mailer?:SendCode}={}){
   if(!province){reply.code(404);return {error:"PROVINCE_NOT_FOUND",requestId:request.id};}
   return province;
  });
- if(options.db){registerAuthRoutes(app,options.db,options.mailer||sendCode);registerAgencyRoutes(app,options.db);registerAgentRoutes(app,options.db);registerListingRoutes(app,options.db);registerPhotoRoutes(app,options.db);registerDiscoveryRoutes(app,options.db);registerEngagementRoutes(app,options.db);registerSafetyRoutes(app,options.db);registerVerificationRoutes(app,options.db);registerPilotRoutes(app,options.db);registerGrowthRoutes(app,options.db);registerBillingRoutes(app,options.db);registerShortlistRoutes(app,options.db);registerSupportRoutes(app,options.db);registerPushRoutes(app,options.db);}
+ if(options.db){registerAuthRoutes(app,options.db,options.mailer||sendCode);registerAgencyRoutes(app,options.db);registerAgentRoutes(app,options.db);registerListingRoutes(app,options.db);registerPhotoRoutes(app,options.db);registerDiscoveryRoutes(app,options.db);registerEngagementRoutes(app,options.db);registerSafetyRoutes(app,options.db);registerVerificationRoutes(app,options.db);registerPilotRoutes(app,options.db);registerGrowthRoutes(app,options.db);registerBillingRoutes(app,options.db);registerBillingControlRoutes(app,options.db);registerShortlistRoutes(app,options.db);registerSupportRoutes(app,options.db);registerPushRoutes(app,options.db);}
  app.setNotFoundHandler((request,reply)=>reply.code(404).send({error:"ROUTE_NOT_FOUND",requestId:request.id}));
  app.setErrorHandler((error,request,reply)=>{
   if(error instanceof HttpProblem)return reply.code(error.status).send({error:error.code,requestId:request.id});
