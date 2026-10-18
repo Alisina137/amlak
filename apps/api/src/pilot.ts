@@ -15,7 +15,7 @@ export async function freshnessSweep(db:Database,options:{execute:boolean;limit?
  const now=options.now||new Date(),limit=Math.max(1,Math.min(options.limit||MAX_BATCH,MAX_BATCH));
  const duePause=or(isNull(schema.listings.lastConfirmedAt),lte(schema.listings.lastConfirmedAt,cutoff(now,FRESHNESS_EXPIRE_DAYS)));
  const newReminder=and(lte(schema.listings.lastConfirmedAt,cutoff(now,FRESHNESS_REMIND_DAYS)),
-  sql.raw("NOT EXISTS (SELECT 1 FROM user_notifications fn WHERE fn.reference_id = listings.id AND fn.kind = 'freshness' AND fn.dedupe_key LIKE 'freshness:remind:%' AND fn.created_at >= listings.last_confirmed_at)"));
+  sql.raw("NOT EXISTS (SELECT 1 FROM user_notifications fn WHERE fn.reference_id = listings.id AND fn.kind = 'freshness' AND fn.dedupe_key = ('freshness:remind:' || listings.id::text || ':' || to_char(listings.last_confirmed_at AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS.MS\"Z\"')))"));
  const rows=await db.select().from(schema.listings).where(and(eq(schema.listings.status,"published"),
   or(duePause,newReminder),options.listingIds?inArray(schema.listings.id,options.listingIds):undefined))
   .orderBy(asc(schema.listings.lastConfirmedAt),asc(schema.listings.id)).limit(limit);
