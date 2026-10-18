@@ -20,6 +20,24 @@ test("Afghanistan prices, location and privacy follow product rules",()=>{
   photoIds:[randomUUID()],contact:{allowPhone:true,phone:"+93700111222",allowWhatsApp:false}
  });
  assert.equal(listingSubmissionSchema.safeParse(base).success,true);
+ assert.deepEqual(base.photoDetails,{}); // Existing listings remain valid without a migration.
+ const roomAndCaption=listingDraftSchema.parse({...base,photoDetails:{
+  [base.photoIds[0]]:{room:"bedroom",caption:"Light-filled master bedroom"}
+ }});
+ assert.equal(listingSubmissionSchema.safeParse(roomAndCaption).success,true);
+ assert.equal(listingSubmissionSchema.safeParse({...roomAndCaption,photoDetails:{
+  [randomUUID()]:{room:"bathroom",caption:"Unrelated file"}
+ }}).success,false);
+ assert.equal(listingSubmissionSchema.safeParse({...roomAndCaption,
+  photoIds:[base.photoIds[0],base.photoIds[0]]}).success,false);
+ assert.equal(listingDraftSchema.safeParse({...roomAndCaption,photoDetails:{
+  [base.photoIds[0]]:{room:"unknown_room",caption:"test"}
+ }}).success,false);
+ assert.equal(listingDraftSchema.safeParse({...roomAndCaption,photoDetails:{
+  [base.photoIds[0]]:{room:"bedroom",caption:"x".repeat(101)}
+ }}).success,false);
+ assert.equal(publicListingPayload(roomAndCaption).photoDetails[base.photoIds[0]].room,"bedroom");
+
  assert.equal(publicListingPayload(base).location.latitude,undefined);
  assert.equal(publicListingPayload(base).location.streetAddress,undefined);
  assert.equal(publicListingPayload(base).contact.phone,undefined);
@@ -64,7 +82,7 @@ test("real DB: advertiser draft→photo→review→publish→pause; edits never 
    title:"Modern apartment located in Kabul",description:"Sunny home with separate living area, working water and suitable neighborhood.",
    propertyType:"house",transactionType:"sale",location:{provinceId:"kabul",city:"Kabul",district:"District 4",neighborhood:"Wazir Akbar Khan",precision:"approximate",streetAddress:"Private block",latitude:34.5,longitude:69.15},
    attributes:{areaM2:220,bedrooms:3,bathrooms:2},price:{currency:"AFN",askingPrice:6500000},
-   photoIds:[photoId],contact:{allowPhone:true,phone:"+93700111222"}
+   photoIds:[photoId],photoDetails:{[photoId]:{room:"living_room",caption:"Bright and open living room"}},contact:{allowPhone:true,phone:"+93700111222"}
   });
   const saved=await call("PUT","/v1/listings/"+id+"/draft",tokens[0],{expectedVersion:1,data:approvedData});
   assert.equal(saved.status,200);assert.equal(saved.body.version,2);
@@ -73,8 +91,9 @@ test("real DB: advertiser draft→photo→review→publish→pause; edits never 
   assert.equal((await call("GET","/v1/properties/"+id)).status,404);
   assert.equal((await call("GET","/v1/admin/listings/review-queue",tokens[0])).status,401);
   const queue=await call("GET","/v1/admin/listings/review-queue",tokens[2]);
-  assert.equal(queue.status,200);const item=(queue.body.items as {id:string;revisionId:string}[]).find(x=>x.id===id);
+  assert.equal(queue.status,200);const item=(queue.body.items as {id:string;revisionId:string;data:{photoDetails:Record<string,{room:string}>}}[]).find(x=>x.id===id);
   assert.ok(item);
+  assert.equal(item.data.photoDetails[photoId].room,"living_room");
   const review=await call("POST","/v1/admin/listings/"+id+"/decision",tokens[2],{revisionId:item!.revisionId,decision:"approve",reason:"Images and property information inspected"});
   assert.equal(review.status,200);
   assert.equal((await call("POST","/v1/admin/listings/"+id+"/decision",tokens[2],{revisionId:item!.revisionId,decision:"approve",reason:"Second reviewer tries stale version"})).status,409);
@@ -82,20 +101,27 @@ test("real DB: advertiser draft→photo→review→publish→pause; edits never 
   assert.equal(visible.status,200);assert.equal(visible.body.data.price.askingPrice,6500000);
   assert.equal(visible.body.data.location.latitude,undefined);
   assert.equal(visible.body.data.contact.phone,undefined);
+  assert.equal(visible.body.photos[0].room,"living_room");
+  assert.equal(visible.body.photos[0].caption,"Bright and open living room");
   assert.equal((await app.inject({method:"GET",url:"/v1/photos/"+photoId})).headers["content-type"],"image/webp");
   const status=await call("POST","/v1/listings/"+id+"/pause",tokens[0]);assert.equal(status.status,200);
   const feed=await call("GET","/v1/properties?provinceId=kabul");assert.equal((feed.body.items as {id:string}[]).some(x=>x.id===id),false);
   assert.equal((await call("POST","/v1/listings/"+id+"/resume",tokens[0])).status,200);
   const owned=await call("GET","/v1/listings/"+id,tokens[0]);const v=owned.body.version as number;
-  const changed=await call("PUT","/v1/listings/"+id+"/draft",tokens[0],{expectedVersion:v,data:{...approvedData,price:{currency:"AFN",askingPrice:7200000}}});
+  const changed=await call("PUT","/v1/listings/"+id+"/draft",tokens[0],{expectedVersion:v,data:{...approvedData,photoDetails:{[photoId]:{room:"bathroom",caption:"New metadata still under review"}},price:{currency:"AFN",askingPrice:7200000}}});
   assert.equal(changed.status,200);
   assert.equal((await call("POST","/v1/listings/"+id+"/submit",tokens[0],{expectedVersion:changed.body.version})).status,200);
-  assert.equal((await call("GET","/v1/properties/"+id)).body.data.price.askingPrice,6500000);
+  const approvedBeforeDecision=await call("GET","/v1/properties/"+id);
+  assert.equal(approvedBeforeDecision.body.data.price.askingPrice,6500000);
+  assert.equal(approvedBeforeDecision.body.photos[0].room,"living_room");
   const reviews=await call("GET","/v1/admin/listings/review-queue",tokens[2]);
   const revision=(reviews.body.items as {id:string;revisionId:string}[]).find(x=>x.id===id);
   assert.ok(revision);
   assert.equal((await call("POST","/v1/admin/listings/"+id+"/decision",tokens[2],{revisionId:revision!.revisionId,decision:"reject",reason:"Price update requires documentary correction"})).status,200);
-  assert.equal((await call("GET","/v1/properties/"+id)).body.data.price.askingPrice,6500000);
+  const afterRejection=await call("GET","/v1/properties/"+id);
+  assert.equal(afterRejection.body.data.price.askingPrice,6500000);
+  assert.equal(afterRejection.body.photos[0].room,"living_room");
+  assert.equal(afterRejection.body.photos[0].caption,"Bright and open living room");
   assert.equal((await call("POST","/v1/listings/"+id+"/pause",tokens[1])).status,403);
   await db.update(schema.users).set({status:"suspended"}).where(eq(schema.users.id,owner.id));
   assert.equal((await call("GET","/v1/properties/"+id)).status,404);

@@ -5,11 +5,12 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import {Image,Pressable,ScrollView,TextInput,View,ActivityIndicator} from "react-native";
 import {colors} from "@amlaklink/design-tokens";
 import {findProvince,searchProvinces} from "@amlaklink/catalog";
-import {listingDraftSchema,type ListingDraft} from "@amlaklink/contracts";
+import {listingDraftSchema,photoInfoFor,type ListingDraft,type PhotoDetail} from "@amlaklink/contracts";
 import {useAuth,requestJson} from "../../../src/auth";
 import {usePreferences} from "../../../src/context";
 import {PropertyLocationPicker} from "../../../src/location-picker";
 import {lt,priceSummary} from "../../../src/listing-ui";
+import {mediaCopy,roomName,photoRoomTypes} from "../../../src/media-copy";
 import {getOwned,photoSource,uploadPhoto,type ListingDTO} from "../../../src/listing-client";
 import {Action,Label,Page,ScreenHeading,SectionCard} from "../../../src/ui";
 const steps={
@@ -26,14 +27,24 @@ type Key=keyof typeof labels.en;
 export default function ListingEditor(){
  const {id}=useLocalSearchParams<{id:string}>(),{locale}=usePreferences(),{token}=useAuth();
  const [pendingImage,setPendingImage]=useState<{uri:string;mime:string;bytes?:number}|null>(null);
+ const [roomEditor,setRoomEditor]=useState<string|null>(null);
  const [data,setData]=useState<ListingDraft>(listingDraftSchema.parse({})),[status,setStatus]=useState("draft"),[revisionStatus,setRevisionStatus]=useState("draft"),[revisionReason,setRevisionReason]=useState("");
  const [version,setVersion]=useState(1),[step,setStep]=useState(0),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),
  [error,setError]=useState(""),[notice,setNotice]=useState(""),[provinceQuery,setProvinceQuery]=useState("");
  const latest=useRef(data),versionRef=useRef(1),saveChain=useRef<Promise<void>>(Promise.resolve()),loaded=useRef(false);
- const tx=(key:Key)=>labels[locale][key];
+ const tx=(key:Key)=>labels[locale][key],media=mediaCopy[locale];
  const localKey="amlak:draft:"+id;
  const mutable=revisionStatus!=="submitted" && !["sold","rented","archived"].includes(status);
  const change=(value:ListingDraft)=>{latest.current=value;setData(value);};
+ const setPhotoDetail=(photoId:string,updates:Partial<PhotoDetail>)=>{
+  const current=photoInfoFor(latest.current,photoId);
+  change({...latest.current,photoDetails:{...latest.current.photoDetails,
+   [photoId]:{...current,...updates}}});
+ };
+ const removePhotoFromDraft=(photoId:string)=>{
+  const details={...latest.current.photoDetails};delete details[photoId];
+  change({...latest.current,photoIds:latest.current.photoIds.filter(p=>p!==photoId),photoDetails:details});
+ };
  const field=(section:"location"|"attributes"|"price"|"contact",key:string,value:unknown)=>{
   change({...latest.current,[section]:{...latest.current[section],[key]:value}});
  };
@@ -106,7 +117,8 @@ export default function ListingEditor(){
   setBusy(true);setError("");setNotice("");
   try{
    const response=await uploadPhoto(id,token,asset.uri,asset.mime);
-   change({...latest.current,photoIds:[...latest.current.photoIds,response.id]});
+   change({...latest.current,photoIds:[...latest.current.photoIds,response.id],
+    photoDetails:{...latest.current.photoDetails,[response.id]:{room:"other",caption:""}}});
    await save();setNotice(locale==="en"?"Photo uploaded":"عکس بارگذاری شد");
    setPendingImage(null);
   }catch(err){
@@ -169,15 +181,50 @@ export default function ListingEditor(){
     <Field label={tx("refund")} multiline value={data.price.refundTerms||""} onChange={v=>field("price","refundTerms",v)}/></>:null}
    {numeric("price","maintenanceMonthly",tx("maint"),true)}
   </SectionCard>;
-  if(step===5)return <SectionCard><Label muted>{locale==="en"?"At least one photo. Maximum 20; images are re-encoded to remove metadata.":"حداقل یک عکس، حداکثر ۲۰ عکس؛ معلومات مخفی عکس حذف می‌شود."}</Label>
-   <Action label={busy?"…":tx("photo")} disabled={busy||data.photoIds.length>=20} onPress={()=>void choosePhoto()}/>
-   {pendingImage?<View style={{gap:8}}><Label muted>{(pendingImage.bytes?Math.round(pendingImage.bytes/1024):"?")+" KB"} · {busy?"Uploading…":error}</Label><Action kind="secondary" disabled={busy} label={locale==="en"?"Retry this photo":"تلاش دوباره برای این عکس"} onPress={()=>void transmitPhoto(pendingImage)}/></View>:null}
-   <View style={{flexDirection:"row",flexWrap:"wrap",gap:8}}>{data.photoIds.map((photoId,i)=><View key={photoId} style={{width:"47%",gap:4}}>
-    <Image source={photoSource(photoId,token)} style={{width:"100%",height:125,backgroundColor:colors.border,borderRadius:12}}/>
-    <Label muted style={{fontSize:12}}>{i===0?(locale==="en"?"Cover":"عکس اصلی"):"#"+(i+1)}</Label>
-    {i>0?<Action kind="secondary" label={locale==="en"?"Set as cover":"تعیین به‌عنوان عکس اصلی"} onPress={()=>change({...latest.current,photoIds:[photoId,...latest.current.photoIds.filter(p=>p!==photoId)]})}/>:null}
-    <Action kind="secondary" label={locale==="en"?"Remove":"حذف"} onPress={()=>change({...latest.current,photoIds:latest.current.photoIds.filter(p=>p!==photoId)})}/>
-   </View>)}</View>
+  if(step===5)return <SectionCard>
+   <Label weight="bold">{media.photos} · {data.photoIds.length}/20</Label>
+   <Label muted>{locale==="en"?"At least one photo. Maximum 20; images are re-encoded to remove metadata.":locale==="fa"?"حداقل یک عکس، حداکثر ۲۰ عکس؛ معلومات مخفی عکس حذف می‌شود.":"لږ تر لږه یو انځور، تر ۲۰ پورې؛ پټ عکس معلومات لرې کېږي."}</Label>
+   <Label muted>{media.note}</Label>
+   <Action label={busy?"…":tx("photo")} disabled={busy||!mutable||data.photoIds.length>=20} onPress={()=>void choosePhoto()}/>
+   {pendingImage?<View style={{gap:8}}><Label muted>{(pendingImage.bytes?Math.round(pendingImage.bytes/1024):"?")+" KB"} · {busy?"Uploading…":error}</Label>
+    <Action kind="secondary" disabled={busy||!mutable} label={locale==="en"?"Retry this photo":"تلاش دوباره برای این عکس"} onPress={()=>void transmitPhoto(pendingImage)}/></View>:null}
+   {data.photoIds.map((photoId,i)=>{
+    const photo=photoInfoFor(data,photoId);
+    return <View key={photoId} style={{gap:10,borderWidth:1,borderColor:colors.border,padding:12,borderRadius:14}}>
+     <View style={{flexDirection:locale==="en"?"row":"row-reverse",gap:12,alignItems:"center"}}>
+      <Image source={photoSource(photoId,token)} style={{width:126,height:106,backgroundColor:colors.border,borderRadius:10}}/>
+      <View style={{flex:1,gap:6}}>
+       <Label weight="bold">{i===0?media.cover:"#"+(i+1)}</Label>
+       <Label muted>{roomName(locale,photo.room)}</Label>
+      </View>
+     </View>
+     <Action kind="secondary" disabled={!mutable||busy}
+      label={media.room+": "+roomName(locale,photo.room)}
+      onPress={()=>setRoomEditor(current=>current===photoId?null:photoId)}/>
+     {roomEditor===photoId?<View style={{flexDirection:locale==="en"?"row":"row-reverse",gap:7,flexWrap:"wrap"}}>
+      {photoRoomTypes.map(room=><Pressable key={room} accessibilityRole="button"
+       accessibilityState={{selected:photo.room===room}} disabled={!mutable||busy}
+       onPress={()=>{setPhotoDetail(photoId,{room});setRoomEditor(null);}}
+       style={{minHeight:44,justifyContent:"center",borderRadius:16,paddingHorizontal:12,borderWidth:1,
+        borderColor:photo.room===room?colors.primary:colors.border,
+        backgroundColor:photo.room===room?"#E1F0E9":colors.surface}}>
+       <Label style={{fontSize:13}}>{roomName(locale,room)}</Label>
+      </Pressable>)}
+     </View>:null}
+     <Label>{media.caption}</Label>
+     <TextInput accessibilityLabel={media.caption+" "+(i+1)} value={photo.caption}
+      onChangeText={caption=>setPhotoDetail(photoId,{caption})}
+      maxLength={100} editable={mutable&&!busy} placeholder={media.caption}
+      style={{borderWidth:1,borderColor:colors.border,borderRadius:10,padding:12,minHeight:48,
+       color:colors.text,textAlign:locale==="en"?"left":"right",
+       writingDirection:locale==="en"?"ltr":"rtl"}}/>
+     <Label muted style={{fontSize:12}}>{media.captionHint}</Label>
+     {i>0?<Action kind="secondary" disabled={!mutable||busy} label={media.coverAction}
+      onPress={()=>change({...latest.current,photoIds:[photoId,...latest.current.photoIds.filter(p=>p!==photoId)]})}/>:null}
+     <Action kind="secondary" disabled={!mutable||busy} label={media.remove}
+      onPress={()=>{removePhotoFromDraft(photoId);if(roomEditor===photoId)setRoomEditor(null);}}/>
+    </View>;
+   })}
   </SectionCard>;
   if(step===6)return <SectionCard>
    <Action kind={data.contact.allowPhone?"primary":"secondary"} label={tx("enablePhone")} onPress={()=>field("contact","allowPhone",!data.contact.allowPhone)}/>
