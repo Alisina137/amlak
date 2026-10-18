@@ -12,6 +12,7 @@
     "ops:freshness": "tsx src/run-freshness.ts",
     "ops:alerts": "tsx src/run-growth-alerts.ts",
     "ops:push": "tsx src/run-push.ts",
+    "ops:push:preflight": "tsx src/run-push-preflight.ts",
     "ops:renewals": "tsx src/run-renewals.ts",
     "ops:media:audit": "tsx src/run-media-audit.ts"
   },
