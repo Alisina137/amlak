@@ -78,9 +78,16 @@ export function registerAgencyRoutes(app:FastifyInstance,db:Database){
   if(!member || member.status==="revoked")throw new HttpProblem(404,"MEMBER_NOT_ACTIVE");
   // Owner transfer requires an audited dedicated workflow. Disallow revoking any owner here.
   if(member.role==="owner" || (member.role==="manager" && manager.role!=="owner"))throw new HttpProblem(403,"OWNER_APPROVAL_REQUIRED");
-  await db.update(schema.memberships).set({status:"revoked",updatedAt:new Date()})
-     .where(and(eq(schema.memberships.id,memberId),eq(schema.memberships.agencyId,id)));
-  await db.insert(schema.audit).values({actorType:"user",actorId:actor.id,action:"agency_member_revoked",targetType:"agency",targetId:id,reason:member.userId});
+  await db.transaction(async tx=>{
+   await tx.update(schema.memberships).set({status:"revoked",updatedAt:new Date()})
+      .where(and(eq(schema.memberships.id,memberId),eq(schema.memberships.agencyId,id)));
+   // Removing a member returns their lead assignments to the manager's
+   // unassigned queue without revealing these leads to former members.
+   await tx.update(schema.inquiries).set({assignedTo:null,updatedAt:new Date()})
+     .where(and(eq(schema.inquiries.agencyId,id),eq(schema.inquiries.assignedTo,member.userId)));
+   await tx.insert(schema.audit).values({actorType:"user",actorId:actor.id,action:"agency_member_revoked",
+    targetType:"agency",targetId:id,reason:member.userId});
+  });
   return {success:true};
  });
  app.post<{Params:{id:string}}>("/v1/agencies/:id/invitation/accept",async request=>{

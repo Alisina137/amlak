@@ -125,7 +125,8 @@ test("phase 5 agency scope: managers own queue, agents assigned only, notes priv
   assert.equal((await send("GET","/v1/inquiries/"+thread+"/lead-notes",2)).status,403);
   assert.equal((await send("GET","/v1/inquiries/"+thread+"/lead-notes",0)).data.items[0].body,"Internal meeting follow-up");
   assert.equal((await send("POST","/v1/inquiries/"+thread+"/assign",0,{assignedTo:users[3].id})).status,422);
-  await db.update(schema.memberships).set({status:"revoked"}).where(eq(schema.memberships.id,members[1].id));
+  assert.equal((await send("POST","/v1/agencies/"+agency.id+"/members/"+members[1].id+"/revoke",0)).status,200);
+  assert.equal((await send("GET","/v1/inquiries/"+thread,0)).data.assignedTo,null);
   assert.equal((await send("GET","/v1/inquiries/"+thread,1)).status,403);
   assert.equal((await send("GET","/v1/inquiries",1)).data.items.length,0);
   assert.equal((await send("GET","/v1/inquiries/"+thread,0)).status,200);
