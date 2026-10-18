@@ -6,6 +6,7 @@ import {useAuth} from "../../src/auth";
 import {usePreferences} from "../../src/context";
 import {inbox,fetchViewings,fetchAlerts,readAllAlerts,readAlert,displayKabul,type InquirySummary,type Viewing,type Alert} from "../../src/engagement-client";
 import {et} from "../../src/engagement-copy";
+import {routeForNotification} from "../../src/push-client";
 import {Action,Label,Page,ScreenHeading,SectionCard} from "../../src/ui";
 export default function Inbox(){
  const {locale}=usePreferences(),{token}=useAuth();
@@ -61,15 +62,13 @@ export default function Inbox(){
   {token&&tab==="notifications"&&alerts.map(n=><Pressable accessibilityRole="button" key={n.id}
    onPress={()=>{
     if(token)void readAlert(n.id,token).then(()=>refresh()).catch(()=>{});
-    if(n.kind==="freshness"){router.push("/my-listings");return;}
-    if(n.kind==="safety"){router.push("/safety");return;}
-    if(n.referenceId)router.push({pathname:"/inquiries/[id]",params:{id:n.referenceId}});
+    router.push(routeForNotification({kind:n.kind,referenceId:n.referenceId}));
    }}>
    <SectionCard>
     <Label weight={n.isRead?"regular":"bold"}>{n.kind==="freshness"?
      (locale==="en"?"Availability":locale==="fa"?"تأیید موجودی":"د شتون تایید"):
      n.kind==="safety"?(locale==="en"?"Safety":locale==="fa"?"ایمنی":"خوندیتوب"):
-     n.kind==="viewing"?et(locale,"viewings"):n.kind==="lead"?et(locale,"lead"):et(locale,"inquiries")}</Label>
+     n.kind==="saved_search"?(locale==="en"?"Saved search":locale==="fa"?"جستجوی ذخیره‌شده":"خوندي پلټنه"):n.kind==="support"?(locale==="en"?"Support":locale==="fa"?"پشتیبانی":"ملاتړ"):n.kind==="viewing"?et(locale,"viewings"):n.kind==="lead"?et(locale,"lead"):et(locale,"inquiries")}</Label>
     <Label>{n.title}</Label>
     <Label muted>{displayKabul(n.createdAt,locale)} {n.isRead?"":"●"}</Label>
    </SectionCard>
