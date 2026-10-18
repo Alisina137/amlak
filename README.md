@@ -74,3 +74,8 @@ New read-only checks: `pnpm db:integrity` and `pnpm ops:media:audit --limit=10`.
 ### Final Completion Step 6: map search areas
 
 Map search supports 3–12 point custom-drawn polygons and a visible-map rectangular search. Both apply server-side location filters to the same paginated property List, without PostGIS or requesting user GPS coordinates. Only properties explicitly approved for exact public pin locations participate in area searches. Map pin results are capped and labeled accordingly. Real Android map tiles still require a licensed/configured provider. See [Step 6 QA notes](docs/FINAL-COMPLETION-STEP-6-MAPS.md).
+
+
+### Final Completion Step 7: external push acceptance
+
+Push stays opt-in and disabled by default. Once a **real** EAS project, FCM V1 credentials, physical Android development build, and private scheduler are configured, verified users can open **Account → Push Notifications → Send a test notification**. The queue endpoint adds an in-app test notice; `pnpm ops:push --execute` sends eligible notifications and checks receipts on later runs. Lock-screen notification text is privacy-neutral and taps are scoped to the current account. `pnpm ops:push:preflight` checks the local server flag and EAS UUID, **not** the external credential vault or phone delivery. See [Step 7 runbook](docs/FINAL-COMPLETION-STEP-7-PUSH.md).
