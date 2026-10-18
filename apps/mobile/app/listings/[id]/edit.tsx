@@ -50,7 +50,8 @@ export default function ListingEditor(){
   });
   await cacheChain.current;
  };
- const mutable=revisionStatus!=="submitted" && !["sold","rented","archived"].includes(status);
+ const mutableBase=revisionStatus!=="submitted" && !["sold","rented","archived"].includes(status);
+ const mutable=mutableBase&&!pendingConflict;
  const change=(value:ListingDraft)=>{latest.current=value;setData(value);};
  const setPhotoDetail=(photoId:string,updates:Partial<PhotoDetail>)=>{
   const current=photoInfoFor(latest.current,photoId);
@@ -67,7 +68,7 @@ export default function ListingEditor(){
  async function refresh(){
   if(!token||!id||!user?.id)return;
   const requestScope=scope;
-  setLoading(true);setError("");
+  setLoading(true);setError("");setPendingConflict(null);
   try{
    const response=await getOwned(id,token);
    if(activeScope.current!==requestScope)return;
@@ -345,7 +346,7 @@ export default function ListingEditor(){
    <Label style={{color:colors.warning}}>{tx("conflict")}</Label>
    <Label muted>{tx("offline")}</Label>
    <Action kind="secondary" label={tx("restoreLocal")} onPress={()=>{
-    if(!mutable)return;
+    if(!mutableBase)return;
     const local=pendingConflict;setPendingConflict(null);change(local);
     void cache(local,versionRef.current,true);
    }}/>
