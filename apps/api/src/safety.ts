@@ -130,7 +130,7 @@ export function registerSafetyRoutes(app:FastifyInstance,db:Database){
  });
  app.post<{Params:{id:string}}>("/v1/admin/safety/cases/:id/transition",async request=>{
   const actor=await staff(db,request,moderators),c=await getCase(db,request.params.id),input=parse(transitionInput,request.body);
-  return db.transaction(async tx=>{
+  const saved=await db.transaction(async tx=>{
    const [lock]=await tx.select().from(schema.safetyCases).where(eq(schema.safetyCases.id,c.id)).for("update");
    if(!lock||lock.version!==input.expectedVersion)throw new HttpProblem(409,"CASE_VERSION_CONFLICT");
    if(!caseTransitions[lock.status]?.includes(input.status))throw new HttpProblem(409,"INVALID_CASE_TRANSITION");
@@ -141,10 +141,15 @@ export function registerSafetyRoutes(app:FastifyInstance,db:Database){
     targetType:"safety_case",targetId:c.id,reason:input.reason});
    return {id:row.id,status:row.status,version:row.version};
   });
+  if(["resolved","rejected","closed"].includes(saved.status)){
+   const listing=await getListing(db,c.listingId);
+   await alert(db,listing.authorId,listing.id,"case:"+c.id+":"+saved.version,"Your property safety case has a new decision").catch(()=>{});
+  }
+  return saved;
  });
  app.post<{Params:{id:string}}>("/v1/admin/safety/cases/:id/appeal-decision",async request=>{
   const actor=await staff(db,request,moderators),c=await getCase(db,request.params.id),input=parse(reviewInput,request.body);
-  return db.transaction(async tx=>{
+  const saved=await db.transaction(async tx=>{
    const [lock]=await tx.select().from(schema.safetyCases).where(eq(schema.safetyCases.id,c.id)).for("update");
    if(lock?.status!=="appealed")throw new HttpProblem(409,"CASE_NOT_APPEALED");
    const [appeal]=await tx.update(schema.safetyAppeals).set({decision:input.decision,reviewerId:actor.id,
@@ -158,6 +163,9 @@ export function registerSafetyRoutes(app:FastifyInstance,db:Database){
     targetType:"safety_case",targetId:c.id,reason:input.reason});
    return {status,listingRestored:false};
   });
+  const listing=await getListing(db,c.listingId);
+  await alert(db,listing.authorId,listing.id,"appeal:"+c.id+":"+input.decision,"Your property appeal was reviewed").catch(()=>{});
+  return saved;
  });
  app.post<{Params:{id:string}}>("/v1/admin/safety/listings/:id/hold",async request=>{
   const actor=await staff(db,request,moderators),l=await getListing(db,request.params.id),input=parse(holdInput,request.body);
