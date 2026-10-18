@@ -39,3 +39,8 @@ See **docs/PHASE-8-GROWTH.md** for saved searches/alerts, four-property comparis
 ### Phase 8 Step 1: optional push notifications
 
 Remote push is **off by default**. The new Account → Push notification settings screen provides opt-in categories, while a scheduled `pnpm ops:push --execute` task delivers only in-app notifications created after consent. This requires a real EAS project, Android FCM credentials and a development build (not Android Expo Go). See [push setup](docs/PHASE-8-STEP-1-PUSH.md).
+
+
+### Phase 8 Step 3: subscription renewals and grace
+
+Read-only subscription status, queued verified renewals, localized expiry warnings and a **3-day communication grace window** are implemented. Grace does not provide additional paid posting capacity: existing listings and conversations are preserved, but new submissions and invitations use free quotas after expiry. No automatic charges. Billing remains disabled by default. Run `pnpm ops:renewals --dry-run` before scheduling `pnpm ops:renewals --execute`. See [Step 3 policy](docs/PHASE-8-STEP-3-SUBSCRIPTIONS.md).
