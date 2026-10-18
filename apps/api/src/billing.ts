@@ -1,10 +1,11 @@
 import {createHash} from "node:crypto";
-import {and,desc,eq,gt,lte} from "drizzle-orm";
+import {and,desc,eq,gt,lte,sql} from "drizzle-orm";
 import type {FastifyInstance} from "fastify";
 import {z} from "zod";
 import {type Database,schema} from "@amlaklink/database";
 import {HttpProblem,requireActor,requireAgencyMember,requireStaffRole,requireVerified} from "./access";
 import {canShowPublic,getListing,validId} from "./listings";
+import {readSubscription} from "./subscription-lifecycle";
 export const PRODUCTS={
  solo_agent:{kind:"subscription",amountAfn:500,listingLimit:15,seatLimit:1,days:30},
  agency_standard:{kind:"subscription",amountAfn:1500,listingLimit:50,seatLimit:5,days:30},
@@ -29,13 +30,7 @@ const decisionInput=z.object({decision:z.enum(["confirm","reject"]),
  reason:z.string().trim().min(12).max(700),reconciled:z.boolean().optional()}).strict();
 
 export async function currentAgencyLimits(db:Database,id:string){
- const now=new Date();
- const [e]=await db.select().from(schema.growthEntitlements).where(and(
-  eq(schema.growthEntitlements.agencyId,id),lte(schema.growthEntitlements.startsAt,now),
-  gt(schema.growthEntitlements.expiresAt,now))).orderBy(desc(schema.growthEntitlements.listingLimit),
-  desc(schema.growthEntitlements.expiresAt)).limit(1);
- return {plan:e?.planCode||"free",listingLimit:e?.listingLimit||3,seatLimit:e?.seatLimit||3,
-  expiresAt:e?.expiresAt||null};
+ return readSubscription(db,{agencyId:id});
 }
 export function registerBillingRoutes(app:FastifyInstance,db:Database){
  app.get("/v1/plans",async()=>({currency:"AFN",billingEnabled:billingEnabled(),illustrativePricing:true,
@@ -132,6 +127,10 @@ export function registerBillingRoutes(app:FastifyInstance,db:Database){
      await tx.insert(schema.growthPromotions).values({invoiceId:invoice.id,listingId:l.id,
       startsAt:now,endsAt:feePeriod(now,product.days)});
     }else{
+     // Two separately paid invoices for the same beneficiary must never start overlapping
+     // periods because their reviewers clicked Confirm at the same time.
+     const key=invoice.agencyId?"agency:"+invoice.agencyId:"solo:"+invoice.payerId;
+     await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${key}::text))`);
      const condition=invoice.agencyId?eq(schema.growthEntitlements.agencyId,invoice.agencyId):
        eq(schema.growthEntitlements.userId,invoice.payerId);
      const [previous]=await tx.select({expiresAt:schema.growthEntitlements.expiresAt})
@@ -161,11 +160,6 @@ export function registerBillingRoutes(app:FastifyInstance,db:Database){
    await requireAgencyMember(db,actor,validId(agencyId),["owner","manager","agent"]);
    return currentAgencyLimits(db,agencyId);
   }
-  const now=new Date();
-  const [grant]=await db.select().from(schema.growthEntitlements).where(and(eq(schema.growthEntitlements.userId,actor.id),
-   lte(schema.growthEntitlements.startsAt,now),gt(schema.growthEntitlements.expiresAt,now)))
-   .orderBy(desc(schema.growthEntitlements.expiresAt)).limit(1);
-  return {plan:grant?.planCode||"free",listingLimit:grant?.listingLimit||3,
-   seatLimit:1,expiresAt:grant?.expiresAt||null};
+  return readSubscription(db,{userId:actor.id});
  });
 }
