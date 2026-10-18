@@ -59,7 +59,11 @@ export async function synchronizeCurrentDevice(token:string){
  if(!nativePushAvailable())return;
  const result=await readPushSettings(token);
  if(!result.serverConfigured||!result.preferences.enabled)return;
- if(await checkSystemPermission()!=="granted")return;
+ if(await checkSystemPermission()!=="granted"){
+  // Respect a permission revoked from Android/iOS settings without showing a prompt.
+  await unregisterCurrentDevice(token);
+  return;
+ }
  await registerCurrentDevice(token,false);
 }
 export function routeForNotification(data:Record<string,unknown>){
