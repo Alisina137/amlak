@@ -59,7 +59,8 @@ test("PostgreSQL identity lifecycle, MFA, and cross-agency revocation", {skip:!p
   assert.equal((await call("GET","/v1/agencies/"+b+"/workspace",undefined,ownerToken)).status,403);
   const staffSecret=newTotpSecret();
   const [staffUser]=await db.insert(schema.staff).values({email:staffEmail,displayName:"Reviewer",passwordHash:await passwordHash("SecureStaffPassword123!"),role:"verification",totpSecretEncrypted:encryptTotp(staffSecret)}).returning();
-  const loginStaff=await call("POST","/v1/staff/auth/login",{email:staffEmail,password:"SecureStaffPassword123!",totp:authenticator.generate(staffSecret)});
+  const firstTotp=authenticator.generate(staffSecret);
+  const loginStaff=await call("POST","/v1/staff/auth/login",{email:staffEmail,password:"SecureStaffPassword123!",totp:firstTotp});
   assert.equal(loginStaff.status,200);
   const staffToken=loginStaff.data.token as string;
   assert.equal((await call("GET","/v1/admin/agents",undefined,staffToken)).data.items.some((p:{email:string})=>p.email===ownerEmail),true);
@@ -90,7 +91,7 @@ test("PostgreSQL identity lifecycle, MFA, and cross-agency revocation", {skip:!p
   assert.equal(reset.status,200);
   assert.equal((await call("GET","/v1/me",undefined,ownerToken)).status,401);
   assert.equal((await call("POST","/v1/auth/login",{email:ownerEmail,password:"AnotherSecurePass123!"})).status,200);
-  assert.equal((await call("POST","/v1/staff/auth/login",{email:staffEmail,password:"SecureStaffPassword123!",totp:authenticator.generate(staffSecret)})).status,401);
+  assert.equal((await call("POST","/v1/staff/auth/login",{email:staffEmail,password:"SecureStaffPassword123!",totp:firstTotp})).status,401);
   assert.ok(staffUser.id);
  }finally{await app.close();await sql.end();}
 });
