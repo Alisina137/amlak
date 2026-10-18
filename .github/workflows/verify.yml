@@ -45,6 +45,8 @@ jobs:
         run: pnpm qa:ui
       - name: Final completion network/offline regression guards
         run: pnpm qa:network
+      - name: Final completion subscription automation guards
+        run: pnpm qa:renewals
       - name: Pilot API startup and read-only smoke
         run: |
           pnpm --filter @amlaklink/api start > /tmp/amlak-api.log 2>&1 &
