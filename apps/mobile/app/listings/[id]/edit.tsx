@@ -2,7 +2,7 @@ import {useEffect,useRef,useState} from "react";
 import {router,useLocalSearchParams} from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import {Image,Pressable,ScrollView,TextInput,View,ActivityIndicator} from "react-native";
+import {Image,Pressable,ScrollView,View,ActivityIndicator} from "react-native";
 import {colors} from "@amlaklink/design-tokens";
 import {findProvince,searchProvinces} from "@amlaklink/catalog";
 import {listingDraftSchema,photoInfoFor,type ListingDraft,type PhotoDetail} from "@amlaklink/contracts";
@@ -12,7 +12,8 @@ import {PropertyLocationPicker} from "../../../src/location-picker";
 import {lt,priceSummary} from "../../../src/listing-ui";
 import {mediaCopy,roomName,photoRoomTypes} from "../../../src/media-copy";
 import {getOwned,photoSource,uploadPhoto,type ListingDTO} from "../../../src/listing-client";
-import {Action,Label,Page,ScreenHeading,SectionCard} from "../../../src/ui";
+import {Action,AppInput,BackButton,DirectionalRow,Label,Page,ScreenHeading,SectionCard} from "../../../src/ui";
+import {uiText} from "../../../src/ui-copy";
 const steps={
  en:["Category","Transaction","Location","Property details","Pricing","Photos","Contact","Review"],
  fa:["نوع ملک","معامله","موقعیت","مشخصات ملک","قیمت","عکس‌ها","تماس","بررسی"],
@@ -119,7 +120,7 @@ export default function ListingEditor(){
    const response=await uploadPhoto(id,token,asset.uri,asset.mime);
    change({...latest.current,photoIds:[...latest.current.photoIds,response.id],
     photoDetails:{...latest.current.photoDetails,[response.id]:{room:"other",caption:""}}});
-   await save();setNotice(locale==="en"?"Photo uploaded":"عکس بارگذاری شد");
+   await save();setNotice(uiText(locale,"editorUploadSuccess"));
    setPendingImage(null);
   }catch(err){
    setPendingImage(asset);setError((err as Error).message);
@@ -137,10 +138,10 @@ export default function ListingEditor(){
  const numeric=(section:"attributes"|"price",key:string,lab:string,opt=false)=>
   <Field label={lab} key={key} numeric value={String((data[section] as Record<string,unknown>)[key]??"")} onChange={v=>field(section,key,v.trim()===""?(opt?undefined:0):Number(v))}/>;
  const form=()=>{
-  if(step===0)return <SectionCard><Label weight="bold">{locale==="en"?"Property category":"نوع ملک"}</Label>
+  if(step===0)return <SectionCard><Label weight="bold">{uiText(locale,"propertyCategory")}</Label>
    {(["house","apartment","land","shop","office","commercial"] as const).map(p=><Action key={p} kind={data.propertyType===p?"primary":"secondary"} label={lt(locale,p)} onPress={()=>chooseItem("propertyType",p)}/>)}
   </SectionCard>;
-  if(step===1)return <SectionCard><Label weight="bold">{locale==="en"?"Transaction type":"نوع معامله"}</Label>
+  if(step===1)return <SectionCard><Label weight="bold">{uiText(locale,"editorTransactionType")}</Label>
    {(["sale","rent","gharawi"] as const).map(p=><Action key={p} kind={data.transactionType===p?"primary":"secondary"} label={lt(locale,p)} onPress={()=>chooseItem("transactionType",p)}/>)}
   </SectionCard>;
   if(step===2)return <SectionCard>
@@ -156,13 +157,11 @@ export default function ListingEditor(){
    <Field label={tx("district")} value={data.location.district} onChange={v=>field("location","district",v)}/>
    <Field label={tx("neighborhood")} value={data.location.neighborhood} onChange={v=>field("location","neighborhood",v)}/>
    <Field label={tx("address")} value={data.location.streetAddress||""} onChange={v=>field("location","streetAddress",v)}/>
-   <Action kind="secondary" label={data.location.precision==="approximate"?"✓ "+(locale==="en"?"Approximate map location":"موقعیت تقریبی"):(locale==="en"?"Exact position":"موقعیت دقیق")} onPress={()=>field("location","precision",data.location.precision==="approximate"?"exact":"approximate")}/>
+   <Action kind="secondary" label={data.location.precision==="approximate"?"✓ "+(uiText(locale,"editorApproximate")):(uiText(locale,"editorExact"))} onPress={()=>field("location","precision",data.location.precision==="approximate"?"exact":"approximate")}/>
    {data.location.precision==="exact"?<PropertyLocationPicker locale={locale}
     latitude={data.location.latitude} longitude={data.location.longitude}
     onChange={(latitude,longitude)=>change({...latest.current,location:{...latest.current.location,latitude,longitude}})}/>:<Label muted>{
-      locale==="en"?"For privacy, your exact address and coordinates will not be shown.":
-      locale==="fa"?"برای حفظ حریم خصوصی، آدرس و مختصات دقیق نمایش داده نمی‌شود.":
-      "د محرمیت لپاره، دقیقه پته او همغږي نه ښکاري."
+      uiText(locale,"editorPrivacyHint")
     }</Label>}
   </SectionCard>;
   if(step===3)return <SectionCard>
@@ -174,7 +173,7 @@ export default function ListingEditor(){
   </SectionCard>;
   if(step===4)return <SectionCard>
    <Label>{tx("currency")}</Label>
-   <View style={{flexDirection:"row",gap:8}}>{(["AFN","USD"] as const).map(c=><View key={c} style={{flex:1}}><Action kind={data.price.currency===c?"primary":"secondary"} label={c} onPress={()=>field("price","currency",c)}/></View>)}</View>
+   <View style={{flexDirection:locale==="en"?"row":"row-reverse",gap:8}}>{(["AFN","USD"] as const).map(c=><View key={c} style={{flex:1}}><Action kind={data.price.currency===c?"primary":"secondary"} label={c} onPress={()=>field("price","currency",c)}/></View>)}</View>
    {data.transactionType==="sale"?numeric("price","askingPrice",tx("salePrice"),true):null}
    {data.transactionType==="rent"?<>{numeric("price","monthlyRent",tx("rent"))}{numeric("price","refundableDeposit",tx("deposit"))}</>:null}
    {data.transactionType==="gharawi"?<>{numeric("price","refundablePrincipal",tx("principal"),true)}{numeric("price","monthlyRent",tx("rent"))}{numeric("price","durationMonths",tx("duration"),true)}
@@ -187,7 +186,7 @@ export default function ListingEditor(){
    <Label muted>{media.note}</Label>
    <Action label={busy?"…":tx("photo")} disabled={busy||!mutable||data.photoIds.length>=20} onPress={()=>void choosePhoto()}/>
    {pendingImage?<View style={{gap:8}}><Label muted>{(pendingImage.bytes?Math.round(pendingImage.bytes/1024):"?")+" KB"} · {busy?"Uploading…":error}</Label>
-    <Action kind="secondary" disabled={busy||!mutable} label={locale==="en"?"Retry this photo":"تلاش دوباره برای این عکس"} onPress={()=>void transmitPhoto(pendingImage)}/></View>:null}
+    <Action kind="secondary" disabled={busy||!mutable} label={uiText(locale,"editorPhotoRetry")} onPress={()=>void transmitPhoto(pendingImage)}/></View>:null}
    {data.photoIds.map((photoId,i)=>{
     const photo=photoInfoFor(data,photoId);
     return <View key={photoId} style={{gap:10,borderWidth:1,borderColor:colors.border,padding:12,borderRadius:14}}>
@@ -212,7 +211,7 @@ export default function ListingEditor(){
       </Pressable>)}
      </View>:null}
      <Label>{media.caption}</Label>
-     <TextInput accessibilityLabel={media.caption+" "+(i+1)} value={photo.caption}
+     <AppInput accessibilityLabel={media.caption+" "+(i+1)} value={photo.caption}
       onChangeText={caption=>setPhotoDetail(photoId,{caption})}
       maxLength={100} editable={mutable&&!busy} placeholder={media.caption}
       style={{borderWidth:1,borderColor:colors.border,borderRadius:10,padding:12,minHeight:48,
@@ -228,9 +227,9 @@ export default function ListingEditor(){
   </SectionCard>;
   if(step===6)return <SectionCard>
    <Action kind={data.contact.allowPhone?"primary":"secondary"} label={tx("enablePhone")} onPress={()=>field("contact","allowPhone",!data.contact.allowPhone)}/>
-   {data.contact.allowPhone?<Field label={tx("phone")} value={data.contact.phone||""} onChange={v=>field("contact","phone",v)}/>:null}
+   {data.contact.allowPhone?<Field label={tx("phone")} inputDirection="ltr" value={data.contact.phone||""} onChange={v=>field("contact","phone",v)}/>:null}
    <Action kind={data.contact.allowWhatsApp?"primary":"secondary"} label={tx("enableWhatsapp")} onPress={()=>field("contact","allowWhatsApp",!data.contact.allowWhatsApp)}/>
-   {data.contact.allowWhatsApp?<Field label={tx("whatsapp")} value={data.contact.whatsapp||""} onChange={v=>field("contact","whatsapp",v)}/>:null}
+   {data.contact.allowWhatsApp?<Field label={tx("whatsapp")} inputDirection="ltr" value={data.contact.whatsapp||""} onChange={v=>field("contact","whatsapp",v)}/>:null}
   </SectionCard>;
   const validation=listingDraftSchema.safeParse(data);
   return <SectionCard><Label weight="bold">{tx("preview")}</Label>
@@ -245,16 +244,17 @@ export default function ListingEditor(){
  };
  if(loading)return <Page><ActivityIndicator color={colors.primary}/></Page>;
  return <Page>
-  <ScreenHeading title={locale==="en"?"Property editor":"مدیریت نشر ملک"} subtitle={steps[locale][step]+" · "+(step+1)+"/8"}/>
-  <Label muted>{locale==="en"?"Status":"وضعیت"}: {status} · v{version}</Label>
+  <BackButton onPress={()=>router.back()}/>
+  <ScreenHeading title={uiText(locale,"editorTitle")} subtitle={steps[locale][step]+" · "+(step+1)+"/8"}/>
+  <Label muted>{uiText(locale,"invalidState")}: {status} · v{version}</Label>
   {status==="published"?<SectionCard>
-   <Label weight="bold">{locale==="en"?"Availability controls":"مدیریت موجودی ملک"}</Label>
-   <Action kind="secondary" disabled={busy} label={locale==="en"?"Confirm still available":"تأیید موجودی ملک"} onPress={()=>void listingAction("confirm-availability")}/>
-   <Action kind="secondary" disabled={busy} label={locale==="en"?"Pause public listing":"توقف نشر ملک"} onPress={()=>void listingAction("pause")}/>
-   <Action kind="secondary" disabled={busy} label={locale==="en"?(data.transactionType==="sale"?"Mark as sold":"Mark as rented"):(data.transactionType==="sale"?"علامت فروخته‌شده":"علامت به‌کرایه‌داده‌شده")} onPress={()=>void listingAction("close",data.transactionType==="sale"?"sold":"rented")}/>
+   <Label weight="bold">{uiText(locale,"editorAvailability")}</Label>
+   <Action kind="secondary" disabled={busy} label={uiText(locale,"editorConfirmAvailability")} onPress={()=>void listingAction("confirm-availability")}/>
+   <Action kind="secondary" disabled={busy} label={uiText(locale,"editorPause")} onPress={()=>void listingAction("pause")}/>
+   <Action kind="secondary" disabled={busy} label={data.transactionType==="sale"?uiText(locale,"editorSold"):uiText(locale,"editorRented")} onPress={()=>void listingAction("close",data.transactionType==="sale"?"sold":"rented")}/>
   </SectionCard>:null}
-  {status==="paused"?<SectionCard><Label muted>{locale==="en"?"Paused listings are hidden from active discovery.":"ملک متوقف از جستجوی عمومی پنهان است."}</Label>
-   <Action disabled={busy} label={locale==="en"?"Resume public listing":"ادامه نشر ملک"} onPress={()=>void listingAction("resume")}/>
+  {status==="paused"?<SectionCard><Label muted>{uiText(locale,"editorPausedWarning")}</Label>
+   <Action disabled={busy} label={uiText(locale,"editorResume")} onPress={()=>void listingAction("resume")}/>
   </SectionCard>:null}
   {revisionStatus==="submitted"?<SectionCard><Label>{tx("review")}</Label><Action kind="secondary" label={tx("withdraw")} disabled={busy} onPress={()=>void withdraw()}/></SectionCard>:null}
   {revisionStatus==="rejected"?<SectionCard><Label>{tx("rejected")}</Label><Label muted>{revisionReason}</Label></SectionCard>:null}
@@ -267,14 +267,14 @@ export default function ListingEditor(){
    {step>0?<Action kind="secondary" disabled={busy} label={tx("back")} onPress={()=>setStep(s=>s-1)}/>:null}
    <Action kind="secondary" disabled={busy} label={tx("save")} onPress={()=>void save().then(()=>setNotice(tx("save"))).catch(()=>setError(tx("offline")))}/>
   </View>:null}
-  <Action kind="secondary" label={locale==="en"?"My listings":"ملک‌های من"} onPress={()=>router.replace("/my-listings")}/>
+  <Action kind="secondary" label={uiText(locale,"editorMyListings")} onPress={()=>router.replace("/my-listings")}/>
  </Page>;
 }
-function Field({label,value,onChange,multiline=false,numeric=false,placeholder}:{label:string;value:string;onChange:(v:string)=>void;multiline?:boolean;numeric?:boolean;placeholder?:string}){
+function Field({label,value,onChange,multiline=false,numeric=false,inputDirection="auto",placeholder}:{label:string;value:string;onChange:(v:string)=>void;multiline?:boolean;numeric?:boolean;inputDirection?:"auto"|"ltr";placeholder?:string}){
  return <View style={{gap:6}}>
   <Label weight="medium">{label}</Label>
-  <TextInput accessibilityLabel={label} value={value} onChangeText={onChange} placeholder={placeholder}
-   multiline={multiline} keyboardType={numeric?"decimal-pad":"default"}
+  <AppInput accessibilityLabel={label} value={value} onChangeText={onChange} placeholder={placeholder}
+   multiline={multiline} keyboardType={numeric?"decimal-pad":"default"} inputDirection={numeric?"ltr":inputDirection}
    style={{minHeight:multiline?100:48,padding:12,color:colors.text,fontSize:16,borderRadius:12,borderWidth:1,borderColor:colors.border,textAlignVertical:multiline?"top":"center"}}/>
  </View>;
 }
