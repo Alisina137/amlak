@@ -10,7 +10,8 @@ test("media audit validates byte length, SHA256 and image dimensions",()=>{
  assert.equal(verifyPhotoIntegrity(row,bytes),null);
  assert.equal(verifyPhotoIntegrity({...row,bytes:999},bytes),"BYTE_COUNT_MISMATCH");
  assert.equal(verifyPhotoIntegrity({...row,fingerprint:"wrong"},bytes),"INVALID_FINGERPRINT");
- assert.equal(verifyPhotoIntegrity(row,Buffer.from("AmlaKLink media content CHANGE")),"SHA256_MISMATCH");
+ const changed=Buffer.from(bytes);changed[3]^=1;
+ assert.equal(verifyPhotoIntegrity(row,changed),"SHA256_MISMATCH");
  assert.equal(verifyPhotoIntegrity({...row,width:100},bytes),"INVALID_DIMENSIONS");
 });
 test("media audit is bounded by operator limit",async()=>{
