@@ -32,6 +32,7 @@
     "qa:ui": "node --test scripts/test-final-rtl-ui.mjs",
     "qa:network": "node --test scripts/test-final-network.mjs",
     "qa:renewals": "node --test scripts/test-final-subscriptions.mjs",
+    "qa:billing": "node --test scripts/test-final-billing.mjs",
     "qa:release": "node scripts/phase8-release-gate.mjs --release"
   }
 }
