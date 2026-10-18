@@ -80,8 +80,10 @@ export default function ListingEditor(){
      const result=listingDraftSchema.safeParse(cached.data);
      if(result.success&&cached.unsynced&&response.revisionStatus!=="submitted"&&
       !["sold","rented","archived"].includes(response.status)){
-      if(cached.version===response.version)doc=result.data;
-      else if(JSON.stringify(result.data)!==JSON.stringify(response.data))
+      if(cached.version===response.version){
+       doc=result.data;
+       setNotice(tx("offline")); // Cached edits are NOT confirmed saved on the server.
+      }else if(JSON.stringify(result.data)!==JSON.stringify(response.data))
        setPendingConflict(result.data); // Never silently discard or overwrite divergent remote edits.
      }
     }catch{}
