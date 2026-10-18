@@ -1,4 +1,4 @@
-import {and,asc,eq,gte,isNull,lt,lte,or,sql} from "drizzle-orm";
+import {and,asc,eq,gte,isNull,lt,lte,or,sql,type SQL} from "drizzle-orm";
 import type {FastifyInstance,FastifyRequest} from "fastify";
 import {type Database,schema} from "@amlaklink/database";
 import {requireActor,requireStaffRole} from "./access";
@@ -52,8 +52,8 @@ export async function freshnessSweep(db:Database,options:{execute:boolean;limit?
  }
  return result;
 }
-async function count(query:Promise<{n:number}[]>):Promise<number>{return Number((await query)[0]?.n||0);}
-const n=sql<number>/* count */.raw("count(*)::int");
+async function count(query:PromiseLike<{n:number}[]>):Promise<number>{return Number((await query)[0]?.n||0);}
+const n=sql.raw("count(*)::int") as SQL<number>;
 export async function pilotScorecard(db:Database,now=new Date()){
  const date14=cutoff(now,14),date30=cutoff(now,30);
  const loc=sql.raw("listing_revisions.data->'location'->>'provinceId'");

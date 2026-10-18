@@ -8,7 +8,8 @@
     "start": "tsx src/server.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "tsx --test src/*.test.ts",
-    "staff:create": "tsx src/create-staff.ts"
+    "staff:create": "tsx src/create-staff.ts",
+    "ops:freshness": "tsx src/run-freshness.ts"
   },
   "dependencies": {
     "@amlaklink/catalog": "workspace:*",

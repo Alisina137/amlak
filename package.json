@@ -15,6 +15,7 @@
     "typecheck": "pnpm -r --if-present typecheck",
     "test": "pnpm -r --if-present test",
     "check": "pnpm typecheck && pnpm test",
-    "db:diagnose": "pnpm --filter @amlaklink/database diagnose"
+    "db:diagnose": "pnpm --filter @amlaklink/database diagnose",
+    "ops:freshness": "pnpm --filter @amlaklink/api ops:freshness"
   }
 }
