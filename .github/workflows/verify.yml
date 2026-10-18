@@ -47,6 +47,8 @@ jobs:
         run: pnpm qa:network
       - name: Final completion subscription automation guards
         run: pnpm qa:renewals
+      - name: Final completion billing and payment safety contracts
+        run: pnpm qa:billing
       - name: Pilot API startup and read-only smoke
         run: |
           pnpm --filter @amlaklink/api start > /tmp/amlak-api.log 2>&1 &
