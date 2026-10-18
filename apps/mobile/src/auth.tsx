@@ -9,15 +9,28 @@ const Context=createContext<AuthContext|null>(null);
 export class ApiError extends Error{constructor(public code:string,public status:number){super(code);}}
 export async function requestJson<T>(path:string,options:{method?:string;body?:object;token?:string|null}={}):Promise<T>{
  if(!BASE_URL)throw new ApiError("API_NOT_CONFIGURED",0);
- const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);
- try{
- const response=await fetch(BASE_URL+path,{method:options.method||"GET",
-  headers:{"Content-Type":"application/json",...(options.token?{Authorization:"Bearer "+options.token}:{})},
-  ...(options.body?{body:JSON.stringify(options.body)}:{}),signal:controller.signal});
- const data=await response.json().catch(()=>({error:"INVALID_SERVER_RESPONSE"}));
- if(!response.ok)throw new ApiError(typeof data?.error==="string"?data.error:"REQUEST_FAILED",response.status);
- return data as T;
- }catch(err){if(err instanceof ApiError)throw err;throw new ApiError("NETWORK_UNAVAILABLE",0);}finally{clearTimeout(timer);}
+ const method=options.method||"GET",attempts=method==="GET"?2:1;
+ for(let attempt=0;attempt<attempts;attempt++){
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);
+  try{
+   const response=await fetch(BASE_URL+path,{method,
+    headers:{"Content-Type":"application/json",...(options.token?{Authorization:"Bearer "+options.token}:{})},
+    ...(options.body?{body:JSON.stringify(options.body)}:{}),signal:controller.signal});
+   const data=await response.json().catch(()=>({error:"INVALID_SERVER_RESPONSE"}));
+   if(!response.ok){
+    if(method==="GET"&&attempt+1<attempts&&[502,503,504].includes(response.status)){
+     await new Promise(resolve=>setTimeout(resolve,400));continue;
+    }
+    throw new ApiError(typeof data?.error==="string"?data.error:"REQUEST_FAILED",response.status);
+   }
+   return data as T;
+  }catch(err){
+   if(err instanceof ApiError)throw err;
+   if(method==="GET"&&attempt+1<attempts){await new Promise(resolve=>setTimeout(resolve,400));continue;}
+   throw new ApiError("NETWORK_UNAVAILABLE",0);
+  }finally{clearTimeout(timer);}
+ }
+ throw new ApiError("NETWORK_UNAVAILABLE",0);
 }
 export function AuthProvider({children}:{children:ReactNode}){
  const [user,setUser]=useState<Account|null>(null),[token,setToken]=useState<string|null>(null),[loading,setLoading]=useState(true);

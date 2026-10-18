@@ -18,18 +18,24 @@ import {registerSafetyRoutes} from "./safety";
 import {registerVerificationRoutes} from "./verification";
 import {registerPilotRoutes} from "./pilot";
 export function buildApp(options:{db?:Database;mailer?:SendCode}={}){
- const app=Fastify({logger:true,bodyLimit:256*1024,trustProxy:false});
+ const app=Fastify({logger:{redact:["req.headers.authorization","request.headers.authorization","headers.authorization",
+ "req.headers.cookie","headers.cookie","password","token","DATABASE_URL"]},
+  bodyLimit:256*1024,trustProxy:false});
  app.register(rateLimit,{global:true,max:120,timeWindow:"1 minute"});
  app.register(multipart,{limits:{fileSize:6_000_000,files:1}});
- app.addHook("onSend",async(_request,reply,payload)=>{
+ app.addHook("onSend",async(request,reply,payload)=>{
+   reply.header("X-Request-Id",request.id);
    reply.header("X-Content-Type-Options","nosniff");reply.header("Referrer-Policy","no-referrer");
    reply.header("Cache-Control","no-store");return payload;
  });
  app.get("/health",async()=>healthSchema.parse({status:"ok",service:"amlaklink-api"}));
  app.get("/ready",async(_request,reply)=>{
   if(!options.db){reply.code(503);return {status:"unavailable",reason:"DATABASE_NOT_CONFIGURED"};}
-  try{await options.db.execute(sql`SELECT 1`);return {status:"ok",phase:"pilot"};}
-  catch{reply.code(503);return {status:"unavailable",reason:"DATABASE_UNREACHABLE"};}
+  try{
+   await Promise.race([options.db.execute(sql`SELECT 1`),
+    new Promise<never>((_,reject)=>setTimeout(()=>reject(Error("READINESS_TIMEOUT")),5000))]);
+   return {status:"ok",phase:"pilot"};
+  }catch{reply.code(503);return {status:"unavailable",reason:"DATABASE_UNREACHABLE"};}
  });
  app.get("/v1/catalog/provinces",async(request,reply)=>{
   const query=provinceQuerySchema.safeParse(request.query);
