@@ -123,7 +123,17 @@ export function registerAuthRoutes(app:FastifyInstance,db:Database,notify:SendCo
   const [user]=await db.select().from(schema.users).where(eq(schema.users.email,mail)).limit(1);
   if(!user||user.status!=="active"||!await passwordCheck(pass,user.passwordHash))throw new HttpProblem(401,"INVALID_CREDENTIALS");
   if(!user.emailVerifiedAt)throw new HttpProblem(403,"CONTACT_NOT_VERIFIED");
-  return {...await issue(db,"user",user.id),user:userProjection(user)};
+  return { ...await db.transaction(async tx=>{
+   await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${user.id}))`);
+   // Recheck the password against the latest hash after concurrent recovery.
+   const [latest]=await tx.select().from(schema.users).where(eq(schema.users.id,user.id)).limit(1);
+   if(!latest||latest.status!=="active"||!latest.emailVerifiedAt||
+     !await passwordCheck(pass,latest.passwordHash))throw new HttpProblem(401,"INVALID_CREDENTIALS");
+   const token=newToken();
+   await tx.insert(schema.sessions).values({audience:"user",userId:user.id,
+    tokenHash:hashToken(token),expiresAt:new Date(Date.now()+30*86400_000)});
+   return {token,expiresInSeconds:30*86400};
+  }),user:userProjection(user)};
  });
  app.post("/v1/auth/recover",{config:{rateLimit:{max:4,timeWindow:"15 minutes"}}},async request=>{
   const {email:mail}=parse(z.object({email}).strict(),request.body);
@@ -138,9 +148,18 @@ export function registerAuthRoutes(app:FastifyInstance,db:Database,notify:SendCo
  app.post("/v1/auth/recover/complete",{config:{rateLimit:{max:8,timeWindow:"15 minutes"}}},async request=>{
   const values=parse(resetBody,request.body);
   const user=await validateCode(db,values.email,"recover",values.code);
-  await db.update(schema.users).set({passwordHash:await passwordHash(values.newPassword),updatedAt:new Date()}).where(eq(schema.users.id,user.id));
-  await db.update(schema.sessions).set({revokedAt:new Date()}).where(and(eq(schema.sessions.userId,user.id),isNull(schema.sessions.revokedAt)));
-  await db.insert(schema.audit).values({actorType:"user",actorId:user.id,action:"password_reset",targetType:"user",targetId:user.id});
+  const replacementHash=await passwordHash(values.newPassword);
+  await db.transaction(async tx=>{
+   // The session-creation paths take the same user lock; reset cannot leave
+   // a freshly created but already compromised session behind.
+   await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${user.id}))`);
+   await tx.update(schema.users).set({passwordHash:replacementHash,updatedAt:new Date()})
+    .where(eq(schema.users.id,user.id));
+   await tx.update(schema.sessions).set({revokedAt:new Date()})
+    .where(and(eq(schema.sessions.userId,user.id),isNull(schema.sessions.revokedAt)));
+   await tx.insert(schema.audit).values({actorType:"user",actorId:user.id,
+    action:"password_reset",targetType:"user",targetId:user.id});
+  });
   return {success:true};
  });
  app.get("/v1/me",async request=>{
@@ -157,9 +176,13 @@ export function registerAuthRoutes(app:FastifyInstance,db:Database,notify:SendCo
  });
  app.get("/v1/auth/sessions",async request=>{
   const actor=await requireActor(db,request,"user");
-  const active=await db.select({id:schema.sessions.id,createdAt:schema.sessions.createdAt,expiresAt:schema.sessions.expiresAt})
-    .from(schema.sessions).where(and(eq(schema.sessions.userId,actor.id),isNull(schema.sessions.revokedAt),gt(schema.sessions.expiresAt,new Date())));
-  return {items:active};
+  const currentHash=hashToken(parseBearer(request));
+  const active=await db.select({id:schema.sessions.id,createdAt:schema.sessions.createdAt,
+   expiresAt:schema.sessions.expiresAt,tokenHash:schema.sessions.tokenHash})
+   .from(schema.sessions).where(and(eq(schema.sessions.userId,actor.id),
+    isNull(schema.sessions.revokedAt),gt(schema.sessions.expiresAt,new Date())))
+   .orderBy(desc(schema.sessions.createdAt)).limit(100);
+  return {items:active.map(({tokenHash,...row})=>({...row,current:tokenHash===currentHash}))};
  });
  app.delete<{Params:{id:string}}>("/v1/auth/sessions/:id",async request=>{
   const actor=await requireActor(db,request,"user");
@@ -167,10 +190,45 @@ export function registerAuthRoutes(app:FastifyInstance,db:Database,notify:SendCo
     .where(and(eq(schema.sessions.userId,actor.id),eq(schema.sessions.id,request.params.id)));
   return {success:true};
  });
+ app.post("/v1/auth/sessions/revoke-others",async request=>{
+  const actor=await requireActor(db,request,"user");
+  parse(z.object({confirm:z.literal(true)}).strict(),request.body);
+  const activeHash=hashToken(parseBearer(request));
+  return db.transaction(async tx=>{
+   await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${actor.id}))`);
+   const [current]=await tx.select({id:schema.sessions.id}).from(schema.sessions)
+    .where(and(eq(schema.sessions.userId,actor.id),
+     eq(schema.sessions.tokenHash,activeHash),isNull(schema.sessions.revokedAt),
+     gt(schema.sessions.expiresAt,new Date()))).limit(1);
+   if(!current)throw new HttpProblem(401,"SESSION_EXPIRED");
+   const other=await tx.select({id:schema.sessions.id}).from(schema.sessions)
+    .where(and(eq(schema.sessions.userId,actor.id),isNull(schema.sessions.revokedAt)));
+   const victims=other.filter(r=>r.id!==current.id);
+   for(const otherSession of victims)
+    await tx.update(schema.sessions).set({revokedAt:new Date()})
+     .where(eq(schema.sessions.id,otherSession.id));
+   await tx.insert(schema.audit).values({actorType:"user",actorId:actor.id,
+    action:"other_sessions_revoked",targetType:"user",targetId:actor.id,
+    reason:"user_initiated_all_devices"});
+   return {success:true,revoked: victims.length};
+  });
+ });
  app.post("/v1/auth/refresh",async request=>{
   const actor=await requireActor(db,request,"user");
-  if(!await revoke(db,parseBearer(request),"user"))throw new HttpProblem(401,"SESSION_EXPIRED");
-  return await issue(db,"user",actor.id);
+  const previous=hashToken(parseBearer(request));
+  return db.transaction(async tx=>{
+   await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${actor.id}))`);
+   const [removed]=await tx.update(schema.sessions).set({revokedAt:new Date()})
+    .where(and(eq(schema.sessions.userId,actor.id),eq(schema.sessions.tokenHash,previous),
+     eq(schema.sessions.audience,"user"),isNull(schema.sessions.revokedAt),
+     gt(schema.sessions.expiresAt,new Date())))
+    .returning({id:schema.sessions.id});
+   if(!removed)throw new HttpProblem(401,"SESSION_EXPIRED");
+   const token=newToken();
+   await tx.insert(schema.sessions).values({audience:"user",userId:actor.id,
+    tokenHash:hashToken(token),expiresAt:new Date(Date.now()+30*86400_000)});
+   return {token,expiresInSeconds:30*86400};
+  });
  });
  app.post("/v1/auth/logout",async request=>{
   await requireActor(db,request,"user");
