@@ -33,7 +33,7 @@ Before launch, follow **docs/PHASE-7-PILOT.md** for the staff pilot scorecard, 1
 
 ## Phase 8 — Professional growth (in progress)
 
-See **docs/PHASE-8-GROWTH.md** for saved searches/alerts, four-property comparison, private shared shortlists and support tickets, proposed AFN subscription invoices with staff-only manual verification, time-bound entitlements, labeled featured listings and scoped agency reports. **Billing is disabled by default** (`AMLAK_BILLING_ENABLED=false`) until local legal, pricing and payment procedures are validated. Alerts are in-app only; push development builds and additional Phase 8 features are not yet complete. After migrating, `pnpm ops:alerts --dry-run` previews alert matches, and `pnpm ops:alerts --execute` creates deduplicated notifications. Phase 7 real-world release acceptance remains pending.
+See **docs/PHASE-8-GROWTH.md** for saved searches/alerts, four-property comparison, private shared shortlists and support tickets, proposed AFN subscription invoices with staff-only manual verification, time-bound entitlements, labeled featured listings and scoped agency reports. **Billing is disabled by default** (`AMLAK_BILLING_ENABLED=false`) until local legal, pricing and payment procedures are validated. In-app alerts remain available without remote push; optional push requires a configured Expo development build. Photo room labels, reviewed captions, and a room-filtered public gallery are implemented in Step 2. Other Phase 8 features and external acceptance remain incomplete. After migrating, `pnpm ops:alerts --dry-run` previews alert matches, and `pnpm ops:alerts --execute` creates deduplicated notifications. Phase 7 real-world release acceptance remains pending.
 
 
 ### Phase 8 Step 1: optional push notifications
