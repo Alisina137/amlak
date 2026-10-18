@@ -21,6 +21,7 @@ export default function RootLayout(){
   <Stack.Screen name="inquiries" />
   <Stack.Screen name="viewings" />
   <Stack.Screen name="shortlists" />
+  <Stack.Screen name="support" />
   <Stack.Screen name="saved-searches" />
   <Stack.Screen name="compare" />
   <Stack.Screen name="upgrade" />
