@@ -1,24 +1,34 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {router} from "expo-router";
-import {createContext,useCallback,useContext,useEffect,useMemo,useState,type ReactNode} from "react";
+import {createContext,useCallback,useContext,useEffect,useMemo,useRef,useState,type ReactNode} from "react";
 import {requestJson} from "./auth";
 import {useAuth} from "./auth";
 const PENDING="amlak:pending-favorite:v1";
 type State={saved:Set<string>;toggle:(id:string)=>Promise<void>;isSaved:(id:string)=>boolean;refresh:()=>Promise<void>;loading:boolean};
 const Context=createContext<State|null>(null);
 export function FavoriteProvider({children}:{children:ReactNode}){
- const {token,user}=useAuth();
- const [saved,setSaved]=useState<Set<string>>(new Set()),[loading,setLoading]=useState(false);
+ const {token}=useAuth();
+ const [snapshot,setSnapshot]=useState<{token:string|null;ids:Set<string>}>({token:null,ids:new Set()});
+ const currentToken=useRef<string|null>(token),requestVersion=useRef(0);
+ currentToken.current=token;
+ // Never render another signed-in account's favorites, even for a single frame.
+ const saved=snapshot.token===token?snapshot.ids:new Set<string>();
+ const setSaved=useCallback((update:(ids:Set<string>)=>Set<string>)=>{
+  setSnapshot(previous=>({token,ids:update(previous.token===token?previous.ids:new Set())}));
+ },[token]);
+ const [loading,setLoading]=useState(false);
  const refresh=useCallback(async()=>{
-  if(!token){setSaved(new Set());return;}
+  const version=++requestVersion.current;
+  if(!token){setSaved(()=>new Set());setLoading(false);return;}
   setLoading(true);
   try{
    const data=await requestJson<{items:{id:string}[]}>("/v1/favorites",{token});
-   setSaved(new Set(data.items.map(row=>row.id)));
-  }catch{}finally{setLoading(false);}
+   if(currentToken.current===token&&version===requestVersion.current)
+    setSaved(()=>new Set(data.items.map(row=>row.id)));
+  }catch{}finally{if(currentToken.current===token&&version===requestVersion.current)setLoading(false);}
  },[token]);
  useEffect(()=>{let active=true;
-  if(!token){setSaved(new Set());return;}
+  if(!token){requestVersion.current++;setSaved(()=>new Set());setLoading(false);return;}
   void (async()=>{
    const pending=await AsyncStorage.getItem(PENDING).catch(()=>null);
    if(active && pending && /^[0-9a-f-]{36}$/i.test(pending)){
@@ -26,7 +36,7 @@ export function FavoriteProvider({children}:{children:ReactNode}){
      await AsyncStorage.removeItem(PENDING);
     }catch{}
    }
-   if(active)await refresh();
+   if(active&&currentToken.current===token)await refresh();
   })();
   return()=>{active=false;};
  },[token,refresh]);
