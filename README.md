@@ -30,3 +30,7 @@ Never commit identity records, actual credentials, MFA secrets, user uploads or 
 ## Phase 7 — Pilot readiness
 
 Before launch, follow **docs/PHASE-7-PILOT.md** for the staff pilot scorecard, 14-day freshness reminders, 30-day auto-pause, encrypted backup/staging restore, read-only smoke testing and **human go/no-go checklist**. The application is *not* yet approved for production release.
+
+## Phase 8 — Professional growth (in progress)
+
+See **docs/PHASE-8-GROWTH.md** for saved searches/alerts, four-property comparison, proposed AFN subscription invoices with staff-only manual verification, time-bound entitlements, labeled featured listings and scoped agency reports. **Billing is disabled by default** (`AMLAK_BILLING_ENABLED=false`) until local legal, pricing and payment procedures are validated. Alerts are in-app only; push development builds and additional Phase 8 features are not yet complete. After migrating, `pnpm ops:alerts --dry-run` previews alert matches, and `pnpm ops:alerts --execute` creates deduplicated notifications. Phase 7 real-world release acceptance remains pending.
