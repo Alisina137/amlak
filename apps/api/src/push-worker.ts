@@ -10,10 +10,17 @@ const MAX=50,RECENT_MS=3*86_400_000;
 export const pushAllowed=(p:{enabled:boolean;enabledAt:Date|null;
  savedSearches:boolean;inquiries:boolean;viewings:boolean;account:boolean},
  kind:string,createdAt:Date)=>Boolean(p.enabled&&p.enabledAt&&p.enabledAt<=createdAt&&p[pushCategory(kind)]);
-export function expoPayload(to:string,n:{id:string;kind:string;title:string;referenceId:string|null}){
- return {to,title:"AmlakLink",body:n.title.slice(0,160),
-  data:{notificationId:n.id,kind:n.kind,...(n.referenceId?{referenceId:n.referenceId}:{})},
-  ttl:24*3600,priority:"default" as const};
+/** Generic lock-screen text: an offline logout cannot prevent old device tokens
+ * receiving a scheduled push, so NEVER expose inquiry/transaction/customer text. */
+export function expoPayload(to:string,n:{id:string;userId:string;kind:string;title:string;referenceId:string|null}){
+ return {to,title:"AmlakLink",body:"You have a new update. Open AmlakLink to view it.",
+  data:{notificationId:n.id,recipientId:n.userId,kind:n.kind,
+   ...(n.referenceId?{referenceId:n.referenceId}:{})},
+  ttl:3600,priority:"default" as const,channelId:"amlaklink-alerts"};
+}
+export function retryableExpoError(error:string){
+ return ["MessageRateExceeded","InternalError","ServiceUnavailable","EXPO_RETRY",
+  "EXPO_NETWORK_FAILURE","EXPO_MALFORMED_RESPONSE"].includes(error);
 }
 async function postExpo(path:string,body:unknown,fetcher:typeof fetch){
  const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),12000);
@@ -45,7 +52,8 @@ async function updateFailure(db:Database,row:Delivery,code:string,now:Date,canRe
 export async function scanPushDeliveries(db:Database,options:{execute:boolean;now?:Date;fetcher?:typeof fetch}){
  const now=options.now||new Date(),fetcher=options.fetcher||fetch;
  const metrics={execute:options.execute,enabled:pushEnabled(),candidateNotifications:0,eligible:0,
-  claimed:0,expoAccepted:0,expoDelivered:0,expoRejected:0,retried:0};
+  claimed:0,expoAccepted:0,expoDelivered:0,expoRejected:0,retried:0,
+  receiptChecked:0,deviceDisabled:0};
  if(!pushEnabled())return metrics;
  const notifications=await db.select({notice:schema.notifications,preferences:schema.pushPreferences,
   user:schema.users}).from(schema.notifications)
@@ -117,15 +125,16 @@ export async function scanPushDeliveries(db:Database,options:{execute:boolean;no
      metrics.expoAccepted++;
     }else{
      const code=ticket.details?.error||"EXPO_TICKET_ERROR";
-     await updateFailure(db,delivery,code,now,code!=="DeviceNotRegistered"&&code==="MessageRateExceeded");
-     if(code==="DeviceNotRegistered")await disableDevice(db,delivery.deviceId);
+     await updateFailure(db,delivery,code,now,retryableExpoError(code));
+     if(code==="DeviceNotRegistered"){await disableDevice(db,delivery.deviceId);metrics.deviceDisabled++;}
      metrics.expoRejected++;
     }
    }
   }catch(err){
    // Expo may have accepted this batch before network failure; retry can duplicate.
    const code=err instanceof Error?err.message:"EXPO_NETWORK_FAILURE";
-   for(const {delivery} of outgoing){await updateFailure(db,delivery,code,now,code==="EXPO_RETRY"||!code.startsWith("EXPO_HTTP_"));metrics.retried++;}
+   for(const {delivery} of outgoing){await updateFailure(db,delivery,code,now,
+    retryableExpoError(code)||!code.startsWith("EXPO_HTTP_"));metrics.retried++;}
   }
  }
  // Receipt verification confirms submission to Google/Apple, NOT handset delivery.
@@ -146,11 +155,12 @@ export async function scanPushDeliveries(db:Database,options:{execute:boolean;no
      continue;
     }
     const error=receipt.details?.error||"EXPO_RECEIPT_ERROR";
+    metrics.receiptChecked++;
     await db.update(schema.pushDeliveries).set({status:receipt.status==="ok"?"delivered":"failed",
      receiptCheckedAt:now,lastError:receipt.status==="ok"?null:error})
      .where(eq(schema.pushDeliveries.id,delivery.id));
     if(receipt.status==="ok")metrics.expoDelivered++;
-    else {metrics.expoRejected++;if(error==="DeviceNotRegistered")await disableDevice(db,delivery.deviceId);}
+    else {metrics.expoRejected++;if(error==="DeviceNotRegistered"){await disableDevice(db,delivery.deviceId);metrics.deviceDisabled++;}}
    }
   }catch{
    // Retain tickets for the next worker run; do not resend already accepted messages.
