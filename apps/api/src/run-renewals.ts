@@ -20,7 +20,7 @@ if(values("--limit=").length>1||values("--cursor=").length>1)
 const execute=args.includes("--execute"),all=args.includes("--all"),limit=Number(values("--limit=")[0]||100);
 if(!Number.isInteger(limit)||limit<1||limit>100)throw Error("limit must be 1 through 100");
 const {db,sql}=connectDatabase();
-let cursor=values("--cursor=")[0];
+let cursor:string|undefined=values("--cursor=")[0];
 const aggregate={execute,scanned:0,due:0,notified:0,skippedRenewed:0,batches:0,
  complete:false,nextCursor:null as string|null,at:new Date().toISOString()};
 try{
