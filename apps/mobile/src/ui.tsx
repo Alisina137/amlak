@@ -1,12 +1,37 @@
 import { colors, radius, spacing, typeScale } from "@amlaklink/design-tokens";
 import { isRTL, t, type Locale } from "@amlaklink/localization";
 import { type ReactNode } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View, type StyleProp, type TextStyle } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View, type StyleProp, type TextInputProps, type TextStyle, type ViewStyle } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { usePreferences } from "./context";
+import {uiText} from "./ui-copy";
 export function Label({children,style,muted=false,weight="regular"}:{children:ReactNode;style?:StyleProp<TextStyle>;muted?:boolean;weight?:"regular"|"medium"|"bold"}){
  const {locale}=usePreferences();
  return <Text style={[{fontSize:typeScale.body,lineHeight:26,color:muted?colors.muted:colors.text,textAlign:isRTL(locale)?"right":"left",writingDirection:isRTL(locale)?"rtl":"ltr",fontWeight:weight==="regular"?"400":weight==="bold"?"700":"600"},style]}>{children}</Text>;
+}
+/** Rows mirror their content order without depending on the OS-wide I18nManager flag. */
+export function DirectionalRow({children,style}:{children:ReactNode;style?:StyleProp<ViewStyle>}){
+ const {locale}=usePreferences();
+ return <View style={[{flexDirection:isRTL(locale)?"row-reverse":"row",alignItems:"center",gap:8},style]}>{children}</View>;
+}
+/** Text uses the active app locale; email, URLs and amounts stay LTR for correct editing. */
+export function AppInput({style,inputDirection="auto",...props}:TextInputProps&{
+ inputDirection?:"auto"|"ltr"}){
+ const {locale}=usePreferences(),rtl=inputDirection!=="ltr"&&isRTL(locale);
+ const direction:TextStyle={writingDirection:rtl?"rtl":"ltr",textAlign:rtl?"right":"left",
+  fontSize:16,color:colors.text};
+ return <TextInput {...props} placeholderTextColor={props.placeholderTextColor||colors.muted}
+  style={[{minHeight:48,borderWidth:1,borderColor:colors.border,borderRadius:12,
+   paddingHorizontal:12,paddingVertical:10,backgroundColor:colors.surface},direction,style]}/>;
+}
+export function BackButton({onPress}:{onPress:()=>void}){
+ const {locale}=usePreferences();
+ return <Pressable accessibilityRole="button" accessibilityLabel={uiText(locale,"back")}
+  onPress={onPress} style={{minWidth:48,minHeight:48,alignSelf:isRTL(locale)?"flex-end":"flex-start",
+   justifyContent:"center",alignItems:"center",borderColor:colors.border,borderWidth:1,
+   borderRadius:12,backgroundColor:colors.surface}}>
+  <Label style={{fontSize:22,textAlign:"center"}}>{isRTL(locale)?"→":"←"}</Label>
+ </Pressable>;
 }
 export function Page({children}:{children:ReactNode}){
  return <SafeAreaView style={{flex:1,backgroundColor:colors.background}} edges={["top"]}>
@@ -20,7 +45,7 @@ export function SectionCard({children}:{children:ReactNode}){
 }
 export function Action({label,onPress,kind="primary",disabled=false}:{label:string;onPress:()=>void;kind?:"primary"|"secondary";disabled?:boolean}){
  const secondary=kind==="secondary";
- return <Pressable accessibilityRole="button" accessibilityState={{disabled}} disabled={disabled} onPress={onPress} style={({pressed})=>[styles.action,{backgroundColor:secondary?colors.surface:colors.primary,borderColor:secondary?colors.border:colors.primary,opacity:disabled?0.45:pressed?0.82:1}]}>
+ return <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{disabled}} disabled={disabled} onPress={onPress} style={({pressed})=>[styles.action,{backgroundColor:secondary?colors.surface:colors.primary,borderColor:secondary?colors.border:colors.primary,opacity:disabled?0.45:pressed?0.82:1}]}>
    <Label weight="medium" style={{color:secondary?colors.text:colors.surface,textAlign:"center"}}>{label}</Label>
  </Pressable>;
 }
@@ -37,7 +62,7 @@ export function LanguagePicker(){
  </View>;
 }
 export function ScreenHeading({title,subtitle}:{title:string;subtitle?:string}){
- return <View style={{gap:6}}><Label weight="bold" style={{fontSize:typeScale.heading,lineHeight:35}}>{title}</Label>{subtitle?<Label muted>{subtitle}</Label>:null}</View>;
+ return <View style={{gap:6,minWidth:0}}><Label weight="bold" style={{fontSize:typeScale.heading,lineHeight:35}}>{title}</Label>{subtitle?<Label muted>{subtitle}</Label>:null}</View>;
 }
 export function EmptyMessage({icon,title,body}:{icon:string;title:string;body:string}){
  return <SectionCard><View style={{alignItems:"center",gap:8,paddingVertical:16}}>
