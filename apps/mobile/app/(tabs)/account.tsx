@@ -58,6 +58,9 @@ export default function Account(){
    </SectionCard>
    <SectionCard><Label weight="bold">{copy("agent")}</Label>
     {user.independentAgentStatus==="approved"?<Label style={{color:colors.success}}>{copy("agentApproved")}</Label>:user.independentAgentStatus==="pending"?<Label muted>{copy("agentPending")}</Label>:<Action kind="secondary" label={copy("agentApplication")} onPress={()=>router.push("/agent/apply")}/>}
+    {user.independentAgentStatus==="approved"?
+     <Action kind="secondary" label={locale==="en"?"Professional plan":"اشتراک حرفه‌ای"}
+      onPress={()=>router.push("/upgrade")}/>:null}
    </SectionCard>
    <SectionCard>
     <Label weight="bold">{copy("agency")}</Label>
@@ -72,6 +75,7 @@ export default function Account(){
     <Action kind="secondary" disabled={!user.verified} label={copy("applyAgency")} onPress={()=>router.push("/agency/apply")}/>
    </SectionCard>
    {message?<Label style={{color:colors.muted}}>{message}</Label>:null}
+   <Action kind="secondary" label={locale==="en"?"Help & support":locale==="fa"?"کمک و پشتیبانی":"مرسته او ملاتړ"} onPress={()=>router.push("/support")}/>
    <Action kind="secondary" label={st(locale,"appeals")} onPress={()=>router.push("/safety")}/>
    <Action kind="secondary" label={copy("refresh")} onPress={()=>void refresh()}/>
    <Action kind="secondary" label={copy("logout")} onPress={()=>void signOut()}/>

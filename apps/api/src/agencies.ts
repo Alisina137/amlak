@@ -1,4 +1,4 @@
-import {and,eq,isNull,ne} from "drizzle-orm";
+import {and,eq,isNull,ne,inArray,gt,lte,desc,sql} from "drizzle-orm";
 import {type FastifyInstance} from "fastify";
 import {z} from "zod";
 import {findProvince} from "@amlaklink/catalog";
@@ -62,11 +62,28 @@ export function registerAgencyRoutes(app:FastifyInstance,db:Database){
   if(manager.role==="manager" && values.role==="manager")throw new HttpProblem(403,"OWNER_APPROVAL_REQUIRED");
   const [person]=await db.select().from(schema.users).where(eq(schema.users.email,normalizeEmail(values.email))).limit(1);
   if(!person || !person.emailVerifiedAt || person.status!=="active")throw new HttpProblem(404,"VERIFIED_MEMBER_NOT_FOUND");
-  const [existing]=await db.select().from(schema.memberships).where(and(eq(schema.memberships.agencyId,id),eq(schema.memberships.userId,person.id))).limit(1);
-  if(existing && existing.status==="active")throw new HttpProblem(409,"MEMBER_ALREADY_ACTIVE");
-  if(existing)await db.update(schema.memberships).set({role:values.role,status:"pending",updatedAt:new Date()}).where(eq(schema.memberships.id,existing.id));
-  else await db.insert(schema.memberships).values({agencyId:id,userId:person.id,role:values.role,status:"pending"});
-  await db.insert(schema.audit).values({actorType:"user",actorId:actor.id,action:"agency_member_invited",targetType:"agency",targetId:id,reason:person.id});
+  await db.transaction(async tx=>{
+   // Lock agency membership changes, including seat-capacity checks, per organization.
+   await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${id}::text))`);
+   const [existing]=await tx.select().from(schema.memberships)
+    .where(and(eq(schema.memberships.agencyId,id),eq(schema.memberships.userId,person.id))).limit(1);
+   if(existing?.status==="active")throw new HttpProblem(409,"MEMBER_ALREADY_ACTIVE");
+   const now=new Date();
+   const [entitlement]=await tx.select({seats:schema.growthEntitlements.seatLimit})
+    .from(schema.growthEntitlements).where(and(eq(schema.growthEntitlements.agencyId,id),
+     lte(schema.growthEntitlements.startsAt,now),gt(schema.growthEntitlements.expiresAt,now)))
+    .orderBy(desc(schema.growthEntitlements.seatLimit),desc(schema.growthEntitlements.expiresAt)).limit(1);
+   if(!existing||existing.status==="revoked"){
+    const [count]=await tx.select({n:sql<number>`count(*)::integer`}).from(schema.memberships)
+      .where(and(eq(schema.memberships.agencyId,id),inArray(schema.memberships.status,["active","pending"])));
+    if(Number(count?.n||0)>=(entitlement?.seats||3))throw new HttpProblem(409,"AGENCY_SEAT_LIMIT_REACHED");
+   }
+   if(existing)await tx.update(schema.memberships).set({role:values.role,status:"pending",updatedAt:now})
+     .where(eq(schema.memberships.id,existing.id));
+   else await tx.insert(schema.memberships).values({agencyId:id,userId:person.id,role:values.role,status:"pending"});
+   await tx.insert(schema.audit).values({actorType:"user",actorId:actor.id,action:"agency_member_invited",
+    targetType:"agency",targetId:id,reason:person.id});
+  });
   return {success:true,userId:person.id,role:values.role,status:"pending"};
  });
  app.post<{Params:{id:string;memberId:string}}>("/v1/agencies/:id/members/:memberId/revoke",async request=>{

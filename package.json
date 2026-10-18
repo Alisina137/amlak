@@ -17,6 +17,7 @@
     "check": "pnpm typecheck && pnpm test",
     "db:diagnose": "pnpm --filter @amlaklink/database diagnose",
     "ops:freshness": "pnpm --filter @amlaklink/api ops:freshness",
+    "ops:alerts": "pnpm --filter @amlaklink/api ops:alerts",
     "db:backup": "pnpm --filter @amlaklink/database backup",
     "db:restore:staging": "pnpm --filter @amlaklink/database restore:staging",
     "pilot:smoke": "node scripts/pilot-smoke.mjs"

@@ -14,6 +14,10 @@ export default async function AdminHome(){
     <p>ماژول‌های بیشتر طبق صلاحیت شما در مراحل بعدی فعال می‌شوند.</p>}
   {["moderator","support","verification","admin","super_admin"].includes(staff.role)?
     <p><Link href="/admin/safety">ایمنی، گزارش‌ها، اعتراض و تأیید اسناد ←</Link></p>:null}
+   {["billing","admin","super_admin"].includes(staff.role)?
+    <p><Link href="/admin/billing">پرداخت خدمات و بررسی فاکتورها ←</Link></p>:null}
+   {["support","admin","super_admin"].includes(staff.role)?
+    <p><Link href="/admin/support">پشتیبانی و درخواست‌های کاربران ←</Link></p>:null}
   </section>
  </main>;
 }
