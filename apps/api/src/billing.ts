@@ -75,13 +75,22 @@ export function registerBillingRoutes(app:FastifyInstance,db:Database){
   const [row]=await db.insert(schema.growthInvoices).values({
    payerId:actor.id,requestId:input.requestId,productCode:input.productCode,amountAfn:product.amountAfn,
    agencyId:input.agencyId||null,listingId:input.listingId||null}).onConflictDoNothing().returning();
-  if(!row)throw new HttpProblem(409,"INVOICE_REQUEST_RETRY");
+  if(!row){
+   // An identical concurrent request may have committed before this one
+   // reached the unique key. Return the committed invoice, not a retry error.
+   const [existing]=await db.select().from(schema.growthInvoices).where(and(
+    eq(schema.growthInvoices.payerId,actor.id),eq(schema.growthInvoices.requestId,input.requestId))).limit(1);
+   if(existing&&existing.productCode===input.productCode&&existing.agencyId===(input.agencyId||null)
+      &&existing.listingId===(input.listingId||null))return {...existing,reused:true};
+   throw new HttpProblem(409,"INVOICE_REQUEST_REUSED");
+  }
   await db.insert(schema.audit).values({actorType:"user",actorId:actor.id,action:"invoice_created",
    targetType:"platform_invoice",targetId:row.id});
   return {...row,reused:false};
  });
  app.post<{Params:{id:string}}>("/v1/invoices/:id/claims",async request=>{
   const actor=await requireActor(db,request,"user");await requireVerified(db,actor);
+  if(!billingEnabled())throw new HttpProblem(503,"BILLING_NOT_ENABLED");
   const id=validId(request.params.id),input=parse(paymentInput,request.body);
   const fingerprint=referenceHash(input.method,input.reference);
   return db.transaction(async tx=>{
@@ -112,6 +121,9 @@ export function registerBillingRoutes(app:FastifyInstance,db:Database){
  app.post<{Params:{id:string}}>("/v1/admin/billing/claims/:id/decision",async request=>{
   const actor=await requireActor(db,request,"staff");requireStaffRole(actor,["billing","admin","super_admin"]);
   const id=validId(request.params.id),input=parse(decisionInput,request.body);
+  // Pause mode must also prevent staff activating a paid entitlement through
+  // an old manually submitted invoice. Rejections and refund handling remain available.
+  if(input.decision==="confirm"&&!billingEnabled())throw new HttpProblem(503,"BILLING_NOT_ENABLED");
   if(input.decision==="confirm"&&!input.reconciliation)
    throw new HttpProblem(422,"EXTERNAL_RECONCILIATION_REQUIRED");
   if(input.decision==="reject"&&input.reconciliation)
