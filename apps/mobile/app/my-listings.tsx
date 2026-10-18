@@ -21,6 +21,7 @@ export default function MyListings(){
  {!loading && items.length===0?<SectionCard><Label muted>{locale==="en"?"No listings yet":"هنوز ملکی ثبت نکرده‌اید"}</Label></SectionCard>:null}
  {items.map(l=><SectionCard key={l.id}><Label weight="bold">{l.title||((locale==="en"?"Property":"ملک")+" #"+l.id.slice(0,8))}</Label>
  <Label muted>{l.status} · {new Date(l.updatedAt).toLocaleDateString(locale==="en"?"en-US":"fa-AF")}</Label>
+ <Action kind="secondary" label={locale==="en"?"Safety cases & appeals":"بررسی ایمنی و اعتراض"} onPress={()=>router.push({pathname:"/safety",params:{listingId:l.id}})}/>
  <Action kind="secondary" label={locale==="en"?"Open / edit":"بازکردن / ویرایش"} onPress={()=>router.push({pathname:"/listings/[id]/edit",params:{id:l.id}})}/>
  </SectionCard>)}
  <Action kind="secondary" label={locale==="en"?"Return to account":"بازگشت به حساب"} onPress={()=>router.back()}/></Page>;

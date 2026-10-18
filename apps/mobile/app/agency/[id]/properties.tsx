@@ -16,6 +16,7 @@ export default function AgencyProperties(){
  {loading?<Label muted>{locale==="en"?"Loading…":"در حال بارگیری…"}</Label>:null}
  {!loading&&items.length===0?<SectionCard><Label muted>{locale==="en"?"No properties assigned yet.":"هنوز ملکی ثبت نشده است."}</Label></SectionCard>:null}
  {items.map(l=><SectionCard key={l.id}><Label>{l.id.slice(0,8)} · {l.status}</Label>
+  <Action kind="secondary" label={locale==="en"?"Safety decisions & appeals":"تصمیم‌های ایمنی و اعتراض"} onPress={()=>router.push({pathname:"/safety",params:{listingId:l.id}})}/>
   <Action kind="secondary" label={locale==="en"?"Open":"بازکردن"} onPress={()=>router.push({pathname:"/listings/[id]/edit",params:{id:l.id}})}/>
  </SectionCard>)}
  </Page>;
