@@ -25,3 +25,5 @@ Phase 3 listing setup, S3-compatible photo storage and the moderator panel are d
 Phase 4 search, favorites, map/list configuration and external call handling are documented in docs/PHASE-4-DISCOVERY.md.
 
 If migrations fail with `CONNECT_TIMEOUT`, follow docs/DATABASE-CONNECTIVITY.md and run `pnpm db:diagnose` before retrying. Neon port-443 WebSocket transport is optionally supported via root `.env` `DATABASE_TRANSPORT=websocket`.
+
+For Phase 5 messages, viewings, agency lead queues, and in-app alerts, see docs/PHASE-5-ENGAGEMENT.md. Check `pnpm db:diagnose` for the earlier Neon connection timeout before running `pnpm db:migrate`.
