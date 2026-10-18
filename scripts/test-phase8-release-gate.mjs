@@ -44,7 +44,7 @@ test("dangerous release flags are always explicitly blocked",()=>{
  const issues=operationalRisks(env);
  assert.ok(issues.length>=9);
  assert.ok(issues.some(v=>v.includes("billing enabled")||v.includes("Billing enabled")));
- assert.ok(issues.some(v=>v.includes("OTP")));
+ assert.ok(issues.some(v=>v.includes("AUTH_DEV_PRINT_CODES")));
  assert.ok(issues.some(v=>v.includes("HTTPS")));
  assert.equal(JSON.stringify(issues).includes("insecure"),false);
 });
