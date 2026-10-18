@@ -41,6 +41,10 @@ export default function Account(){
     <Action kind="secondary" label={locale==="en"?"Create new listing":"ثبت ملک جدید"} onPress={()=>router.push("/listings/new")}/>
    </SectionCard>:null}
    <SectionCard>
+    <Label weight="bold">{locale==="en"?"Inquiries & viewings":"پرسش‌ها و بازدیدها"}</Label>
+    <Action kind="secondary" label={locale==="en"?"Open inbox":"بازکردن پیام‌ها"} onPress={()=>router.push("/(tabs)/inbox")}/>
+   </SectionCard>
+   <SectionCard>
     <Label weight="bold">{copy("seller")}</Label>
     <Label muted>{copy("listingLater")}</Label>
     {user.advertiserEnabled?<Label style={{color:colors.success}}>{copy("sellerActive")}</Label>:<>

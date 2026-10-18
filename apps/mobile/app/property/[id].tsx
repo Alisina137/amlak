@@ -7,6 +7,7 @@ import {usePreferences} from "../../src/context";
 import {getPublic,photoSource,type ListingDTO} from "../../src/listing-client";
 import {advertiserId,advertiserKind,getContact} from "../../src/discovery-client";
 import {dt} from "../../src/discovery-copy";
+import {et} from "../../src/engagement-copy";
 import {useFavorites} from "../../src/favorites";
 import {lt,priceSummary} from "../../src/listing-ui";
 import {Action,Label,Page,ScreenHeading,SectionCard} from "../../src/ui";
@@ -92,9 +93,12 @@ export default function PropertyDetails(){
    <Label muted>{dt(locale,"safeContact")}</Label>
    {error?<SectionCard><Label style={{color:colors.error}}>{error}</Label></SectionCard>:null}
   </Page>
-  <View style={{flexDirection:"row",gap:10,backgroundColor:colors.surface,padding:12,borderTopWidth:1,borderColor:colors.border,paddingBottom:20}}>
+  <View style={{gap:8,backgroundColor:colors.surface,padding:12,borderTopWidth:1,borderColor:colors.border,paddingBottom:20}}>
+   <Action label={et(locale,"newInquiry")} disabled={!canContact} onPress={()=>router.push({pathname:"/inquiries/new",params:{listingId:id}})}/>
+   <View style={{flexDirection:"row",gap:10}}>
    <View style={{flex:1}}><Action label={busy==="call"?"…":dt(locale,"call")} disabled={!canContact||!d.contact.allowPhone||busy!==null} onPress={()=>void contact("call")}/></View>
    <View style={{flex:1}}><Action kind="secondary" label={busy==="whatsapp"?"…":dt(locale,"whatsapp")} disabled={!canContact||!d.contact.allowWhatsApp||busy!==null} onPress={()=>void contact("whatsapp")}/></View>
+   </View>
   </View>
  </View>;
 }

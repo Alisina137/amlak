@@ -4,7 +4,7 @@ import {ActivityIndicator,Pressable,View} from "react-native";
 import {colors} from "@amlaklink/design-tokens";
 import {useAuth} from "../../src/auth";
 import {usePreferences} from "../../src/context";
-import {inbox,fetchViewings,fetchAlerts,readAllAlerts,displayKabul,type InquirySummary,type Viewing,type Alert} from "../../src/engagement-client";
+import {inbox,fetchViewings,fetchAlerts,readAllAlerts,readAlert,displayKabul,type InquirySummary,type Viewing,type Alert} from "../../src/engagement-client";
 import {et} from "../../src/engagement-copy";
 import {Action,Label,Page,ScreenHeading,SectionCard} from "../../src/ui";
 export default function Inbox(){
@@ -58,7 +58,7 @@ export default function Inbox(){
   </SectionCard>)}
   {token&&tab==="notifications"&&<Action kind="secondary" label={et(locale,"allRead")} onPress={()=>void readAllAlerts(token).then(refresh).catch(()=>setError(et(locale,"unknown")))}/>}
   {token&&tab==="notifications"&&alerts.length===0&&!busy?<SectionCard><Label>{et(locale,"empty")}</Label></SectionCard>:null}
-  {token&&tab==="notifications"&&alerts.map(n=><Pressable accessibilityRole="button" key={n.id} onPress={()=>router.push({pathname:"/inquiries/[id]",params:{id:n.referenceId||""}})}>
+  {token&&tab==="notifications"&&alerts.map(n=><Pressable accessibilityRole="button" key={n.id} onPress={()=>{if(token)void readAlert(n.id,token).then(()=>refresh()).catch(()=>{});if(n.referenceId)router.push({pathname:"/inquiries/[id]",params:{id:n.referenceId}});}}>
    <SectionCard><Label weight={n.isRead?"regular":"bold"}>{n.kind==="viewing"?et(locale,"viewings"):n.kind==="lead"?et(locale,"lead"):et(locale,"inquiries")}</Label>
     <Label muted>{displayKabul(n.createdAt,locale)} {n.isRead?"":"●"}</Label>
    </SectionCard>

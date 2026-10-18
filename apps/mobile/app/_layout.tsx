@@ -16,5 +16,7 @@ export default function RootLayout(){
   <Stack.Screen name="property" />
   <Stack.Screen name="advertiser" />
   <Stack.Screen name="search-map" />
+  <Stack.Screen name="inquiries" />
+  <Stack.Screen name="viewings" />
  </Stack></SearchProvider></FavoriteProvider></AuthProvider></PreferencesProvider></SafeAreaProvider>;
 }

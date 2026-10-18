@@ -31,6 +31,7 @@ export default function AgencyWorkspace(){
   <Label weight="bold">{t("status")}: {workspace.agency.status} · {workspace.membership.role}</Label>
   <Action label={locale==="en"?"Create agency listing":"ثبت ملک برای دفتر"} onPress={()=>router.push({pathname:"/listings/new",params:{agencyId:id}})}/>
   <Action kind="secondary" label={locale==="en"?"Agency properties":"ملک‌های دفتر"} onPress={()=>router.push({pathname:"/agency/[id]/properties",params:{id}})}/>
+  <Action kind="secondary" label={locale==="en"?"Agency leads & inquiries":"مدیریت مشتریان و پرسش‌ها"} onPress={()=>router.push({pathname:"/agency/[id]/leads",params:{id}})}/>
   <Label weight="bold">{t("members")}</Label>
   {members.map(m=><Label key={m.id}>{m.displayName} · {m.role}</Label>)}
   {workspace.canManageMembers?<View style={{gap:10}}>
