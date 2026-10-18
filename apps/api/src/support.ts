@@ -112,8 +112,13 @@ export function registerSupportRoutes(app:FastifyInstance,db:Database){
     body:input.body,requestId:input.requestId}).returning();
    await tx.update(schema.supportTickets).set({status:"awaiting_user",updatedAt:new Date()})
     .where(eq(schema.supportTickets.id,id));
+   const [recipient]=await tx.select({locale:schema.users.locale}).from(schema.users)
+    .where(eq(schema.users.id,ticket.userId)).limit(1);
+   const noticeTitle=recipient?.locale==="ps"?"د املاک لینک ملاتړ ستاسو غوښتنې ته ځواب ورکړ.":
+    recipient?.locale==="fa"?"پشتیبانی املاک لینک به درخواست شما پاسخ داد.":
+    "AmlakLink support replied to your request.";
    await tx.insert(schema.notifications).values({userId:ticket.userId,kind:"support",referenceId:id,
-    dedupeKey:"support:reply:"+reply.id,title:"AmlakLink support replied to your request."}).onConflictDoNothing();
+    dedupeKey:"support:reply:"+reply.id,title:noticeTitle}).onConflictDoNothing();
    return {id:reply.id,reused:false};
   });
  });
