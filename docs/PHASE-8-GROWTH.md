@@ -13,6 +13,7 @@ This phase is built on Phases 1–7 and **does not override the pilot launch gat
 - Public sponsored results in a **separately labeled** section of Search and subject to the normal published/fresh/active-author/active-agency visibility constraints. Placement expires automatically and cannot resurrect a paused, sold, held or stale listing.
 - Agency activity metrics: actual listings, public listings, captured inquiries, open inquiries and deliberate contact taps. No fabricated phone conversations, external WhatsApp completion or completed-sales claims.
 - Dedicated staff billing page and separate agency reports/billing pages; ordinary users cannot call staff payment endpoints. Owner-only plan purchase; account-level solo plan is available to approved independent agents.
+- Private support requests: user-only tickets, reply threads and localized mobile UI, plus separate staff-only review and replies; request-ID idempotency, five-open-ticket cap and audited staff status changes. Support does not replace urgent fraud reporting.
 - Existing email-verification, moderation, staff MFA and audit rules still apply.
 
 ## Commercial and security gates
@@ -50,7 +51,7 @@ Run `pnpm dev:api`, `pnpm dev:mobile` and `pnpm dev:admin` as usual; the API rem
 ## Remaining Phase 8 work
 
 - Expo **development-build push delivery and explicit OS permission UX**, push token lifecycle, preference controls and fallback; current alerts are **in-app only**.
-- Room-labeled media, customer support tickets, and optional drawn map regions after map-provider cost validation.
+- Room-labeled media and optional drawn map regions after map-provider cost validation.
 - Full E2E payment review and rejection/resubmission scenarios, refund/credit policy, grace/renewal notices and real pilot pricing validation.
 - Real-device accessibility/RTL QA, distribution to a controlled pilot, local business/legal validation and full production readiness review.
 
