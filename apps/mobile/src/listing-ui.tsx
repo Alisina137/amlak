@@ -9,7 +9,8 @@ import {Label,SectionCard} from "./ui";
 import {useFavorites} from "./favorites";
 import {dt} from "./discovery-copy";
 import {Action} from "./ui";
-import type {Locale} from "@amlaklink/localization";
+import {formatNumber,isRTL,type Locale} from "@amlaklink/localization";
+import {uiText} from "./ui-copy";
 import {findProvince} from "@amlaklink/catalog";
 const labels={
  en:{sale:"Sale",rent:"Rent",gharawi:"Gharawi",house:"House",apartment:"Apartment",land:"Land",shop:"Shop",office:"Office",commercial:"Commercial",published:"Published",paused:"Paused",pending_review:"Under review",rejected:"Rejected",draft:"Draft",sold:"Sold",rented:"Rented",available:"Confirmed available",notAvailable:"Not currently available",deposit:"Refundable deposit",principal:"Refundable gharawi principal",monthly:"Monthly rent"},
@@ -19,7 +20,7 @@ const labels={
 export function lt(locale:Locale,k:keyof typeof labels.en){return labels[locale][k];}
 function money(v:number|undefined,c:string,locale:Locale){
  if(v===undefined)return "—";
- return new Intl.NumberFormat(locale==="en"?"en-US":"fa-AF").format(v)+" "+c;
+ return formatNumber(v,locale)+" "+c;
 }
 export function priceSummary(d:ListingDTO["data"],locale:Locale){
  const p=d.price;
@@ -42,7 +43,7 @@ export function ListingCard({item}:{item:ListingDTO}){
    </View>:
     <View style={{height:160,backgroundColor:colors.border,justifyContent:"center",alignItems:"center"}}><Label>⌂</Label></View>}
    <View style={{padding:16,gap:6}}>
-    <View style={{flexDirection:"row",alignItems:"center",justifyContent:"flex-end"}}>
+    <View style={{flexDirection:isRTL(locale)?"row-reverse":"row",alignItems:"center",justifyContent:"flex-end"}}>
      <Pressable accessibilityRole="button" accessibilityLabel={isSaved(item.id)?dt(locale,"unsave"):dt(locale,"save")} onPress={event=>{event.stopPropagation();void toggle(item.id).catch(()=>setError(dt(locale,"favoriteError")));}} style={{paddingHorizontal:15,paddingVertical:8,minHeight:44,borderRadius:18,backgroundColor:isSaved(item.id)?"#e1f0e9":colors.background}}>
       <Label style={{fontSize:23,color:colors.primary}}>{isSaved(item.id)?"♥":"♡"}</Label>
      </Pressable>
@@ -51,7 +52,7 @@ export function ListingCard({item}:{item:ListingDTO}){
     <Label weight="bold">{d.title}</Label>
     <Label muted>{lt(locale,d.transactionType)} · {lt(locale,d.propertyType)} · {findProvince(d.location.provinceId)?.names[locale]} / {d.location.district}</Label>
     {error?<Label style={{color:colors.error}}>{error}</Label>:null}
-    <Label muted style={{fontSize:13}}>{d.attributes.areaM2} m² · {item.lastConfirmedAt?new Date(item.lastConfirmedAt).toLocaleDateString(locale==="en"?"en-US":"fa-AF"):"—"}</Label>
+    <Label muted style={{fontSize:13}}>{formatNumber(d.attributes.areaM2||0,locale)} m² · {item.lastConfirmedAt?new Date(item.lastConfirmedAt).toLocaleDateString(locale==="en"?"en-US":locale==="ps"?"ps-AF":"fa-AF"):"—"}</Label>
    </View>
   </View>
  </Pressable>;
@@ -61,12 +62,12 @@ export function ListingFeed({provinceId}:{provinceId?:string}){
  const {locale}=usePreferences();
  useEffect(()=>{let active=true;setLoading(true);setError("");
   import("./listing-client").then(({listPublic})=>listPublic(provinceId)).then(data=>{if(active)setItems(data.items);})
-  .catch(()=>{if(active)setError(locale==="en"?"Unable to load properties. Try again.":"دریافت ملک‌ها ممکن نشد؛ دوباره تلاش کنید.")})
+  .catch(()=>{if(active)setError(uiText(locale,"feedError"))})
   .finally(()=>{if(active)setLoading(false);});
   return()=>{active=false;};
  },[provinceId,locale]);
- if(loading)return <SectionCard><ActivityIndicator color={colors.primary}/><Label muted>{locale==="en"?"Loading properties…":"در حال دریافت ملک‌ها…"}</Label></SectionCard>;
+ if(loading)return <SectionCard><ActivityIndicator color={colors.primary}/><Label muted>{uiText(locale,"feedLoading")}</Label></SectionCard>;
  if(error)return <SectionCard><Label style={{color:colors.error}}>{error}</Label></SectionCard>;
- if(items.length===0)return <SectionCard><Label muted>{locale==="en"?"No published properties in this area yet.":"هنوز ملکی در این منطقه نشر نشده است."}</Label></SectionCard>;
+ if(items.length===0)return <SectionCard><Label muted>{uiText(locale,"feedEmpty")}</Label></SectionCard>;
  return <View>{items.map(item=><ListingCard key={item.id} item={item}/>)}</View>;
 }
