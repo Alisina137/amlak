@@ -32,7 +32,14 @@ export function ListingCard({item}:{item:ListingDTO}){
  const {isSaved,toggle}=useFavorites();const [error,setError]=useState("");
  return <Pressable accessibilityRole="button" onPress={()=>router.push({pathname:"/property/[id]",params:{id:item.id}})}>
   <View style={{backgroundColor:colors.surface,borderColor:colors.border,borderWidth:1,borderRadius:18,overflow:"hidden",marginBottom:14}}>
-   {photo?<Image source={photoSource(photo)} style={{width:"100%",aspectRatio:4/3,backgroundColor:colors.border}} resizeMode="cover"/>:
+   {photo?<View>
+    <Image source={photoSource(photo)} accessibilityLabel={d.title}
+     style={{width:"100%",aspectRatio:4/3,backgroundColor:colors.border}} resizeMode="cover"/>
+    {item.photos.length>1?<View style={{position:"absolute",bottom:10,end:10,paddingHorizontal:11,paddingVertical:6,
+     borderRadius:16,backgroundColor:"rgba(15,20,19,0.82)"}}>
+     <Label style={{fontSize:12,color:"#fff"}}>▣ {item.photos.length}</Label>
+    </View>:null}
+   </View>:
     <View style={{height:160,backgroundColor:colors.border,justifyContent:"center",alignItems:"center"}}><Label>⌂</Label></View>}
    <View style={{padding:16,gap:6}}>
     <View style={{flexDirection:"row",alignItems:"center",justifyContent:"flex-end"}}>
