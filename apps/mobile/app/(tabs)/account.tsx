@@ -75,6 +75,7 @@ export default function Account(){
     <Action kind="secondary" disabled={!user.verified} label={copy("applyAgency")} onPress={()=>router.push("/agency/apply")}/>
    </SectionCard>
    {message?<Label style={{color:colors.muted}}>{message}</Label>:null}
+   <Action kind="secondary" label={locale==="en"?"Push notification settings":locale==="fa"?"تنظیمات اعلان‌ها":"د خبرتیاوو تنظیمات"} onPress={()=>router.push("/notification-settings")}/>
    <Action kind="secondary" label={locale==="en"?"Help & support":locale==="fa"?"کمک و پشتیبانی":"مرسته او ملاتړ"} onPress={()=>router.push("/support")}/>
    <Action kind="secondary" label={st(locale,"appeals")} onPress={()=>router.push("/safety")}/>
    <Action kind="secondary" label={copy("refresh")} onPress={()=>void refresh()}/>
