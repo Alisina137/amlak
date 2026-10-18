@@ -9,7 +9,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "tsx --test src/*.test.ts",
     "staff:create": "tsx src/create-staff.ts",
-    "ops:freshness": "tsx src/run-freshness.ts"
+    "ops:freshness": "tsx src/run-freshness.ts",
+    "ops:alerts": "tsx src/run-growth-alerts.ts"
   },
   "dependencies": {
     "@amlaklink/catalog": "workspace:*",
