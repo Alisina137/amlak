@@ -20,7 +20,11 @@ export function PushBridge(){
   };
   const route=(payload:unknown)=>{
    if(!live||!payload||typeof payload!=="object")return;
-   router.push(routeForNotification(payload as Record<string,unknown>));
+   const data=payload as Record<string,unknown>;
+   // An older user's push may still reach this installation after offline
+   // logout. Never deep-link a previous account's notification into this one.
+   if(data.recipientId!==user.id)return;
+   router.push(routeForNotification(data));
   };
   void import("expo-notifications").then(async Notifications=>{
    if(!live)return;
@@ -40,6 +44,6 @@ export function PushBridge(){
   stateSubscription=AppState.addEventListener("change",s=>{if(s==="active")synchronize();});
   synchronize(true);
   return ()=>{live=false;responseSubscription?.remove();tokenSubscription?.remove();stateSubscription?.remove();};
- },[token,user?.verified]);
+ },[token,user?.verified,user?.id]);
  return null;
 }
