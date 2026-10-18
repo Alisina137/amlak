@@ -202,9 +202,12 @@ export default function ListingEditor(){
   setBusy(true);setError("");setNotice("");
   try{
    const response=await uploadPhoto(id,token,asset.uri,asset.mime);
-   change({...latest.current,photoIds:[...latest.current.photoIds,response.id],
-    photoDetails:{...latest.current.photoDetails,[response.id]:{room:"other",caption:""}}});
-   await save();setNotice(uiText(locale,"editorUploadSuccess"));
+   change({...latest.current,
+    photoIds:latest.current.photoIds.includes(response.id)?
+     latest.current.photoIds:[...latest.current.photoIds,response.id],
+    photoDetails:{...latest.current.photoDetails,
+     [response.id]:latest.current.photoDetails[response.id]||{room:"other",caption:""}}});
+   await save(true);setNotice(uiText(locale,"editorUploadSuccess"));
    setPendingImage(null);
   }catch(err){
    setPendingImage(asset);setError((err as Error).message);
