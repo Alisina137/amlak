@@ -58,16 +58,18 @@ export function ListingCard({item}:{item:ListingDTO}){
  </Pressable>;
 }
 export function ListingFeed({provinceId}:{provinceId?:string}){
- const [items,setItems]=useState<ListingDTO[]>([]),[loading,setLoading]=useState(true),[error,setError]=useState("");
+ const [items,setItems]=useState<ListingDTO[]>([]),[loading,setLoading]=useState(true),[error,setError]=useState(""),[retry,setRetry]=useState(0);
  const {locale}=usePreferences();
  useEffect(()=>{let active=true;setLoading(true);setError("");
   import("./listing-client").then(({listPublic})=>listPublic(provinceId)).then(data=>{if(active)setItems(data.items);})
   .catch(()=>{if(active)setError(uiText(locale,"feedError"))})
   .finally(()=>{if(active)setLoading(false);});
   return()=>{active=false;};
- },[provinceId,locale]);
+ },[provinceId,locale,retry]);
  if(loading)return <SectionCard><ActivityIndicator color={colors.primary}/><Label muted>{uiText(locale,"feedLoading")}</Label></SectionCard>;
- if(error)return <SectionCard><Label style={{color:colors.error}}>{error}</Label></SectionCard>;
+ if(error)return <SectionCard><Label style={{color:colors.error}}>{error}</Label>
+  <Action kind="secondary" label={dt(locale,"retry")} onPress={()=>setRetry(v=>v+1)}/>
+ </SectionCard>;
  if(items.length===0)return <SectionCard><Label muted>{uiText(locale,"feedEmpty")}</Label></SectionCard>;
  return <View>{items.map(item=><ListingCard key={item.id} item={item}/>)}</View>;
 }
