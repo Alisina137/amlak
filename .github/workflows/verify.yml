@@ -1,4 +1,4 @@
-name: Verify foundations and identity
+name: AmlakLink Quality Gate (Phases 1–7)
 on:
   push:
     branches: [main]
@@ -35,5 +35,15 @@ jobs:
       - run: pnpm install --no-frozen-lockfile
       - run: pnpm --filter @amlaklink/database migrate
       - run: pnpm check
+      - name: Pilot API startup and read-only smoke
+        run: |
+          pnpm --filter @amlaklink/api start > /tmp/amlak-api.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:4000/ready >/dev/null; then break; fi
+            sleep 1
+          done
+          pnpm pilot:smoke
       - run: pnpm --filter @amlaklink/admin build
       - run: pnpm --filter @amlaklink/mobile exec expo export --platform android --output-dir dist
