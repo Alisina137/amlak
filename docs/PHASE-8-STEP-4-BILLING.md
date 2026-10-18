@@ -13,7 +13,7 @@
 
 All money is nominal AFN for AmlakLink's own optional platform services. **No property purchase, rent, advance, gharawi payment, tenant deposit, escrow or owner payout.** No bank transfer is executed by the app.
 
-**Default `AMLAK_BILLING_ENABLED=false` stays unchanged.** This prevents issuing new platform-fee invoices. Existing authorized users can request or review corrections on already verified historical invoices; staff can independently reconcile prior payment claims. Approving a refund request alone never claims money was sent.
+**Default `AMLAK_BILLING_ENABLED=false` stays unchanged.** This now prevents issuing new platform-fee invoices, submitting new payment claims, **and confirming previously submitted payment claims** (as hardened by Final Completion Step 9). Existing authorized users can request or review corrections on already verified historical invoices; staff can reject historical claims and independently review evidence. Actual historical confirmations require the billing feature to be explicitly enabled after finance approval. Approving a refund request alone never claims money was sent.
 
 Existing subscription periods and promotions **are not silently deleted or retroactively revoked by a refund case**: an approved refund is a financial record, not yet an automated proration/entitlement cancellation. Refund conditions, access after reversal, fraud investigation, consumer rights, credit reuse and accounting obligations must be approved before live transactions.
 
