@@ -1,9 +1,8 @@
 import {router,useFocusEffect} from "expo-router";
 import {useCallback,useRef,useState} from "react";
-import {ActivityIndicator,Pressable,ScrollView,View} from "react-native";
+import {ActivityIndicator,Pressable,ScrollView} from "react-native";
 import {colors} from "@amlaklink/design-tokens";
 import {formatNumber,isRTL} from "@amlaklink/localization";
-import {leadStageLabel,uiText} from "../../src/ui-copy";
 import {useAuth} from "../../src/auth";
 import {usePreferences} from "../../src/context";
 import {inbox,fetchViewings,fetchAlerts,readAllAlerts,readAlert,displayKabul,type InquirySummary,type Viewing,type Alert} from "../../src/engagement-client";
