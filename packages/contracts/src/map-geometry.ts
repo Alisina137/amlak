@@ -31,7 +31,7 @@ export function validatePolygon(points:GeoPoint[]):GeoPoint[]{
   const n=points[(i+1)%points.length];
   return area+p.longitude*n.latitude-n.longitude*p.latitude;
  },0);
- if(Math.abs(sum)/2<0.000001)throw Error("INVALID_MAP_POLYGON");
+ if(Math.abs(sum)/2<0.00000001)throw Error("INVALID_MAP_POLYGON");
  return points;
 }
 export function parsePolygon(value:string):GeoPoint[]{
