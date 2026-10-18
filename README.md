@@ -84,3 +84,8 @@ Push stays opt-in and disabled by default. Once a **real** EAS project, FCM V1 c
 ### Final Completion Step 8: renewal automation
 
 Subscription reminders now use bounded cursor pagination and a monitored `--all` drain to prevent old first-page grants from starving newer reminders. `pnpm ops:renewals --dry-run --all` reports eligible counts without writing data; after staging sign-off, `pnpm ops:renewals --execute --all` creates deduplicated **in-app notices only**. A remaining backlog exits non-zero with a resume cursor. Paid quotas still expire exactly on schedule; the 3-day grace period does not grant premium access and existing listings are preserved. Billing remains off by default and **no automatic charges or renewals** are introduced. An external scheduler must be explicitly provisioned and monitored. See [Step 8 runbook](docs/FINAL-COMPLETION-STEP-8-SUBSCRIPTIONS.md).
+
+
+### Final Completion Step 9: billing and payment controls
+
+With `AMLAK_BILLING_ENABLED=false`, new invoices, payment claims, and staff payment confirmations are all blocked; pre-existing refunds, corrections and read-only records remain accessible. Mobile finance requests reuse stable request IDs after uncertain network outcomes. Finance staff can review internal exception indicators under Billing, but this is **not external financial reconciliation**. Run `pnpm qa:billing` and review [the Step 9 financial runbook](docs/FINAL-COMPLETION-STEP-9-BILLING.md). No property deposits or bank transfers are processed by AmlakLink; real merchant/legal approval remains outstanding.
