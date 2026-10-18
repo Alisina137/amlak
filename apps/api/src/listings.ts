@@ -1,4 +1,4 @@
-import {and,desc,eq,gt,inArray,sql} from "drizzle-orm";
+import {and,desc,eq,gt,inArray,lte,sql} from "drizzle-orm";
 import type {FastifyInstance,FastifyRequest} from "fastify";
 import {z} from "zod";
 import {type Database,schema} from "@amlaklink/database";
@@ -123,11 +123,22 @@ export function registerListingRoutes(app:FastifyInstance,db:Database){
    if(!v.success)throw new HttpProblem(422,"LISTING_VALIDATION_FAILED",JSON.stringify(v.error.issues.map(i=>({path:i.path,message:i.message}))));
    const p=await tx.select({id:schema.photos.id}).from(schema.photos).where(and(eq(schema.photos.listingId,l.id),inArray(schema.photos.id,v.data.photoIds)));
    if(p.length!==v.data.photoIds.length||new Set(v.data.photoIds).size!==p.length)throw new HttpProblem(422,"PHOTO_OWNERSHIP_MISMATCH");
-   if(!lock.approvedRevisionId&&!lock.agencyId){
-    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${actor.id}::text))`);
+   if(!lock.approvedRevisionId){
+    // Serialize each publisher's capacity to prevent over-limit concurrent submissions.
+    const key=lock.agencyId||actor.id;
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${key}::text))`);
+    const now=new Date();
+    const beneficiary=lock.agencyId?eq(schema.growthEntitlements.agencyId,lock.agencyId):
+      eq(schema.growthEntitlements.userId,actor.id);
+    const [grant]=await tx.select({limit:schema.growthEntitlements.listingLimit})
+     .from(schema.growthEntitlements).where(and(beneficiary,
+       lte(schema.growthEntitlements.startsAt,now),gt(schema.growthEntitlements.expiresAt,now)))
+     .orderBy(desc(schema.growthEntitlements.listingLimit),desc(schema.growthEntitlements.expiresAt)).limit(1);
+    const scope=lock.agencyId?eq(schema.listings.agencyId,lock.agencyId):
+      and(eq(schema.listings.authorId,actor.id),eq(schema.listings.publisher,lock.publisher));
     const [num]=await tx.select({count:sql.raw("count(*)::integer")}).from(schema.listings)
-     .where(and(eq(schema.listings.authorId,actor.id),inArray(schema.listings.status,["pending_review","published","paused"])));
-    if(Number(num?.count||0)>=3)throw new HttpProblem(409,"FREE_LISTING_LIMIT_REACHED");
+     .where(and(scope,inArray(schema.listings.status,["pending_review","published","paused"])));
+    if(Number(num?.count||0)>=(grant?.limit||3))throw new HttpProblem(409,"LISTING_PLAN_LIMIT_REACHED");
    }
    await tx.update(schema.revisions).set({status:"submitted"}).where(eq(schema.revisions.id,r.id));
    await tx.update(schema.listings).set({status:lock.approvedRevisionId?lock.status:"pending_review",updatedAt:new Date()}).where(eq(schema.listings.id,l.id));
