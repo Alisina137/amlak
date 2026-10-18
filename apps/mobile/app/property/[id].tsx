@@ -1,4 +1,5 @@
 import {useEffect,useState} from "react";
+import {requestJson} from "../../src/auth";
 import {router,useLocalSearchParams} from "expo-router";
 import {ActivityIndicator,Image,Linking,Pressable,ScrollView,Share,View} from "react-native";
 import {colors} from "@amlaklink/design-tokens";
@@ -15,11 +16,17 @@ import {Action,Label,Page,ScreenHeading,SectionCard} from "../../src/ui";
 export default function PropertyDetails(){
  const {id}=useLocalSearchParams<{id:string}>(),{locale}=usePreferences(),{isSaved,toggle}=useFavorites();
  const [data,setData]=useState<ListingDTO|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState(""),[busy,setBusy]=useState<"call"|"whatsapp"|null>(null);
+ const [authorizationReviewed,setAuthorizationReviewed]=useState(false);
  useEffect(()=>{let live=true;setLoading(true);setError("");
   void getPublic(id).then(v=>{if(live)setData(v);}).catch(()=>{if(live)setError(locale==="en"?"This property is not available.":"این ملک فعلاً قابل مشاهده نیست.");})
    .finally(()=>{if(live)setLoading(false);});
   return()=>{live=false;};
  },[id,locale]);
+ useEffect(()=>{let active=true;setAuthorizationReviewed(false);
+  void requestJson<{items:{scope:string}[]}>("/v1/properties/"+id+"/verified-checks")
+   .then(r=>{if(active)setAuthorizationReviewed(r.items.some(i=>i.scope==="listing_authorization_reviewed"));})
+   .catch(()=>{});return()=>{active=false;};
+ },[id]);
  async function contact(channel:"call"|"whatsapp"){
   if(!data?.available||data.status!=="published")return;
   setBusy(channel);setError("");
@@ -88,6 +95,7 @@ export default function PropertyDetails(){
    </SectionCard>
    <SectionCard><Label weight="bold">{dt(locale,"profile")}</Label>
     <Label muted>{kind==="agency"?dt(locale,"agencyBadge"):data.publisher==="independent_agent"?dt(locale,"proBadge"):dt(locale,"contactBadge")}</Label>
+    {authorizationReviewed?<Label style={{color:colors.primary}}>{st(locale,"verified")}</Label>:null}
     <Label muted>{dt(locale,"notOwnership")}</Label>
     <Action kind="secondary" label={dt(locale,"profile")} onPress={()=>router.push({pathname:"/advertiser/[kind]/[id]",params:{kind,id:profileId}})}/>
    </SectionCard>
