@@ -33,6 +33,7 @@
     "qa:network": "node --test scripts/test-final-network.mjs",
     "qa:renewals": "node --test scripts/test-final-subscriptions.mjs",
     "qa:billing": "node --test scripts/test-final-billing.mjs",
-    "qa:release": "node scripts/phase8-release-gate.mjs --release"
+    "qa:release": "node scripts/phase8-release-gate.mjs --release",
+    "qa:android-e2e": "node --test scripts/test-final-android-e2e.mjs"
   }
 }
