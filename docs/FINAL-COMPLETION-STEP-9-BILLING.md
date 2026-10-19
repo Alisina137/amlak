@@ -35,3 +35,9 @@ No new SQL migration was added in Step 9. The earlier `0010_billing_controls.sql
 Use staging accounts and test the full paid claim, approval, rejection, refund, adjustment and audit sequence. Validate duplicate attempts, concurrency, finance-role permissions, EAS notification privacy and three-language interfaces. Review local merchant, refund, accounting, tax, privacy and retention policies with appropriately authorized professionals. Actual provider account statements, payout proof and physical Android tests have not been verified by this GitHub change.
 
 **Release remains blocked** until independent real-world finance/legal acceptance. Leave billing disabled until approval.
+
+### Additional Step 9 exception checks
+
+The read-only staff exception report now also flags (with at most 50 invoice/entitlement IDs per category) confirmed platform invoices whose stored AFN amount no longer matches the configured product catalog, and entitlement rows linked to an invoice that is not confirmed. These checks detect internal consistency problems only; they do not prove a bank transfer, authorize a refund, or automatically change financial records. Investigate every finding against independent external evidence before making a manual, audited correction.
+
+Run `pnpm qa:billing` and `pnpm check` after pulling. Existing migration `0010_billing_controls.sql` is still required; this change introduces no migration.
