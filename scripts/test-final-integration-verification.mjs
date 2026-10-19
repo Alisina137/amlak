@@ -55,6 +55,7 @@ test("CI runs isolated database migrations, workspace checks, QA, API smoke, adm
     "Migration rerun safety",
     "pnpm db:integrity",
     "pnpm check",
+    "pnpm qa:integration-verification",
     "pnpm qa:phase8",
     "pnpm qa:ui",
     "pnpm qa:network",
