@@ -7,7 +7,7 @@
     "node": ">=22.13.0"
   },
   "scripts": {
-    "dev:api": "pnpm --filter @amlaklink/api dev",
+    "dev:api": "node scripts/dev-api-with-ngrok.mjs",
     "dev:mobile": "pnpm --filter @amlaklink/mobile start",
     "dev:mobile:push": "pnpm --filter @amlaklink/mobile start:dev-client",
     "dev:admin": "pnpm --filter @amlaklink/admin dev",
