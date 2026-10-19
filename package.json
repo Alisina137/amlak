@@ -36,6 +36,7 @@
     "qa:release": "node scripts/phase8-release-gate.mjs --release",
     "qa:android-e2e": "node --test scripts/test-final-android-e2e.mjs",
     "qa:kabul-pilot": "node --test scripts/test-final-kabul-pilot.mjs",
-    "qa:production-readiness": "node --test scripts/test-final-production-readiness.mjs"
+    "qa:production-readiness": "node --test scripts/test-final-production-readiness.mjs",
+    "qa:integration-verification": "node --test scripts/test-final-integration-verification.mjs"
   }
 }
