@@ -4,7 +4,7 @@ import {z} from "zod";
 import {type Database,schema} from "@amlaklink/database";
 import {HttpProblem,requireActor,requireStaffRole,requireVerified} from "./access";
 import {validId} from "./listings";
-import {referenceHash} from "./billing";
+import {PRODUCTS,referenceHash,type ProductCode} from "./billing";
 
 const requestAdjustment=z.object({requestId:z.uuid(),kind:z.enum(["refund","credit"]),
  amountAfn:z.number().int().positive().max(1_000_000),
@@ -118,7 +118,7 @@ export function registerBillingControlRoutes(app:FastifyInstance,db:Database){
  app.get("/v1/admin/billing/exceptions",async request=>{
   const actor=await requireActor(db,request,"staff");requireStaffRole(actor,permissions);
   const [withoutClaim,incompleteClaims,missingEntitlements,missingPromotions,
-   incompleteRefunds]=await Promise.all([
+   incompleteRefunds,priceMismatches,orphanEntitlements]=await Promise.all([
    db.select({id:schema.growthInvoices.id}).from(schema.growthInvoices)
     .leftJoin(schema.paymentClaims,and(
      eq(schema.paymentClaims.invoiceId,schema.growthInvoices.id),
@@ -150,14 +150,27 @@ export function registerBillingControlRoutes(app:FastifyInstance,db:Database){
       isNull(schema.billingAdjustments.settledAt),
       isNull(schema.billingAdjustments.settlementReferenceHash),
       isNull(schema.billingAdjustments.settlementMethod))))
-    .limit(50)
+    .limit(50),
+   db.select({id:schema.growthInvoices.id}).from(schema.growthInvoices)
+    .where(and(eq(schema.growthInvoices.status,"confirmed"),
+     sql`(
+      (${schema.growthInvoices.productCode}='solo_agent' AND ${schema.growthInvoices.amountAfn}<>${PRODUCTS.solo_agent.amountAfn}) OR
+      (${schema.growthInvoices.productCode}='agency_standard' AND ${schema.growthInvoices.amountAfn}<>${PRODUCTS.agency_standard.amountAfn}) OR
+      (${schema.growthInvoices.productCode}='agency_growth' AND ${schema.growthInvoices.amountAfn}<>${PRODUCTS.agency_growth.amountAfn}) OR
+      (${schema.growthInvoices.productCode}='featured_7d' AND ${schema.growthInvoices.amountAfn}<>${PRODUCTS.featured_7d.amountAfn})
+     )`)).limit(50),
+   db.select({id:schema.growthEntitlements.id}).from(schema.growthEntitlements)
+    .innerJoin(schema.growthInvoices,eq(schema.growthEntitlements.invoiceId,schema.growthInvoices.id))
+    .where(ne(schema.growthInvoices.status,"confirmed")).limit(50)
   ]);
   const categories={
    confirmedInvoiceWithoutConfirmedClaim:withoutClaim.map(x=>x.id),
    confirmedClaimWithIncompleteEvidence:incompleteClaims.map(x=>x.id),
    confirmedPlanWithoutEntitlement:missingEntitlements.map(x=>x.id),
    confirmedPromotionWithoutPlacement:missingPromotions.map(x=>x.id),
-   refundWithoutSettlementEvidence:incompleteRefunds.map(x=>x.id)
+   refundWithoutSettlementEvidence:incompleteRefunds.map(x=>x.id),
+   confirmedInvoiceWithUnexpectedAmount:priceMismatches.map(x=>x.id),
+   entitlementWithoutConfirmedInvoice:orphanEntitlements.map(x=>x.id)
   };
   const counts=Object.fromEntries(Object.entries(categories).map(([key,ids])=>[key,ids.length]));
   return {passed:Object.values(counts).every(n=>n===0),counts,categories,
