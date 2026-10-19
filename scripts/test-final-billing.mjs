@@ -26,6 +26,10 @@ test("refund and adjustment records still require authorization and audit",()=>{
  assert.match(s,/confirmedInvoiceWithoutConfirmedClaim/);
  assert.match(s,/confirmedClaimWithIncompleteEvidence/);
  assert.match(s,/refundWithoutSettlementEvidence/);
+ assert.match(s,/confirmedInvoiceWithUnexpectedAmount/);
+ assert.match(s,/entitlementWithoutConfirmedInvoice/);
+ assert.match(s,/PRODUCTS\.agency_growth\.amountAfn/);
+ assert.match(s,/readOnly:true/);
 });
 test("network retries reuse payment and refund request identities",()=>{
  const billing=file("apps/mobile/src/billing-ui.tsx");
