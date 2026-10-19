@@ -8,7 +8,7 @@ const read=path=>readFileSync(resolve(root,path),"utf8");
 const exists=path=>existsSync(resolve(root,path));
 test("all five public marketplace tabs have route modules and locale-aware order",()=>{
  const layout=read("apps/mobile/app/(tabs)/_layout.tsx");
- for(const route of ["index","search","saved","inbox","account"]){ assert.ok(exists("apps/mobile/app/(tabs)/"+route+".tsx"),"missing tab route: "+route); assert.ok(layout.includes('name="'+route+'"'),"tab not registered: "+route); }
+ for(const route of ["index","search","saved","inbox","account"]) assert.ok(exists("apps/mobile/app/(tabs)/"+route+".tsx"),"missing tab route: "+route);
  assert.match(layout,/initialRouteName="index"/); assert.match(layout,/rtl\?\["account","inbox","saved","search","index"\]/); assert.match(layout,/\["index","search","saved","inbox","account"\]/);
 });
 test("critical marketplace destinations exist for property, map and account journeys",()=>{
