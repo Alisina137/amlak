@@ -39,6 +39,8 @@ jobs:
       - name: Read-only database integrity query smoke
         run: pnpm db:integrity
       - run: pnpm check
+      - name: Final integration verification contracts
+        run: pnpm qa:integration-verification
       - name: Phase 8 automated QA guard (not production approval)
         run: pnpm qa:phase8
       - name: Trilingual RTL/LTR static UI contracts (not device approval)
