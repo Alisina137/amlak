@@ -4,7 +4,7 @@ import {z} from "zod";
 import {type Database,schema} from "@amlaklink/database";
 import {HttpProblem,requireActor,requireStaffRole,requireVerified} from "./access";
 import {validId} from "./listings";
-import {PRODUCTS,referenceHash,type ProductCode} from "./billing";
+import {PRODUCTS,referenceHash} from "./billing";
 
 const requestAdjustment=z.object({requestId:z.uuid(),kind:z.enum(["refund","credit"]),
  amountAfn:z.number().int().positive().max(1_000_000),
