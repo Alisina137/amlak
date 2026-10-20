@@ -29,7 +29,7 @@
     "ops:media:audit": "pnpm --filter @amlaklink/api ops:media:audit",
     "pilot:smoke": "node scripts/pilot-smoke.mjs",
     "qa:phase8": "node --test scripts/test-phase8-release-gate.mjs && node scripts/phase8-release-gate.mjs --ci",
-    "qa:ui": "node --test scripts/test-final-rtl-ui.mjs scripts/test-group-a-foundation.mjs scripts/test-group-b-discovery.mjs scripts/test-group-c-property.mjs scripts/test-group-d-saved.mjs scripts/test-group-e-inbox.mjs scripts/test-group-f-account.mjs scripts/test-group-g-owner.mjs",
+    "qa:ui": "node --test scripts/test-final-rtl-ui.mjs scripts/test-group-a-foundation.mjs scripts/test-group-b-discovery.mjs scripts/test-group-c-property.mjs scripts/test-group-d-saved.mjs scripts/test-group-e-inbox.mjs scripts/test-group-f-account.mjs scripts/test-group-g-owner.mjs scripts/test-group-h-final.mjs",
     "qa:network": "node --test scripts/test-final-network.mjs",
     "qa:renewals": "node --test scripts/test-final-subscriptions.mjs",
     "qa:billing": "node --test scripts/test-final-billing.mjs",
@@ -37,6 +37,7 @@
     "qa:android-e2e": "node --test scripts/test-final-android-e2e.mjs",
     "qa:kabul-pilot": "node --test scripts/test-final-kabul-pilot.mjs",
     "qa:production-readiness": "node --test scripts/test-final-production-readiness.mjs",
-    "qa:integration-verification": "node --test scripts/test-final-integration-verification.mjs"
+    "qa:integration-verification": "node --test scripts/test-final-integration-verification.mjs",
+    "qa:groupH": "node --test scripts/test-group-h-final.mjs && pnpm qa:network && pnpm qa:integration-verification"
   }
 }

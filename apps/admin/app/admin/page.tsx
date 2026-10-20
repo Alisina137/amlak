@@ -2,22 +2,41 @@ import {redirect} from "next/navigation";
 import Link from "next/link";
 import {getStaff} from "../../lib/staff";
 import {LogoutButton} from "./signout";
+import {StaffNav} from "./staff-nav";
+const cards=[
+ {href:"/admin/listings",label:"آگهی‌های ملک",desc:"بررسی نسخه‌های پیشنهادی، عکس‌ها و دلایل تصمیم",roles:["moderator","admin","super_admin"]},
+ {href:"/admin/agencies",label:"دفترهای رهنمای معاملات",desc:"صف بررسی درخواست‌های دفتر",roles:["verification","admin","super_admin"]},
+ {href:"/admin/agents",label:"رهنماهای مستقل",desc:"بررسی هویت و درخواست‌های حرفه‌ای",roles:["verification","admin","super_admin"]},
+ {href:"/admin/safety",label:"ایمنی و اعتراض‌ها",desc:"گزارش‌ها، بررسی‌ها و پرونده‌های ایمنی",roles:["moderator","support","verification","admin","super_admin"]},
+ {href:"/admin/support",label:"پشتیبانی کاربران",desc:"گفتگوهای خصوصی و رسیدگی به شکایت‌ها",roles:["support","admin","super_admin"]},
+ {href:"/admin/billing",label:"بررسی پرداخت خدمات",desc:"ادعاهای پرداخت خدمات پلتفرم و وضعیت فاکتورها",roles:["billing","admin","super_admin"]},
+ {href:"/admin/pilot",label:"عملیات و آمادگی آزمایشی",desc:"شاخص‌ها، سلامت سیستم و بررسی پیش از نشر",roles:["moderator","support","verification","admin","super_admin"]}
+] as const;
 export default async function AdminHome(){
  const staff=await getStaff();if(!staff)redirect("/admin/login");
  return <main className="admin-workspace" dir="rtl">
-  <header><h1>املاک لینک — مدیریت</h1><p>{staff.displayName} · {staff.role}</p><LogoutButton/></header>
-  <section className="admin-card"><h2>مرکز کاری کارمندان</h2>
-   {["moderator","support","verification","admin","super_admin"].includes(staff.role)?<p><Link href="/admin/pilot">شاخص‌های آزمایشی و تازه‌سازی موجودی ←</Link></p>:null}<p>ورود دو مرحله‌ای و نقش کارمند بررسی شده است.</p>
-   {["moderator","admin","super_admin"].includes(staff.role)?<p><Link href="/admin/listings">صف بررسی آگهی‌های ملک ←</Link></p>:null}
-   {["verification","admin","super_admin"].includes(staff.role)?
-    <div style={{display:"flex",gap:24,flexWrap:"wrap"}}><Link href="/admin/agencies">بررسی درخواست‌های ثبت دفتر ←</Link><Link href="/admin/agents">درخواست‌های رهنمای معاملات مستقل ←</Link></div>:
-    <p>ماژول‌های بیشتر طبق صلاحیت شما در مراحل بعدی فعال می‌شوند.</p>}
-  {["moderator","support","verification","admin","super_admin"].includes(staff.role)?
-    <p><Link href="/admin/safety">ایمنی، گزارش‌ها، اعتراض و تأیید اسناد ←</Link></p>:null}
-   {["billing","admin","super_admin"].includes(staff.role)?
-    <p><Link href="/admin/billing">پرداخت خدمات و بررسی فاکتورها ←</Link></p>:null}
-   {["support","admin","super_admin"].includes(staff.role)?
-    <p><Link href="/admin/support">پشتیبانی و درخواست‌های کاربران ←</Link></p>:null}
-  </section>
+  <StaffNav role={staff.role}/>
+  <div className="admin-main-content">
+   <header className="admin-dashboard-header">
+    <div><span className="staff-kicker">AMLAKLINK / STAFF</span><h1>مرکز مدیریت املاک لینک</h1>
+     <p>{staff.displayName} · {staff.role.replaceAll("_"," ")}</p></div>
+    <LogoutButton/>
+   </header>
+   <section className="admin-card">
+    <h2>بخش‌های کاری شما</h2>
+    <p>هر بخش براساس صلاحیت حساب کارمند قابل دسترسی است. تصمیم‌های نشر، تأیید و پرداخت در سرور بررسی می‌شوند.</p>
+    <div className="admin-quick-grid">
+     {cards.filter(card=>(card.roles as readonly string[]).includes(staff.role)).map(card=><Link
+      className="admin-quick-link" href={card.href} key={card.href}>
+      <strong>{card.label}</strong><span>{card.desc}</span><b aria-hidden>‹</b>
+     </Link>)}
+    </div>
+   </section>
+   <section className="admin-card staff-guidance">
+    <h2>روند بررسی</h2>
+    <p>ورود دومرحله‌ای فعال است. تأیید حرفه‌ای یا آگهی، سند قانونی ملک یا معاملات خارج از برنامه را تضمین نمی‌کند.
+     پیش از نشر عمومی باید بررسی عملی دستگاه‌ها، امنیت، نسخهٔ پشتیبان و آمادگی خدمات انجام شود.</p>
+   </section>
+  </div>
  </main>;
 }

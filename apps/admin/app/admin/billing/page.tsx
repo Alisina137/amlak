@@ -1,3 +1,4 @@
+import {StaffNav} from "../staff-nav";
 import Link from "next/link";
 import {redirect} from "next/navigation";
 import {getStaff} from "../../../lib/staff";
@@ -8,10 +9,13 @@ export default async function BillingAdmin(){
  if(!staff)redirect("/admin/login");
  if(!["billing","admin","super_admin"].includes(staff.role))redirect("/admin");
  return <main className="admin-workspace" dir="rtl">
+  <StaffNav role={staff.role}/>
+  <div className="admin-main-content">
   <Link href="/admin">→ بازگشت به مدیریت</Link>
   <h1>بررسی پرداخت خدمات املاک لینک</h1>
   <p>تنها پرداخت حق اشتراک و تبلیغات پلتفرم را با مدارک مستقل تطبیق دهید؛ این سیستم پول ملک، کرایه، گروی یا سند مالکیت را تأیید نمی‌کند.</p>
   <BillingPanel/>
   <BillingAdjustmentsPanel/>
+  </div>
  </main>;
 }

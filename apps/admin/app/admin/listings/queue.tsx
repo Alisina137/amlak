@@ -16,6 +16,12 @@ const roomNames:Record<string,string>={
 export function ListingQueue(){
  const [items,setItems]=useState<Listing[]>([]),[loading,setLoading]=useState(true),[error,setError]=useState("");
  const [reasons,setReasons]=useState<Record<string,string>>({}),[working,setWorking]=useState<string|null>(null);
+ const [search,setSearch]=useState(""),[filter,setFilter]=useState<"all"|"new"|"revision">("all");
+ const visible=items.filter(item=>{
+  const text=[item.data.title,item.data.location.city,item.data.location.provinceId,item.data.propertyType].join(" ").toLocaleLowerCase();
+  return text.includes(search.trim().toLocaleLowerCase())&&
+   (filter==="all"||filter==="new"&&!item.approvedRevisionId||filter==="revision"&&!!item.approvedRevisionId);
+ });
  const load=useCallback(async()=>{
   setLoading(true);setError("");
   try{
@@ -27,6 +33,8 @@ export function ListingQueue(){
  },[]);
  useEffect(()=>{void load();},[load]);
  async function decide(item:Listing,decision:"approve"|"reject"){
+  if(working||loading||(reasons[item.id]||"").trim().length<8)return;
+  if(!window.confirm(decision==="approve"?"این نسخه با دلیل ثبت‌شده تأیید و نشر شود؟":"این نسخه با دلیل ثبت‌شده رد شود؟"))return;
   setWorking(item.id);setError("");
   try{
    const response=await fetch("/api/listings/"+encodeURIComponent(item.id)+"/decision",{
@@ -39,10 +47,20 @@ export function ListingQueue(){
   finally{setWorking(null);}
  }
  return <section className="admin-card">
-  <button type="button" className="admin-button secondary" onClick={()=>void load()} disabled={loading}>تازه‌سازی صف</button>
+  <div className="admin-queue-tools">
+   <label htmlFor="listing-search">جستجوی عنوان، ولایت یا نوع ملک</label>
+   <input id="listing-search" type="search" value={search} onChange={e=>setSearch(e.target.value)}
+    placeholder="جستجوی آگهی‌های در انتظار"/>
+   <label htmlFor="listing-filter">نوع بررسی</label>
+   <select id="listing-filter" value={filter} onChange={e=>setFilter(e.target.value as typeof filter)}>
+    <option value="all">همه</option><option value="new">نشر نخست</option><option value="revision">اصلاح نسخهٔ نشرشده</option>
+   </select>
+   <button type="button" className="admin-button secondary" onClick={()=>void load()} disabled={loading}>تازه‌سازی صف</button>
+  </div>
+  <p aria-live="polite">{visible.length.toLocaleString("fa-AF")} / {items.length.toLocaleString("fa-AF")} آگهی</p>
   {error?<p role="alert">{error}</p>:null}
   {loading?<p>در حال بارگیری آگهی‌ها…</p>:items.length===0?<p>هیچ آگهی معطل بررسی نیست.</p>:null}
-  {items.map(item=><article className="agency-review" key={item.revisionId}>
+  {visible.map(item=><article className="agency-review" key={item.revisionId}>
    <h2>{item.data.title||"بدون عنوان"}</h2>
    <p>{item.data.transactionType} · {item.data.propertyType} · {item.data.location.city} / {item.data.location.district} · {item.data.location.provinceId}</p>
    <p>شماره نسخه: {item.version} · {item.approvedRevisionId?"اصلاح نسخهٔ نشرشده":"نشر نخست"}</p>
@@ -63,8 +81,8 @@ export function ListingQueue(){
    <label htmlFor={"reason-"+item.id}>دلیل تصمیم (حداقل ۸ حرف)</label>
    <textarea id={"reason-"+item.id} maxLength={500} value={reasons[item.id]||""} onChange={e=>setReasons(p=>({...p,[item.id]:e.target.value}))}/>
    <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
-    <button className="admin-button" type="button" disabled={working===item.id||(reasons[item.id]||"").trim().length<8} onClick={()=>void decide(item,"approve")}>تأیید و نشر</button>
-    <button className="admin-button secondary" type="button" disabled={working===item.id||(reasons[item.id]||"").trim().length<8} onClick={()=>void decide(item,"reject")}>رد با دلیل</button>
+    <button className="admin-button" type="button" disabled={!!working||loading||(reasons[item.id]||"").trim().length<8} onClick={()=>void decide(item,"approve")}>تأیید و نشر</button>
+    <button className="admin-button secondary" type="button" disabled={!!working||loading||(reasons[item.id]||"").trim().length<8} onClick={()=>void decide(item,"reject")}>رد با دلیل</button>
    </div>
   </article>)}
  </section>;

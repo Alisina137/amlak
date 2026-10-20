@@ -1,45 +1,62 @@
 import {router,useFocusEffect,useLocalSearchParams} from "expo-router";
-import {useCallback,useMemo,useState} from "react";
-import {Pressable,ScrollView} from "react-native";
-import {colors} from "@amlaklink/design-tokens";
+import {useCallback,useMemo,useRef,useState} from "react";
+import {View} from "react-native";
 import {formatNumber,isRTL} from "@amlaklink/localization";
-import {leadStageLabel,uiText} from "../../../src/ui-copy";
+import {leadStageLabel} from "../../../src/ui-copy";
 import {useAuth} from "../../../src/auth";
 import {usePreferences} from "../../../src/context";
 import {displayKabul,inbox,type InquirySummary} from "../../../src/engagement-client";
-import {et} from "../../../src/engagement-copy";
-import {Action,BackButton,Label,Page,ScreenHeading,SectionCard} from "../../../src/ui";
+import {ag} from "../../../src/agency-experience";
+import {Action,AppInput,BackButton,FilterChip,Label,Page,ScreenHeading,SectionCard,LoadingCard,StateNotice,StatusBadge} from "../../../src/ui";
+type Stage="all"|"unassigned"|"new"|"contacted"|"viewing"|"negotiating"|"won"|"lost";
 export default function AgencyLeads(){
- const {id}=useLocalSearchParams<{id:string}>(),{token}=useAuth(),{locale}=usePreferences();
- const [items,setItems]=useState<InquirySummary[]>([]),[tab,setTab]=useState<"all"|"unassigned"|"new"|"viewing">("all"),[loading,setLoading]=useState(true),[error,setError]=useState("");
+ const {id}=useLocalSearchParams<{id:string}>(),{token}=useAuth(),{locale}=usePreferences(),rtl=isRTL(locale);
+ const [snapshot,setSnapshot]=useState<{scope:string;items:InquirySummary[]}>({scope:"",items:[]});
+ const scope=token+":"+id,items=snapshot.scope===scope?snapshot.items:[];
+ const [stage,setStage]=useState<Stage>("all"),[query,setQuery]=useState(""),[busy,setBusy]=useState(false),[error,setError]=useState("");
+ const epoch=useRef(0),scopeRef=useRef(scope);scopeRef.current=scope;
  const load=useCallback(async()=>{
-  if(!token)return;
-  setLoading(true);setError("");
-  try{const result=await inbox(token);setItems(result.items.filter(i=>i.agencyId===id&&i.side==="advertiser"));}
-  catch(e){setError((e as Error).message||et(locale,"unknown"));}finally{setLoading(false);}
- },[token,id,locale]);
- useFocusEffect(useCallback(()=>{void load();},[load]));
- const filtered=useMemo(()=>items.filter(i=>tab==="all"||tab==="unassigned"&&!i.assignedTo||
-  tab==="new"&&i.leadStatus==="new"||tab==="viewing"&&i.leadStatus==="viewing"),[items,tab]);
+  const version=++epoch.current;
+  if(!token){setSnapshot({scope,items:[]});setBusy(false);return;}
+  setBusy(true);setError("");
+  try{
+   const result=await inbox(token);
+   if(version===epoch.current&&scopeRef.current===scope)
+    setSnapshot({scope,items:result.items.filter(i=>i.agencyId===id&&i.side==="advertiser")});
+  }catch{if(version===epoch.current&&scopeRef.current===scope)setError(ag(locale,"error"));}
+  finally{if(version===epoch.current&&scopeRef.current===scope)setBusy(false);}
+ },[token,id,locale,scope]);
+ useFocusEffect(useCallback(()=>{void load();return()=>{epoch.current++;};},[load]));
+ const filtered=useMemo(()=>items.filter(item=>{
+  const stageMatch=stage==="all"||stage==="unassigned"&&!item.assignedTo||item.leadStatus===stage;
+  return stageMatch&&item.title.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase());
+ }),[items,stage,query]);
+ const label=(value:Stage)=>value==="all"?ag(locale,"all"):value==="unassigned"?ag(locale,"unassigned"):leadStageLabel(locale,value);
+ const stages:Stage[]=["all","unassigned","new","contacted","viewing","negotiating","won","lost"];
  return <Page>
   <BackButton onPress={()=>router.back()}/>
-  <ScreenHeading title={uiText(locale,"agencyLeads")} subtitle={locale==="en"?"Only inquiries in your active agency are visible.":locale==="fa"?"تنها درخواست‌های دفتر فعال شما قابل مشاهده‌اند.":"یوازې ستاسو د فعال دفتر غوښتنې ښکاري."}/>
-  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{flexDirection:isRTL(locale)?"row-reverse":"row",gap:8,paddingVertical:3}}>
-   {(["all","unassigned","new","viewing"] as const).map(k=><Pressable key={k} accessibilityRole="tab" accessibilityState={{selected:tab===k}}
-    onPress={()=>setTab(k)} style={{paddingHorizontal:12,minHeight:44,justifyContent:"center",borderWidth:1,borderRadius:14,
-     borderColor:tab===k?colors.primary:colors.border,backgroundColor:tab===k?"#e3f0e9":colors.surface}}>
-    <Label>{k==="all"?(locale==="en"?"All":locale==="fa"?"همه":"ټول"):k==="unassigned"?et(locale,"unassigned"):k==="new"?et(locale,"new"):et(locale,"viewings")}</Label>
-   </Pressable>)}
-  </ScrollView>
-  <Label muted>{formatNumber(filtered.length,locale)} · {et(locale,"lead")}</Label>
-  {loading?<SectionCard><Label muted>…</Label></SectionCard>:null}
-  {error?<SectionCard><Label style={{color:colors.error}}>{error}</Label></SectionCard>:null}
-  {!loading&&filtered.length===0?<SectionCard><Label muted>{et(locale,"empty")}</Label></SectionCard>:null}
-  {filtered.map(item=><SectionCard key={item.id}>
-   <Label weight="bold">{item.title}</Label>
-   <Label muted>{leadStageLabel(locale,item.leadStatus)} · {item.assignedTo?et(locale,"assignee"):et(locale,"unassigned")} · {displayKabul(item.lastMessageAt,locale)}</Label>
-   <Action label={et(locale,"open")} onPress={()=>router.push({pathname:"/inquiries/[id]",params:{id:item.id}})}/>
+  <ScreenHeading title={ag(locale,"leads")} subtitle={ag(locale,"analytics")}/>
+  <AppInput accessibilityLabel={ag(locale,"search")} placeholder={ag(locale,"search")} value={query} onChangeText={setQuery}/>
+  <View style={{flexDirection:rtl?"row-reverse":"row",gap:7,flexWrap:"wrap"}}>
+   {stages.map(value=><FilterChip key={value} label={label(value)}
+    selected={stage===value} onPress={()=>setStage(value)}/>)}
+  </View>
+  <Label muted style={{fontSize:12}}>{formatNumber(filtered.length,locale)} / {formatNumber(items.length,locale)} {ag(locale,"leads")}</Label>
+  {busy?<LoadingCard rows={3}/>:null}
+  {error?<StateNotice message={error} retryLabel={ag(locale,"retry")} onRetry={()=>void load()}/>:null}
+  {!busy&&filtered.length===0?<SectionCard><Label muted>{ag(locale,"empty")}</Label></SectionCard>:null}
+  {!busy&&filtered.map(item=><SectionCard key={item.id}>
+   <Label weight="bold" style={{fontSize:16}}>{item.title}</Label>
+   <View style={{flexDirection:rtl?"row-reverse":"row",gap:8,flexWrap:"wrap"}}>
+    <StatusBadge label={leadStageLabel(locale,item.leadStatus)}
+     tone={["new","contacted"].includes(item.leadStatus)?"warning":"neutral"}/>
+    <StatusBadge label={item.assignedTo?ag(locale,"assigned"):ag(locale,"unassigned")}/>
+   </View>
+   <Label muted style={{fontSize:12}}>{ag(locale,"recent")}: {displayKabul(item.lastMessageAt,locale)}</Label>
+   <Action label={ag(locale,"open")} onPress={()=>router.push({pathname:"/inquiries/[id]",params:{id:item.id}})}/>
   </SectionCard>)}
-  <Action kind="secondary" label={et(locale,"refresh")} onPress={()=>void load()}/>
+  <Action kind="secondary" label={ag(locale,"refresh")} disabled={busy} onPress={()=>void load()}/>
+  <Action kind="secondary" label={ag(locale,"performance")}
+   onPress={()=>router.push({pathname:"/agency/[id]/performance",params:{id}})}/>
  </Page>;
 }
