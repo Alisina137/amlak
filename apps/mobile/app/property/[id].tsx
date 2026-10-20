@@ -16,16 +16,23 @@ import {lt,priceSummary} from "../../src/listing-ui";
 import {PropertyGallery} from "../../src/property-gallery";
 import {Action,BackButton,Label,Page,ScreenHeading,SectionCard,LoadingCard,StateNotice,StatusBadge} from "../../src/ui";
 import {localeDate} from "../../src/foundation-copy";
-import {isRTL} from "@amlaklink/localization";
+import {formatNumber,isRTL} from "@amlaklink/localization";
+const detailCopy={
+ en:{location:"Location",details:"Property details",description:"Description",available:"Availability",checked:"Availability checked",price:"Price overview",area:"Area",beds:"Bedrooms",baths:"Bathrooms",yes:"Yes",no:"No",features:"Features",months:"months",viewing:"Request a viewing",photos:"Photos",retry:"Try again",notFound:"This listing could not be loaded.",updated:"Listing information",about:"About the advertiser",noAddress:"Precise address is shared only with permission",noDescription:"No description provided.",month:"Monthly",safe:"Only contact through methods enabled by the advertiser"},
+ fa:{location:"موقعیت",details:"مشخصات ملک",description:"توضیحات",available:"موجودیت",checked:"آخرین تأیید موجودی",price:"جزئیات قیمت",area:"مساحت",beds:"اتاق خواب",baths:"حمام",yes:"بلی",no:"نخیر",features:"امکانات",months:"ماه",viewing:"درخواست بازدید",photos:"تصاویر",retry:"تلاش دوباره",notFound:"بارگذاری این آگهی ممکن نشد.",updated:"اطلاعات آگهی",about:"درباره آگهی‌دهنده",noAddress:"آدرس دقیق تنها با اجازه شریک می‌شود",noDescription:"توضیحی ثبت نشده است.",month:"ماهانه",safe:"تنها از روش‌های تماس مجاز آگهی‌دهنده استفاده کنید"},
+ ps:{location:"موقعیت",details:"د ملک ځانګړنې",description:"تفصیل",available:"شتون",checked:"د شتون وروستی تایید",price:"د بیې جزییات",area:"مساحت",beds:"د خوب خونې",baths:"تشنابونه",yes:"هو",no:"نه",features:"اسانتیاوې",months:"میاشتې",viewing:"د لیدنې غوښتنه",photos:"انځورونه",retry:"بیا هڅه",notFound:"دا اعلان پورته نه شو.",updated:"د اعلان معلومات",about:"د اعلان ورکوونکي په اړه",noAddress:"کره پته یوازې په اجازه شریکېږي",noDescription:"تفصیل نه دی ورکړل شوی.",month:"میاشتنی",safe:"یوازې د اعلان ورکوونکي له اجازې سره سم اړیکه ونیسئ"}
+} as const;
+function InfoMetric({label,value}:{label:string;value:string}){return <View style={{flexGrow:1,flexBasis:"29%",minWidth:90,gap:3,padding:10,borderWidth:1,borderColor:colors.border,borderRadius:12,backgroundColor:colors.background}}><Label muted style={{fontSize:12,lineHeight:18}}>{label}</Label><Label weight="bold" style={{fontSize:15,lineHeight:23}}>{value}</Label></View>;}
+
 export default function PropertyDetails(){
  const {id}=useLocalSearchParams<{id:string}>(),{locale}=usePreferences(),{isSaved,toggle}=useFavorites();
- const [data,setData]=useState<ListingDTO|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState(""),[busy,setBusy]=useState<"call"|"whatsapp"|null>(null);
+ const [data,setData]=useState<ListingDTO|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState(""),[busy,setBusy]=useState<"call"|"whatsapp"|null>(null),[retry,setRetry]=useState(0);
  const [authorizationReviewed,setAuthorizationReviewed]=useState(false);
  useEffect(()=>{let live=true;setLoading(true);setError("");
   void getPublic(id).then(v=>{if(live){setData(v);if(v.status==="published")void markRecentlyViewed(v.id).catch(()=>{});}}).catch(()=>{if(live)setError(locale==="en"?"This property is not available.":"این ملک فعلاً قابل مشاهده نیست.");})
    .finally(()=>{if(live)setLoading(false);});
   return()=>{live=false;};
- },[id,locale]);
+ },[id,locale,retry]);
  useEffect(()=>{let active=true;setAuthorizationReviewed(false);
   void requestJson<{items:{scope:string}[]}>("/v1/properties/"+id+"/verified-checks")
    .then(r=>{if(active)setAuthorizationReviewed(r.items.some(i=>i.scope==="listing_authorization_reviewed"));})
@@ -48,10 +55,12 @@ export default function PropertyDetails(){
   catch{setError(dt(locale,"unknown"));}
  }
  if(loading)return <Page><LoadingCard withImage rows={4}/><LoadingCard rows={3}/></Page>;
- if(!data)return <Page><BackButton onPress={()=>router.back()}/><StateNotice message={error||"—"}/></Page>;
- const d=data.data,p=d.price,a=d.attributes,canContact=!!data.available&&data.status==="published";
+ if(!data)return <Page><BackButton onPress={()=>router.back()}/><StateNotice message={error||detailCopy[locale].notFound} retryLabel={detailCopy[locale].retry} onRetry={()=>setRetry(v=>v+1)}/></Page>;
+ const d=data.data,p=d.price,a=d.attributes,canContact=!!data.available&&data.status==="published",copy=detailCopy[locale];
  const cash=(amount:number|undefined)=>amount===undefined?"—":new Intl.NumberFormat(locale==="en"?"en-US":"fa-AF").format(amount)+" "+p.currency;
  const profileId=advertiserId(data),kind=advertiserKind(data);
+ const location=[findProvince(d.location.provinceId)?.names[locale],d.location.city,d.location.district,d.location.neighborhood].filter(Boolean).join(" · ");
+ const features=[a.furnished!==undefined?dt(locale,"furnished")+": "+(a.furnished?copy.yes:copy.no):null,a.parking!==undefined?dt(locale,"parking")+": "+(a.parking?copy.yes:copy.no):null].filter((v):v is string=>!!v);
  return <View style={{flex:1,backgroundColor:colors.background}}>
   <Page>
    <View style={{flexDirection:isRTL(locale)?"row-reverse":"row",justifyContent:"space-between",alignItems:"center"}}>
@@ -65,43 +74,58 @@ export default function PropertyDetails(){
     </View>
    </View>
    <PropertyGallery photos={data.photos} title={d.title}/>
-   <ScreenHeading title={d.title} subtitle={lt(locale,d.transactionType)+" · "+lt(locale,d.propertyType)}/>
-   <StatusBadge tone={canContact?"success":"warning"} label={canContact?dt(locale,"active"):dt(locale,"unavailable")}/>
+   <View style={{gap:10}}>
+    <View style={{flexDirection:isRTL(locale)?"row-reverse":"row",gap:8,flexWrap:"wrap"}}>
+     <StatusBadge label={lt(locale,d.transactionType)+" · "+lt(locale,d.propertyType)}/>
+     <StatusBadge tone={canContact?"success":"warning"} label={canContact?dt(locale,"active"):dt(locale,"unavailable")}/>
+    </View>
+    <ScreenHeading title={d.title} subtitle={location||copy.noAddress}/>
+   </View>
    <SectionCard>
-    <Label weight="bold" style={{fontSize:24,color:colors.primary}}>{priceSummary(d,locale)}</Label>
+    <Label muted style={{fontSize:13}}>{copy.price}</Label>
+    <Label weight="bold" style={{fontSize:25,lineHeight:34,color:colors.primary}}>{priceSummary(d,locale)}</Label>
     {d.transactionType==="rent"?<>
      <Label>{lt(locale,"deposit")}: {cash(p.refundableDeposit)}</Label><Label>{lt(locale,"monthly")}: {cash(p.monthlyRent)}</Label>
     </>:null}
     {d.transactionType==="gharawi"?<>
      <Label>{lt(locale,"principal")}: {cash(p.refundablePrincipal)}</Label>
      <Label>{lt(locale,"monthly")}: {cash(p.monthlyRent)}</Label>
-     <Label>{p.durationMonths} {locale==="en"?"months":"ماه"}</Label>
+     <Label>{p.durationMonths} {copy.months}</Label>
      <Label>{p.refundTerms}</Label>
     </>:null}
    </SectionCard>
-   <SectionCard><Label weight="bold">{locale==="en"?"Location":"موقعیت"}</Label>
-    <Label>{findProvince(d.location.provinceId)?.names[locale]} · {d.location.city} · {d.location.district} · {d.location.neighborhood}</Label>
-    <Label muted>{d.location.precision==="approximate"?dt(locale,"approximate"):dt(locale,"limited")}</Label>
-    {data.lastConfirmedAt?<Label muted>{locale==="en"?"Last availability confirmation:":"آخرین تأیید موجودی:"} {localeDate(data.lastConfirmedAt,locale)}</Label>:null}
+   <SectionCard>
+    <Label weight="bold" style={{fontSize:17}}>{copy.details}</Label>
+    <View style={{flexDirection:isRTL(locale)?"row-reverse":"row",gap:8,flexWrap:"wrap"}}>
+     <InfoMetric label={copy.area} value={formatNumber(a.areaM2,locale)+" m²"}/>
+     {a.bedrooms!==undefined?<InfoMetric label={copy.beds} value={formatNumber(a.bedrooms,locale)}/>:null}
+     {a.bathrooms!==undefined?<InfoMetric label={copy.baths} value={formatNumber(a.bathrooms,locale)}/>:null}
+    </View>
+    {features.length?<><Label weight="medium">{copy.features}</Label><View style={{gap:5}}>{features.map(v=><Label key={v} style={{fontSize:14}}>{v}</Label>)}</View></>:null}
    </SectionCard>
-   <SectionCard><Label weight="bold">{locale==="en"?"Property details":"مشخصات ملک"}</Label>
-    <Label>{a.areaM2} m² {a.bedrooms!==undefined?" · "+a.bedrooms+" 🛏":""}{a.bathrooms!==undefined?" · "+a.bathrooms+" 🚿":""}</Label>
-    {a.furnished!==undefined?<Label>{dt(locale,"furnished")}: {a.furnished?"✓":"✕"}</Label>:null}
-    {a.parking!==undefined?<Label>{dt(locale,"parking")}: {a.parking?"✓":"✕"}</Label>:null}
-    <Label>{d.description}</Label>
+   <SectionCard>
+    <Label weight="bold" style={{fontSize:17}}>{copy.location}</Label>
+    <Label>{location||copy.noAddress}</Label>
+    <Label muted style={{fontSize:13}}>{d.location.precision==="approximate"?dt(locale,"approximate"):dt(locale,"limited")} · {copy.noAddress}</Label>
+    {data.lastConfirmedAt?<Label muted style={{fontSize:12}}>{copy.checked}: {localeDate(data.lastConfirmedAt,locale)}</Label>:null}
    </SectionCard>
-   <SectionCard><Label weight="bold">{dt(locale,"profile")}</Label>
+   <SectionCard>
+    <Label weight="bold" style={{fontSize:17}}>{copy.description}</Label>
+    <Label style={{fontSize:14,lineHeight:24}}>{d.description?.trim()||copy.noDescription}</Label>
+   </SectionCard>
+   <SectionCard><Label weight="bold" style={{fontSize:17}}>{copy.about}</Label>
     <Label muted>{kind==="agency"?dt(locale,"agencyBadge"):data.publisher==="independent_agent"?dt(locale,"proBadge"):dt(locale,"contactBadge")}</Label>
     {authorizationReviewed?<Label style={{color:colors.primary}}>{st(locale,"verified")}</Label>:null}
     <Label muted>{dt(locale,"notOwnership")}</Label>
     <Action kind="secondary" label={dt(locale,"profile")} onPress={()=>router.push({pathname:"/advertiser/[kind]/[id]",params:{kind,id:profileId}})}/>
    </SectionCard>
-   <Label muted>{dt(locale,"safeContact")}</Label>
+   <Label muted style={{fontSize:12}}>{copy.safe}</Label>
    <Action kind="secondary" label={st(locale,"report")} onPress={()=>router.push({pathname:"/report/[listingId]",params:{listingId:id}})}/>
    {error?<SectionCard><Label style={{color:colors.error}}>{error}</Label></SectionCard>:null}
   </Page>
   <View style={{gap:8,backgroundColor:colors.surface,padding:12,borderTopWidth:1,borderColor:colors.border,paddingBottom:20}}>
    <Action label={et(locale,"newInquiry")} disabled={!canContact} onPress={()=>router.push({pathname:"/inquiries/new",params:{listingId:id}})}/>
+   <Action kind="secondary" label={copy.viewing} disabled={!canContact} onPress={()=>router.push({pathname:"/viewings/new",params:{listingId:id}})}/>
    <View style={{flexDirection:isRTL(locale)?"row-reverse":"row",gap:10}}>
    <View style={{flex:1}}><Action label={busy==="call"?"…":dt(locale,"call")} disabled={!canContact||!d.contact.allowPhone||busy!==null} onPress={()=>void contact("call")}/></View>
    <View style={{flex:1}}><Action kind="secondary" label={busy==="whatsapp"?"…":dt(locale,"whatsapp")} disabled={!canContact||!d.contact.allowWhatsApp||busy!==null} onPress={()=>void contact("whatsapp")}/></View>
