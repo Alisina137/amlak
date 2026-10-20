@@ -13,9 +13,9 @@ import { uiText } from "../../src/ui-copy";
 export default function Explore() {
  const { locale, provinceId } = usePreferences();
  const { setFilters } = useSearchFilters();
- const openSearch = (patch?: { type?: "house" | "apartment" }) => {
-  setFilters({ provinceId, ...(patch ?? {}) });
-  router.push("/(tabs)/search");
+ const openSearch = () => {
+  setFilters({ provinceId });
+  router.push({ pathname: "/(tabs)/search", params: { focusSearch: "1" } });
  };
  const filterText = locale === "en" ? ["Property type", "Price range", "Bedrooms", "More filters"] : locale === "fa" ? ["نوع ملکیت", "محدوده قیمت", "اتاق خواب", "فیلترهای بیشتر"] : ["د ملکیت ډول", "د بیې حد", "د خوب خونې", "نور فلټرونه"];
  const searchText = locale === "en" ? "Search properties, locations or keywords" : locale === "fa" ? "جستجوی ملکیت، موقعیت یا کلمات کلیدی" : "ملکیتونه، ځایونه یا کلیمې ولټوئ";
