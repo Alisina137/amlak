@@ -76,7 +76,7 @@ function PremiumTabIcon({name,focused}:{name:TabName;focused:boolean}){
 /** A dedicated floating dock rather than the oversized stock tab bar.
  * Navigation events, deep links and RTL route order remain React Navigation's.
  */
-function PremiumTabBar({state,descriptors,navigation,rtl,labels}:TabBarProps&{
+function PremiumTabBar({state,navigation,rtl,labels}:TabBarProps&{
  rtl:boolean;labels:Record<TabName,string>;
 }){
  const insets=useSafeAreaInsets();
@@ -88,11 +88,10 @@ function PremiumTabBar({state,descriptors,navigation,rtl,labels}:TabBarProps&{
  },[]);
  if(keyboardOpen)return null;
  return <View style={[styles.dockArea,{paddingBottom:Math.max(insets.bottom,10)}]}>
-  <View style={[styles.dock,{flexDirection:rtl?"row-reverse":"row"}]}>
+  <View style={styles.dock}>
    {state.routes.map((route,index)=>{
     const focused=state.index===index;
     const name=route.name as TabName;
-    const options=descriptors[route.key].options;
     const label=labels[name]||route.name;
     const press=()=>{
      const event=navigation.emit({type:"tabPress",target:route.key,canPreventDefault:true});
@@ -100,7 +99,7 @@ function PremiumTabBar({state,descriptors,navigation,rtl,labels}:TabBarProps&{
     };
     const hold=()=>navigation.emit({type:"tabLongPress",target:route.key});
     return <Pressable key={route.key} accessibilityRole="tab" accessibilityLabel={label}
-     accessibilityState={{selected:focused}} accessibilityHint={options.tabBarAccessibilityLabel}
+     accessibilityState={{selected:focused}}
      onPress={press} onLongPress={hold}
      style={({pressed})=>[styles.tab,pressed&&styles.tabPressed]}>
      <PremiumTabIcon name={name} focused={focused}/>
