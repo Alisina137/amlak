@@ -33,7 +33,7 @@ export default function Explore() {
    <Pressable accessibilityRole="button" accessibilityLabel={notificationsLabel}
     onPress={() => router.push("/notification-settings")}
     style={{ width: 44, height: 44, borderWidth: 1, borderColor: colors.border, borderRadius: 14, backgroundColor: colors.surface, justifyContent: "center", alignItems: "center" }}>
-    <Label style={{ fontSize: 22, textAlign: "center" }}>♧</Label>
+    <Label style={{ fontSize: 22, textAlign: "center" }}>🔔</Label>
    </Pressable>
   </View>
 
