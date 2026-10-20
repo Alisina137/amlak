@@ -6,7 +6,7 @@ import {colors} from "@amlaklink/design-tokens";
 import {useAuth,requestJson} from "../../src/auth";
 import {usePreferences} from "../../src/context";
 import {st,reportReasons,reasonLabel} from "../../src/safety-copy";
-import {Action,Label,Page,ScreenHeading,SectionCard} from "../../src/ui";
+import {Action,BackButton,Label,Page,ScreenHeading,SectionCard} from "../../src/ui";
 export default function ReportProperty(){
  const {listingId}=useLocalSearchParams<{listingId:string}>(),{locale}=usePreferences(),{user,token}=useAuth();
  const [reason,setReason]=useState<typeof reportReasons[number]>("inaccurate_details"),[details,setDetails]=useState("");
@@ -22,7 +22,7 @@ export default function ReportProperty(){
   }catch(e){setError((e as Error).message||st(locale,"error"));}finally{setBusy(false);}
  }
  return <Page>
-  <Action kind="secondary" label="←" onPress={()=>router.back()}/>
+  <BackButton onPress={()=>router.back()}/>
   <ScreenHeading title={st(locale,"report")} subtitle={st(locale,"warning")}/>
   {!token||!user?.verified?<SectionCard>
    <Label>{st(locale,"login")}</Label>

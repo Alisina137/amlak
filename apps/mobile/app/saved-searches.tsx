@@ -7,7 +7,7 @@ import {useAuth,requestJson} from "../src/auth";
 import {usePreferences} from "../src/context";
 import {useSearchFilters} from "../src/search-context";
 import type {SearchFilters} from "../src/discovery-client";
-import {Action,Label,Page,ScreenHeading,SectionCard} from "../src/ui";
+import {Action,BackButton,Label,Page,ScreenHeading,SectionCard} from "../src/ui";
 type Saved={id:string;title:string;filters:Record<string,string>;alertsEnabled:boolean;createdAt:string};
 const translations={
  en:{heading:"Saved searches",sub:"Save filters and choose which searches should create in-app alerts.",
@@ -62,6 +62,7 @@ export default function SavedSearches(){
   ]);
  }
  return <Page>
+  <BackButton onPress={()=>router.back()}/>
   <ScreenHeading title={copy.heading} subtitle={copy.sub}/>
   {!token?<SectionCard><Label>{copy.login}</Label><Action label={locale==="en"?"Sign in":"ورود"} onPress={()=>router.push({pathname:"/auth/[action]",params:{action:"login"}})}/></SectionCard>:
   <>

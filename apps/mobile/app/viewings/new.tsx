@@ -6,7 +6,7 @@ import {useAuth} from "../../src/auth";
 import {usePreferences} from "../../src/context";
 import {kabulSlots,requestId,displayKabul,requestViewing} from "../../src/engagement-client";
 import {et} from "../../src/engagement-copy";
-import {Action,Label,Page,ScreenHeading,SectionCard} from "../../src/ui";
+import {Action,BackButton,Label,Page,ScreenHeading,SectionCard} from "../../src/ui";
 export default function NewViewing(){
  const {inquiryId}=useLocalSearchParams<{inquiryId:string}>(),{token}=useAuth(),{locale}=usePreferences();
  const options=useMemo(()=>kabulSlots(),[]);
@@ -39,6 +39,6 @@ export default function NewViewing(){
    {error?<Label style={{color:colors.error}}>{error}</Label>:null}
    <Action disabled={busy||chosen.length<2} label={busy?et(locale,"sending"):et(locale,"newViewing")} onPress={()=>void submit()}/>
   </SectionCard>
-  <Action kind="secondary" label="←" onPress={()=>router.back()}/>
+  <BackButton onPress={()=>router.back()}/>
  </Page>;
 }
