@@ -13,9 +13,9 @@ test("Group E phase 21: inbox has three original sections, thread statuses, filt
   'setInterval(()=>void refresh(),20000)','dataToken===token','unreadForThreads'])assert.ok(p.includes(token),token);
  assert.match(helper,/notices\.filter\(n=>!n\.isRead/);
  assert.match(helper,/\["inquiry","lead","message"\]/);
- assert.doesNotMatch(p,/unreadThreads\\.add\\(/);
- assert.match(p,/i\\.lastMessagePreview/);
- assert.match(read("apps/api/src/engagement.ts"),/lastMessagePreview:recentMessage\\?\\.body\\.slice\\(0,140\\)/);
+ assert.ok(!p.includes("unreadThreads.add("));
+ assert.ok(p.includes("i.lastMessagePreview"));
+ assert.ok(read("apps/api/src/engagement.ts").includes("lastMessagePreview:recentMessage?.body.slice(0,140)"));
 });
 test("Group E phase 22: human-readable price snapshot and idempotent secure message composer",()=>{
  const p=read("apps/mobile/app/inquiries/[id].tsx"),u=read("apps/mobile/src/inbox-experience.ts"),
