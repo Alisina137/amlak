@@ -5,6 +5,7 @@ import {View} from "react-native";
 import {colors} from "@amlaklink/design-tokens";
 import {formatNumber,isRTL} from "@amlaklink/localization";
 import {useAuth,requestJson} from "../../src/auth";
+import {authT} from "../../src/auth-copy";
 import {usePreferences} from "../../src/context";
 import {sx,ticketCategory,ticketCategories,ticketStatus,type TicketCategory} from "../../src/support-experience";
 import {Action,AppInput,BackButton,FilterChip,Label,Page,ScreenHeading,SectionCard,LoadingCard,StateNotice,StatusBadge} from "../../src/ui";
@@ -54,7 +55,7 @@ export default function Support(){
   </View>
   {!token||!user?.verified?<SectionCard>
    <Label>{sx(locale,"signin")}</Label>
-   <Action label={sx(locale,"back")} onPress={()=>router.push({pathname:"/auth/[action]",params:{action:"login"}})}/>
+   <Action label={authT(locale,"login")} onPress={()=>router.push({pathname:"/auth/[action]",params:{action:"login"}})}/>
   </SectionCard>:null}
   {token&&user?.verified&&tab==="new"?<SectionCard>
    <Label weight="bold" style={{fontSize:17}}>{sx(locale,"new")}</Label>
