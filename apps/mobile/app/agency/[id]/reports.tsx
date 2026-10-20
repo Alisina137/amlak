@@ -50,7 +50,7 @@ export default function AgencyReports(){
      <Label weight="bold" style={{fontSize:20}}>{formatNumber(item.value,locale)}</Label>
     </View>
     <View style={{height:9,backgroundColor:colors.border,borderRadius:6,overflow:"hidden"}}>
-     <View accessibilityLabel={item.label+" "+item.value} style={{height:9,width:(100*Math.min(1,item.value/item.max))+"%",backgroundColor:colors.primary,borderRadius:6}}/>
+     <View accessibilityLabel={item.label+" "+item.value} style={{height:9,width:((100*Math.min(1,item.value/item.max))+"%") as `${number}%`,backgroundColor:colors.primary,borderRadius:6}}/>
     </View>
    </View>)}
    <Label muted style={{fontSize:12,lineHeight:19}}>{report.note}</Label>
