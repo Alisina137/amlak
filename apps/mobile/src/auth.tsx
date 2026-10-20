@@ -1,7 +1,8 @@
 import * as SecureStore from "expo-secure-store";
 import {createContext,useCallback,useContext,useEffect,useMemo,useRef,useState,type ReactNode} from "react";
 const BASE_URL=(process.env.EXPO_PUBLIC_API_URL||"").replace(/\/+$/,"");
-const KEY="amlaklink:user-session:v1";
+// Expo SecureStore only permits letters, digits, '.', '-' and '_' in item keys.
+const KEY="amlaklink.user-session.v1";
 export type Account={id:string;displayName:string;email:string;verified:boolean;advertiserEnabled:boolean;independentAgentStatus:"none"|"pending"|"approved"|"rejected";locale:string;status:string};
 type AuthContext={user:Account|null;token:string|null;loading:boolean;signIn:(email:string,password:string)=>Promise<void>;
  verify:(email:string,code:string)=>Promise<void>;signOut:()=>Promise<void>;refresh:()=>Promise<void>};
@@ -75,7 +76,15 @@ export function AuthProvider({children}:{children:ReactNode}){
  },[]);
  const refresh=useCallback(async()=>{
   const epoch=sessionEpoch.current;
-  const saved=token||await SecureStore.getItemAsync(KEY);
+  let saved=token;
+  if(!saved){
+   try{saved=await SecureStore.getItemAsync(KEY);}
+   catch{
+    // Native storage can be temporarily unavailable, e.g. while a locked device
+    // is recovering. Do not emit an unhandled rejection or assume the user logged out.
+    return;
+   }
+  }
   if(epoch!==sessionEpoch.current||!saved)return;
   try{
    const res=await requestJson<{user:Account}>("/v1/me",{token:saved});
@@ -91,7 +100,7 @@ export function AuthProvider({children}:{children:ReactNode}){
    }
   }
  },[token]);
- useEffect(()=>{let mounted=true;void (async()=>{try{await refresh();}finally{if(mounted)setLoading(false);}})();return()=>{mounted=false;};},[]); // once at launch
+ useEffect(()=>{let mounted=true;void (async()=>{try{await refresh();}catch{/* Never throw from app bootstrap. */}finally{if(mounted)setLoading(false);}})();return()=>{mounted=false;};},[]); // once at launch
  const signIn=useCallback(async(email:string,password:string)=>{
    const epoch=sessionEpoch.current;
    const data=await requestJson<{token:string;user:Account}>("/v1/auth/login",{method:"POST",body:{email,password}});
