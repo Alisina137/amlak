@@ -1,11 +1,11 @@
 import {useEffect,useState} from "react";
-import {Image,Pressable,View,ActivityIndicator} from "react-native";
+import {Image,Pressable,View} from "react-native";
 import {router} from "expo-router";
 import {colors} from "@amlaklink/design-tokens";
 import type {ListingDTO} from "./listing-client";
 import {photoSource} from "./listing-client";
 import {usePreferences} from "./context";
-import {Label,SectionCard} from "./ui";
+import {Label,SectionCard,LoadingCard,StateNotice} from "./ui";
 import {useFavorites} from "./favorites";
 import {dt} from "./discovery-copy";
 import {Action} from "./ui";
@@ -83,10 +83,8 @@ export function ListingFeed({provinceId,reconnectEpoch=0}:{provinceId?:string;re
   .finally(()=>{if(active)setLoading(false);});
   return()=>{active=false;};
  },[provinceId,locale,retry,reconnectEpoch]);
- if(loading)return <SectionCard><ActivityIndicator color={colors.primary}/><Label muted>{uiText(locale,"feedLoading")}</Label></SectionCard>;
- if(error)return <SectionCard><Label style={{color:colors.error}}>{error}</Label>
-  <Action kind="secondary" label={dt(locale,"retry")} onPress={()=>setRetry(v=>v+1)}/>
- </SectionCard>;
+ if(loading)return <View style={{gap:12}}><LoadingCard withImage rows={3} label={uiText(locale,"feedLoading")}/><LoadingCard withImage rows={2}/></View>;
+ if(error)return <StateNotice message={error} retryLabel={dt(locale,"retry")} onRetry={()=>setRetry(v=>v+1)}/>;
  if(items.length===0)return <SectionCard><Label muted>{uiText(locale,"feedEmpty")}</Label></SectionCard>;
  return <View>{items.map(item=><ListingCard key={item.id} item={item}/>)}</View>;
 }

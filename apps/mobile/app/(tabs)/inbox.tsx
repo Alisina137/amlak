@@ -1,6 +1,6 @@
 import {router,useFocusEffect} from "expo-router";
 import {useCallback,useRef,useState} from "react";
-import {ActivityIndicator,Pressable,ScrollView} from "react-native";
+import {Pressable,ScrollView} from "react-native";
 import {colors} from "@amlaklink/design-tokens";
 import {formatNumber,isRTL} from "@amlaklink/localization";
 import {useAuth} from "../../src/auth";
@@ -8,7 +8,7 @@ import {usePreferences} from "../../src/context";
 import {inbox,fetchViewings,fetchAlerts,readAllAlerts,readAlert,displayKabul,type InquirySummary,type Viewing,type Alert} from "../../src/engagement-client";
 import {et} from "../../src/engagement-copy";
 import {routeForNotification} from "../../src/push-client";
-import {Action,Label,Page,ScreenHeading,SectionCard} from "../../src/ui";
+import {Action,Label,Page,ScreenHeading,SectionCard,LoadingCard,StateNotice} from "../../src/ui";
 export default function Inbox(){
  const {locale}=usePreferences(),{token}=useAuth();
  const [tab,setTab]=useState<"inquiries"|"viewings"|"notifications">("inquiries");
@@ -61,8 +61,8 @@ export default function Inbox(){
     </Pressable>)}
   </ScrollView>
   {token?<Action kind="secondary" disabled={busy} label={et(locale,"refresh")} onPress={()=>void refresh()}/>:null}
-  {busy&&safeItems.length===0&&safeViewings.length===0&&safeAlerts.length===0?<SectionCard><ActivityIndicator color={colors.primary}/></SectionCard>:null}
-  {error?<SectionCard><Label style={{color:colors.error}}>{error}</Label></SectionCard>:null}
+  {busy&&safeItems.length===0&&safeViewings.length===0&&safeAlerts.length===0&&token?<LoadingCard rows={3}/>:null}
+  {error?<StateNotice message={error} retryLabel={et(locale,"refresh")} onRetry={()=>void refresh()}/>:null}
   {token&&tab==="inquiries"&&safeItems.length===0&&!busy?<SectionCard><Label>{et(locale,"none")}</Label></SectionCard>:null}
   {token&&tab==="inquiries"&&safeItems.map(i=><SectionCard key={i.id}>
    <Pressable accessibilityRole="button" onPress={()=>router.push({pathname:"/inquiries/[id]",params:{id:i.id}})} style={{gap:5,minHeight:44}}>

@@ -5,7 +5,7 @@ import {colors} from "@amlaklink/design-tokens";
 import {useAuth,requestJson} from "../../src/auth";
 import {usePreferences} from "../../src/context";
 import {st,reasonLabel,reportReasons} from "../../src/safety-copy";
-import {Action,Label,Page,ScreenHeading,SectionCard} from "../../src/ui";
+import {Action,BackButton,Label,Page,ScreenHeading,SectionCard} from "../../src/ui";
 type Report={id:string;listingId:string;reason:typeof reportReasons[number];status:string;createdAt:string};
 type Case={id:string;status:string;resolution:string|null;createdAt:string;appealed:boolean};
 export default function SafetyCenter(){
@@ -37,7 +37,7 @@ export default function SafetyCenter(){
   catch(e){setError((e as Error).message||st(locale,"error"));}finally{setSending(false);}
  }
  return <Page>
-  <Action kind="secondary" label="←" onPress={()=>router.back()}/>
+  <BackButton onPress={()=>router.back()}/>
   <ScreenHeading title={st(locale,"appeals")} subtitle={st(locale,"warning")}/>
   {!token?<SectionCard><Label>{st(locale,"login")}</Label></SectionCard>:null}
   {error?<SectionCard><Label style={{color:colors.error}}>{error}</Label></SectionCard>:null}

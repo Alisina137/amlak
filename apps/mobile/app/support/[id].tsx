@@ -6,7 +6,7 @@ import {colors} from "@amlaklink/design-tokens";
 import {isRTL} from "@amlaklink/localization";
 import {useAuth,requestJson} from "../../src/auth";
 import {usePreferences} from "../../src/context";
-import {Action,Label,Page,ScreenHeading,SectionCard} from "../../src/ui";
+import {Action,BackButton,Label,Page,ScreenHeading,SectionCard} from "../../src/ui";
 type Ticket={id:string;subject:string;category:string;status:string};
 type Message={id:string;body:string;authorUserId:string|null;authorStaffId:string|null;createdAt:string};
 const copy={
@@ -39,7 +39,7 @@ export default function TicketDetails(){
    setText("");await load();
   }catch{setError(t.error);}finally{setBusy(false);}
  }
- return <Page><ScreenHeading title={ticket?.subject||t.title} subtitle={ticket?.category}/>
+ return <Page><BackButton onPress={()=>router.back()}/><ScreenHeading title={ticket?.subject||t.title} subtitle={ticket?.category}/>
   {ticket?<SectionCard><Label weight="bold">{t.status}: {ticket.status}</Label></SectionCard>:null}
   {messages.slice().reverse().map(m=><SectionCard key={m.id}>
    <Label weight="bold">{m.authorUserId===user?.id?

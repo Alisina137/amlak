@@ -6,7 +6,7 @@ import {colors} from "@amlaklink/design-tokens";
 import {isRTL} from "@amlaklink/localization";
 import {useAuth,requestJson} from "../../src/auth";
 import {usePreferences} from "../../src/context";
-import {Action,Label,Page,ScreenHeading,SectionCard} from "../../src/ui";
+import {Action,BackButton,Label,Page,ScreenHeading,SectionCard} from "../../src/ui";
 type Ticket={id:string;subject:string;status:string;category:string;updatedAt:string};
 const categories=["account","listing","payments","safety","other"] as const;
 const copy={
@@ -45,7 +45,7 @@ export default function Support(){
  }
  const style={minHeight:48,padding:12,borderWidth:1,borderColor:colors.border,borderRadius:12,
   color:colors.text,writingDirection:rtl?"rtl" as const:"ltr" as const,textAlign:rtl?"right" as const:"left" as const};
- return <Page><ScreenHeading title={t.title} subtitle={t.sub}/>
+ return <Page><BackButton onPress={()=>router.back()}/><ScreenHeading title={t.title} subtitle={t.sub}/>
   {!token||!user?.verified?<SectionCard><Label>{t.signin}</Label>
    <Action label={locale==="en"?"Sign in":"ورود"} onPress={()=>router.push({pathname:"/auth/[action]",params:{action:"login"}})}/>
   </SectionCard>:<><SectionCard>

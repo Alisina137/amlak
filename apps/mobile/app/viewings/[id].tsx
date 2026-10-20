@@ -6,7 +6,7 @@ import {useAuth} from "../../src/auth";
 import {usePreferences} from "../../src/context";
 import {fetchViewings,inquiry,viewingDecision,displayKabul,kabulSlots,type Viewing,type InquiryDetail} from "../../src/engagement-client";
 import {et} from "../../src/engagement-copy";
-import {Action,Label,Page,ScreenHeading,SectionCard} from "../../src/ui";
+import {Action,BackButton,Label,Page,ScreenHeading,SectionCard} from "../../src/ui";
 export default function ViewingDetail(){
  const {id}=useLocalSearchParams<{id:string}>(),{token}=useAuth(),{locale}=usePreferences();
  const [visit,setVisit]=useState<Viewing|null>(null),[thread,setThread]=useState<InquiryDetail|null>(null),[selected,setSelected]=useState<string|null>(null);
@@ -29,7 +29,7 @@ export default function ViewingDetail(){
   catch(e){setError((e as Error).message);}finally{setBusy(false);}
  }
  const future=kabulSlots().slice(0,12);
- return <Page><Action kind="secondary" label="←" onPress={()=>router.back()}/>
+ return <Page><BackButton onPress={()=>router.back()}/>
   <ScreenHeading title={et(locale,"viewings")} subtitle={thread?.title}/>
   {error?<SectionCard><Label style={{color:colors.error}}>{error}</Label></SectionCard>:null}
   {visit?<SectionCard>

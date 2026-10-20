@@ -1,12 +1,16 @@
 import {Stack} from "expo-router";
 import {SafeAreaProvider} from "react-native-safe-area-context";
-import {PreferencesProvider} from "../src/context";
+import {isRTL} from "@amlaklink/localization";
+import {PreferencesProvider,usePreferences} from "../src/context";
 import {AuthProvider} from "../src/auth";
 import {SearchProvider} from "../src/search-context";
 import {FavoriteProvider} from "../src/favorites";
+import {NetworkProvider} from "../src/api";
 import {PushBridge} from "../src/push-bridge";
-export default function RootLayout(){
- return <SafeAreaProvider><PreferencesProvider><AuthProvider><FavoriteProvider><SearchProvider><PushBridge/><Stack screenOptions={{headerShown:false}}>
+
+function NavigationShell(){
+ const {locale}=usePreferences();
+ return <Stack screenOptions={{headerShown:false,animation:isRTL(locale)?"slide_from_left":"slide_from_right"}}>
   <Stack.Screen name="(tabs)" />
   <Stack.Screen name="locations" />
   <Stack.Screen name="auth" />
@@ -27,5 +31,11 @@ export default function RootLayout(){
   <Stack.Screen name="compare" />
   <Stack.Screen name="upgrade" />
   <Stack.Screen name="notification-settings" />
- </Stack></SearchProvider></FavoriteProvider></AuthProvider></PreferencesProvider></SafeAreaProvider>;
+  <Stack.Screen name="account-sessions" />
+ </Stack>;
+}
+export default function RootLayout(){
+ return <SafeAreaProvider><PreferencesProvider><AuthProvider><FavoriteProvider><SearchProvider>
+  <NetworkProvider><PushBridge/><NavigationShell/></NetworkProvider>
+ </SearchProvider></FavoriteProvider></AuthProvider></PreferencesProvider></SafeAreaProvider>;
 }

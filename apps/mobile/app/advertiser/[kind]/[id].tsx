@@ -7,7 +7,7 @@ import {fetchAdvertiser,fetchAdvertiserProperties,type AdvertiserProfile} from "
 import {dt} from "../../../src/discovery-copy";
 import {ListingCard} from "../../../src/listing-ui";
 import type {ListingDTO} from "../../../src/listing-client";
-import {Action,Label,Page,ScreenHeading,SectionCard} from "../../../src/ui";
+import {Action,BackButton,Label,Page,ScreenHeading,SectionCard} from "../../../src/ui";
 export default function AdvertiserProfilePage(){
  const {id,kind}=useLocalSearchParams<{id:string;kind:string}>(),{locale}=usePreferences();
  const [profile,setProfile]=useState<AdvertiserProfile|null>(null),[list,setList]=useState<ListingDTO[]>([]),[loading,setLoading]=useState(true),[error,setError]=useState("");
@@ -17,7 +17,7 @@ export default function AdvertiserProfilePage(){
   }).catch(()=>{if(active)setError(dt(locale,"unknown"));}).finally(()=>{if(active)setLoading(false);});
   return()=>{active=false;};
  },[id,kind,locale]);
- return <Page><Action kind="secondary" label="←" onPress={()=>router.back()}/>
+ return <Page><BackButton onPress={()=>router.back()}/>
   {loading?<ActivityIndicator color={colors.primary}/>:null}
   {error?<SectionCard><Label>{error}</Label></SectionCard>:null}
   {profile?<><ScreenHeading title={profile.name} subtitle={dt(locale,"profile")}/>

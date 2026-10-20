@@ -6,7 +6,7 @@ import {useAuth} from "../../src/auth";
 import {usePreferences} from "../../src/context";
 import {openInquiry,requestId} from "../../src/engagement-client";
 import {et} from "../../src/engagement-copy";
-import {Action,Label,Page,ScreenHeading,SectionCard} from "../../src/ui";
+import {Action,BackButton,Label,Page,ScreenHeading,SectionCard} from "../../src/ui";
 export default function NewInquiry(){
  const {listingId}=useLocalSearchParams<{listingId:string}>(),{token,user}=useAuth(),{locale}=usePreferences();
  const [body,setBody]=useState(""),[key,setKey]=useState(requestId()),[busy,setBusy]=useState(false),[error,setError]=useState("");
@@ -30,6 +30,6 @@ export default function NewInquiry(){
      <Action label={et(locale,"login")} onPress={()=>router.push({pathname:"/auth/[action]",params:{action:"login"}})}/></>}
   </SectionCard>
   <Label muted>{et(locale,"safety")}</Label>
-  <Action kind="secondary" label="←" onPress={()=>router.back()}/>
+  <BackButton onPress={()=>router.back()}/>
  </Page>;
 }
