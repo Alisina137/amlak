@@ -1,5 +1,5 @@
 import {useEffect,useMemo,useRef,useState} from "react";
-import {Image,Modal,Pressable,ScrollView,View,useWindowDimensions} from "react-native";
+import {Modal,Pressable,ScrollView,View,useWindowDimensions} from "react-native";
 import {SafeAreaView} from "react-native-safe-area-context";
 import {colors} from "@amlaklink/design-tokens";
 import {formatNumber,isRTL} from "@amlaklink/localization";
@@ -7,6 +7,7 @@ import {usePreferences} from "./context";
 import {photoSource,type ListingDTO} from "./listing-client";
 import {Label,SectionCard} from "./ui";
 import {mediaCopy,photoRoomTypes,roomName,type PhotoRoom} from "./media-copy";
+import {MotionImage,MotionReveal} from "./motion";
 
 type Photo=ListingDTO["photos"][number];
 type Filter="all"|PhotoRoom;
@@ -20,7 +21,7 @@ function GalleryImage({photo,title,mode="cover"}:{photo:Photo;title:string;mode?
   style={{flex:1,justifyContent:"center",alignItems:"center",padding:16,backgroundColor:"#263531"}}>
   <Label style={{color:"#FFFFFF",textAlign:"center",fontSize:14}}>{mediaCopy[locale].imageUnavailable}</Label>
  </Pressable>;
- return <Image key={photo.id} source={photoSource(photo.id)} onError={()=>setFailed(true)}
+ return <MotionImage imageKey={photo.id} source={photoSource(photo.id)} onError={()=>setFailed(true)}
   resizeMode={mode} accessibilityLabel={title+" · "+roomName(locale,photo.room)}
   style={{width:"100%",height:"100%"}}/>;
 }
@@ -93,7 +94,7 @@ export function PropertyGallery({photos,title}:{photos:Photo[];title:string}){
      <Label style={{fontSize:13}}>{roomName(locale,room)}</Label>
     </Pressable>)}
    </ScrollView>:null}
-   {current?<Pressable accessibilityRole="button"
+   {current?<MotionReveal delay={30}><Pressable accessibilityRole="button"
     accessibilityLabel={copy.view+": "+roomName(locale,current.room)+" "+formatNumber(index+1,locale)}
     onPress={()=>setFullScreen(true)}
     style={{overflow:"hidden",borderRadius:16,backgroundColor:colors.border}}>
@@ -106,7 +107,7 @@ export function PropertyGallery({photos,title}:{photos:Photo[];title:string}){
       {roomName(locale,current.room)} · {formatNumber(index+1,locale)}/{formatNumber(matching.length,locale)}
      </Label>
     </View>
-   </Pressable>:null}
+   </Pressable></MotionReveal>:null}
    {current?.caption?<Label style={{fontSize:13,lineHeight:21}}>{current.caption}</Label>:null}
    {matching.length>1?renderControls():null}
    <ScrollView horizontal showsHorizontalScrollIndicator={false}
