@@ -9,6 +9,7 @@ import {inbox,fetchViewings,fetchAlerts,readAllAlerts,readAlert,displayKabul,typ
 import {et} from "../../src/engagement-copy";
 import {ix,inquiryStatus,isPastVisit,notificationGroup,noticeLabel,unreadForThreads,viewingLabel} from "../../src/inbox-experience";
 import {routeForNotification} from "../../src/push-client";
+import {MotionReveal} from "../../src/motion";
 import {Action,AppInput,FilterChip,Label,Page,ScreenHeading,SectionCard,LoadingCard,StateNotice,StatusBadge} from "../../src/ui";
 
 type Tab="inquiries"|"viewings"|"notifications";
@@ -82,7 +83,7 @@ export default function Inbox(){
   </View>
   {!token?<SectionCard><Label>{et(locale,"login")}</Label>
    <Action label={et(locale,"login")} onPress={()=>router.push({pathname:"/auth/[action]",params:{action:"login"}})}/></SectionCard>:null}
-  {token&&tab==="inquiries"?<View style={{gap:10}}>
+  {token&&tab==="inquiries"?<MotionReveal key="inquiries-controls" style={{gap:10}}>
    <AppInput accessibilityLabel={ix(locale,"search")} placeholder={ix(locale,"search")}
     value={query} onChangeText={setQuery}/>
    <View style={{flexDirection:rtl?"row-reverse":"row",flexWrap:"wrap",gap:8}}>
@@ -90,15 +91,15 @@ export default function Inbox(){
      label={ix(locale,key)} selected={threadFilter===key} onPress={()=>setThreadFilter(key)}/>)}
    </View>
    {!loading?<Label muted style={{fontSize:12}}>{formatNumber(conversations.length,locale)} {ix(locale,"conversation")}</Label>:null}
-  </View>:null}
-  {token&&tab==="viewings"?<View style={{gap:10}}>
+  </MotionReveal>:null}
+  {token&&tab==="viewings"?<MotionReveal key="viewings-controls" style={{gap:10}}>
    <View style={{flexDirection:rtl?"row-reverse":"row",flexWrap:"wrap",gap:8}}>
     {(["all","upcoming","history"] as const).map(key=><FilterChip key={key}
      label={ix(locale,key)} selected={visitFilter===key} onPress={()=>setVisitFilter(key)}/>)}
    </View>
    <Label muted style={{fontSize:12}}>{ix(locale,"timeZone")} {ix(locale,"viewingHint")}</Label>
-  </View>:null}
-  {token&&tab==="notifications"?<View style={{gap:10}}>
+  </MotionReveal>:null}
+  {token&&tab==="notifications"?<MotionReveal key="notifications-controls" style={{gap:10}}>
    <View style={{flexDirection:rtl?"row-reverse":"row",flexWrap:"wrap",gap:8}}>
     {(["all","unread","read"] as const).map(key=><FilterChip key={key}
      label={ix(locale,key)} selected={alertFilter===key} onPress={()=>setAlertFilter(key)}/>)}
@@ -106,7 +107,7 @@ export default function Inbox(){
    <Label muted style={{fontSize:12}}>{ix(locale,"settingsHint")}</Label>
    <Action kind="secondary" label={ix(locale,"settings")} onPress={()=>router.push("/notification-settings")}/>
    <Action kind="secondary" disabled={mutating||refreshing||!unread} label={ix(locale,"markAll")} onPress={()=>void markAll()}/>
-  </View>:null}
+  </MotionReveal>:null}
   {token&&loading?<View style={{gap:10}}><LoadingCard rows={3}/><LoadingCard rows={2}/></View>:null}
   {error?<StateNotice message={error} retryLabel={ix(locale,"retry")} onRetry={()=>void refresh()}/>:null}
   {token&&!loading&&tab==="inquiries"&&conversations.length===0?<SectionCard>
