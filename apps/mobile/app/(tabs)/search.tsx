@@ -72,7 +72,7 @@ export default function Search(){
  const visibleCursor=resultKey===filterKey?cursor:null;
  const visibleCache=resultKey===filterKey?cached:null;
  const intent=filters.intent||"sale";
- const suggestions=useMemo(()=>query.trim().length>=2?searchProvinces(query,locale).slice(0,5):[],[query,locale]);
+ const suggestions=useMemo(()=>query.trim().length>=2&&query.trim()!==(filters.q||"")?searchProvinces(query,locale).slice(0,5):[],[query,filters.q,locale]);
  const removeFilter=(key:keyof SearchFilters)=>{
   const patch:SearchFilters={[key]:undefined};
   if(key==="provinceId")Object.assign(patch,{city:undefined,district:undefined,neighborhood:undefined,viewport:undefined,polygon:undefined});
@@ -171,10 +171,10 @@ function FilterSheet({visible,close,filters,apply,clear,locale}:{visible:boolean
  const options=(label:string,key:keyof SearchFilters,items:{value:string;label:string}[])=>
   <View style={{gap:8}}><Label weight="bold">{label}</Label>
    <View style={{flexDirection:rtl?"row-reverse":"row",gap:8,flexWrap:"wrap"}}>
-    {items.map(o=><Pressable key={o.value} accessibilityRole="button" accessibilityState={{selected:draft[key]===o.value}}
+    {items.map(o=><Pressable key={o.value} accessibilityRole="button" accessibilityState={{selected:(draft[key]||"")===o.value}}
      onPress={()=>update({[key]:o.value===""?undefined:o.value})} style={{paddingHorizontal:14,paddingVertical:11,minHeight:44,borderRadius:22,borderWidth:1,
-      borderColor:draft[key]===o.value?colors.primary:colors.border,backgroundColor:draft[key]===o.value?"#e2f1ec":colors.surface}}>
-     <Label style={{color:draft[key]===o.value?colors.primary:colors.text}}>{o.label}</Label>
+      borderColor:(draft[key]||"")===o.value?colors.primary:colors.border,backgroundColor:(draft[key]||"")===o.value?"#e2f1ec":colors.surface}}>
+     <Label style={{color:(draft[key]||"")===o.value?colors.primary:colors.text}}>{o.label}</Label>
     </Pressable>)}
    </View>
   </View>;

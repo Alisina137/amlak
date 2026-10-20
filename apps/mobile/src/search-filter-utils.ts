@@ -39,12 +39,12 @@ export function validateSearchFilters(filters:SearchFilters,locale:Locale):Filte
 /** Do not reuse a street or a drawn search area when switching provinces. */
 export function patchSearchFilters(previous:SearchFilters,patch:SearchFilters):SearchFilters{
  const result={...previous,...patch};
- if(patch.provinceId!==undefined&&patch.provinceId!==previous.provinceId){
+ if(Object.prototype.hasOwnProperty.call(patch,"provinceId")&&patch.provinceId!==previous.provinceId){
   for(const key of ["city","district","neighborhood","viewport","polygon"] as const){
    if(!(key in patch))result[key]=undefined;
   }
  }
- if(patch.city!==undefined&&patch.city!==previous.city){
+ if(Object.prototype.hasOwnProperty.call(patch,"city")&&patch.city!==previous.city){
   if(!("district" in patch))result.district=undefined;
   if(!("neighborhood" in patch))result.neighborhood=undefined;
  }
