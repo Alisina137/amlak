@@ -15,6 +15,7 @@ import {st} from "../../src/safety-copy";
 import {useFavorites} from "../../src/favorites";
 import {lt,priceSummary} from "../../src/listing-ui";
 import {PropertyGallery} from "../../src/property-gallery";
+import {FavoriteGlyph,MotionReveal} from "../../src/motion";
 import {Action,BackButton,Label,Page,ScreenHeading,SectionCard,LoadingCard,StateNotice,StatusBadge} from "../../src/ui";
 import {localeDate} from "../../src/foundation-copy";
 import {formatNumber,isRTL} from "@amlaklink/localization";
@@ -69,13 +70,13 @@ export default function PropertyDetails(){
     <View style={{flexDirection:"row",gap:8}}>
      <Pressable accessibilityRole="button" accessibilityLabel={isSaved(id)?dt(locale,"unsave"):dt(locale,"save")}
        onPress={()=>void toggle(id).catch(()=>setError(dt(locale,"favoriteError")))} style={{padding:12,minHeight:44}}>
-      <Label style={{fontSize:23,color:colors.primary}}>{isSaved(id)?"♥":"♡"}</Label>
+      <FavoriteGlyph saved={isSaved(id)}/>
      </Pressable>
      <Pressable accessibilityRole="button" accessibilityLabel={dt(locale,"share")} onPress={()=>void share()} style={{padding:12,minHeight:44}}><Label>↗</Label></Pressable>
     </View>
    </View>
    {error?<StateNotice message={error}/>:null}
-   <PropertyGallery photos={data.photos} title={d.title}/>
+   <MotionReveal delay={35}><PropertyGallery photos={data.photos} title={d.title}/></MotionReveal>
    <View style={{gap:10}}>
     <View style={{flexDirection:isRTL(locale)?"row-reverse":"row",gap:8,flexWrap:"wrap"}}>
      <StatusBadge label={lt(locale,d.transactionType)+" · "+lt(locale,d.propertyType)}/>
@@ -83,7 +84,7 @@ export default function PropertyDetails(){
     </View>
     <ScreenHeading title={d.title} subtitle={location||copy.noAddress}/>
    </View>
-   <SectionCard>
+   <MotionReveal delay={85}><SectionCard>
     <Label muted style={{fontSize:13}}>{copy.price}</Label>
     <Label weight="bold" style={{fontSize:25,lineHeight:34,color:colors.primary}}>{priceSummary(d,locale)}</Label>
     {d.transactionType==="rent"?<>
@@ -95,7 +96,7 @@ export default function PropertyDetails(){
      <Label>{p.durationMonths} {copy.months}</Label>
      <Label>{p.refundTerms}</Label>
     </>:null}
-   </SectionCard>
+   </SectionCard></MotionReveal>
    <SectionCard>
     <Label weight="bold" style={{fontSize:17}}>{copy.details}</Label>
     <View style={{flexDirection:isRTL(locale)?"row-reverse":"row",gap:8,flexWrap:"wrap"}}>

@@ -15,6 +15,7 @@ import { useApiStatus } from "../../src/api";
 import { Action, Label, Page, ScreenHeading, SectionCard } from "../../src/ui";
 import { uiText } from "../../src/ui-copy";
 import { BrowseProvinces, FeaturedPlaceholder, HomeNextSteps, RecentlyViewedSection, homeText } from "../../src/home-sections";
+import {MotionReveal} from "../../src/motion";
 
 export default function Explore() {
  const { locale, provinceId } = usePreferences();
@@ -70,12 +71,12 @@ export default function Explore() {
 
   <ScreenHeading title={t(locale, "findHome")} subtitle={t(locale, "tagline")} />
 
-  <Pressable accessibilityRole="button" accessibilityLabel={searchText}
+  <MotionReveal delay={45}><Pressable accessibilityRole="button" accessibilityLabel={searchText}
    onPress={() => openSearch()}
    style={{ flexDirection: rtl ? "row-reverse" : "row", alignItems: "center", gap: 10, minHeight: 52, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, borderRadius: 14, paddingHorizontal: 14 }}>
    <Label style={{ fontSize: 21, color: colors.primary }}>⌕</Label>
    <Label muted style={{ fontSize: 14, flex: 1 }}>{searchText}</Label>
-  </Pressable>
+  </Pressable></MotionReveal>
 
   <SectionCard>
    <View style={{ flexDirection: rtl ? "row-reverse" : "row", gap: 8 }}>
@@ -97,7 +98,7 @@ export default function Explore() {
    </Pressable>)}
   </ScrollView>
 
-  <View style={{gap:8}}>
+  <MotionReveal delay={95}><View style={{gap:8}}>
    <Label weight="bold" style={{fontSize:18}}>{locale==="en"?"Property categories":locale==="fa"?"دسته‌بندی ملکیت‌ها":"د ملکیتونو ډولونه"}</Label>
    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{flexDirection:rtl?"row-reverse":"row",gap:10}}>
     {categories.map((type,index)=><Pressable key={type} accessibilityRole="button" accessibilityLabel={categoryNames[locale][index]}
@@ -107,9 +108,9 @@ export default function Explore() {
      <Label weight="medium" style={{fontSize:12,textAlign:"center"}}>{categoryNames[locale][index]}</Label>
     </Pressable>)}
    </ScrollView>
-  </View>
+  </View></MotionReveal>
   <BrowseProvinces />
-  <View style={{gap:8}}>
+  <MotionReveal delay={135}><View style={{gap:8}}>
    <Label weight="bold" style={{fontSize:18}}>{locale==="en"?"Featured properties":locale==="fa"?"ملکیت‌های ویژه":"ځانګړي ملکیتونه"}</Label>
    {featuredLoading?<FeaturedPlaceholder />:null}
    {!featuredLoading&&featuredError?<SectionCard>
@@ -126,7 +127,7 @@ export default function Explore() {
      <ListingCard item={item}/>
     </View>)}
    </ScrollView>:null}
-  </View>
+  </View></MotionReveal>
   <RecentlyViewedSection reconnectEpoch={reconnectEpoch} />
   <View style={{ flexDirection: rtl ? "row-reverse" : "row", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
    <Label weight="bold" style={{ fontSize: 18, flex: 1 }}>{uiText(locale, "recentProperties")}</Label>

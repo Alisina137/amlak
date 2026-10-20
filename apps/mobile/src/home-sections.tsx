@@ -11,6 +11,7 @@ import {getPublic,type ListingDTO} from "./listing-client";
 import {ListingCard} from "./listing-ui";
 import {getRecentlyViewedIds} from "./recently-viewed";
 import {Label,SectionCard} from "./ui";
+import {MotionSkeleton} from "./motion";
 
 const copy = {
  en:{
@@ -72,13 +73,13 @@ export function BrowseProvinces(){
 
 export function FeaturedPlaceholder(){
  const {locale}=usePreferences(),rtl=isRTL(locale);
- return <View accessibilityLabel={homeText(locale,"loadingFeatured")} style={{flexDirection:rtl?"row-reverse":"row",gap:12}}>
+ return <MotionSkeleton><View accessibilityLabel={homeText(locale,"loadingFeatured")} style={{flexDirection:rtl?"row-reverse":"row",gap:12}}>
   {[0,1].map(index=><View key={index} style={{width:150,gap:8,paddingBottom:8}}>
    <View style={{height:128,borderRadius:14,backgroundColor:colors.border}}/>
    <View style={{width:"70%",height:16,borderRadius:6,backgroundColor:colors.border}}/>
    <View style={{width:"95%",height:12,borderRadius:6,backgroundColor:colors.border}}/>
   </View>)}
- </View>;
+ </View></MotionSkeleton>;
 }
 
 export function RecentlyViewedSection({reconnectEpoch=0}:{reconnectEpoch?:number}){
