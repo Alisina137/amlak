@@ -133,7 +133,7 @@ export default function TabLayout(){
 
 const styles=StyleSheet.create({
  dockArea:{paddingTop:9,paddingHorizontal:12,backgroundColor:colors.background},
- dock:{backgroundColor:colors.surface,borderRadius:26,borderWidth:1,
+ dock:{flexDirection:"row",backgroundColor:colors.surface,borderRadius:26,borderWidth:1,
   borderColor:colors.borderStrong,paddingVertical:7,paddingHorizontal:5,
   alignItems:"center",...elevation.floating},
  tab:{flex:1,minWidth:0,minHeight:68,alignItems:"center",justifyContent:"center",
