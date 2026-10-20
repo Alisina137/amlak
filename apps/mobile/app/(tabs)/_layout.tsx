@@ -1,5 +1,5 @@
 import { Tabs } from "expo-router";
-import { Animated,Text } from "react-native";
+import { Animated,Text,type ColorValue } from "react-native";
 import {useEffect,useRef} from "react";
 import { colors } from "@amlaklink/design-tokens";
 import {isRTL,t} from "@amlaklink/localization";
@@ -8,7 +8,7 @@ import {useMotion} from "../../src/motion";
 const icons:Record<string,[string,string]>={
  index:["⌂","⌂"],search:["⌕","⌕"],saved:["♡","♥"],inbox:["✉","✉"],account:["☰","☰"]
 };
-function AnimatedTabIcon({name,color,focused}:{name:string;color:string;focused:boolean}){
+function AnimatedTabIcon({name,color,focused}:{name:string;color:ColorValue;focused:boolean}){
  const {reduced}=useMotion();
  const progress=useRef(new Animated.Value(focused?1:0)).current;
  useEffect(()=>{
