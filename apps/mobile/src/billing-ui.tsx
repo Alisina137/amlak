@@ -1,11 +1,11 @@
 import * as Crypto from "expo-crypto";
 import {useCallback,useEffect,useRef,useState} from "react";
-import {AppState,TextInput,View} from "react-native";
+import {AppState,ScrollView,TextInput,View} from "react-native";
 import {colors} from "@amlaklink/design-tokens";
-import {isRTL} from "@amlaklink/localization";
+import {isRTL,formatNumber} from "@amlaklink/localization";
 import {useAuth,requestJson} from "./auth";
 import {usePreferences} from "./context";
-import {Action,Label,Page,ScreenHeading,SectionCard} from "./ui";
+import {Action,Label,Page,ScreenHeading,SectionCard,StateNotice,StatusBadge} from "./ui";
 import {BillingAdjustmentUI} from "./billing-adjustment-ui";
 type Product={code:string;kind:string;amountAfn:number;listingLimit:number;seatLimit:number;days:number};
 type Plans={billingEnabled:boolean;illustrativePricing:boolean;products:Product[];disclaimer:string};
@@ -154,17 +154,26 @@ export function BillingScreen({agencyId,listingId}:{agencyId?:string;listingId?:
    <Label muted>{t.pendingWarning}</Label>
   </SectionCard>:null}
   <SectionCard><Label weight="bold">{t.plans}</Label>
-   {products.map(p=><View key={p.code} style={{gap:8,borderTopWidth:1,borderColor:colors.border,paddingTop:10}}>
-    <Label weight="bold">{p.code.replaceAll("_"," ")}</Label>
-    <Label muted>{p.amountAfn.toLocaleString()} AFN · {p.days} days · {p.listingLimit||"—"} listings · {p.seatLimit||"—"} seats</Label>
-    <Action disabled={busy||!plans?.billingEnabled} label={t.create} onPress={()=>void invoice(p.code)}/>
-   </View>)}
+   {plans?.illustrativePricing?<StatusBadge tone="warning" label={t.disabled}/>:null}
+   <ScrollView horizontal nestedScrollEnabled showsHorizontalScrollIndicator
+    contentContainerStyle={{flexDirection:rtl?"row-reverse":"row",gap:12,paddingVertical:6}}>
+    {products.map(p=><View key={p.code} style={{width:244,gap:9,borderWidth:1,borderColor:colors.border,
+     borderRadius:16,padding:14,backgroundColor:colors.background}}>
+     <Label weight="bold" style={{fontSize:15}}>{p.code.replaceAll("_"," ")}</Label>
+     <Label weight="bold" style={{fontSize:20,color:colors.primary}}>{formatNumber(p.amountAfn,locale)} AFN</Label>
+     <Label muted style={{fontSize:12}}>{formatNumber(p.days,locale)} {locale==="en"?"days":locale==="fa"?"روز":"ورځې"}</Label>
+     <Label muted style={{fontSize:12}}>{formatNumber(p.listingLimit,locale)} {locale==="en"?"listings":locale==="fa"?"آگهی":"اعلانونه"}</Label>
+     <Label muted style={{fontSize:12}}>{formatNumber(p.seatLimit,locale)} {locale==="en"?"team seats":locale==="fa"?"جای عضو":"د غړو ځایونه"}</Label>
+     <Action disabled={busy||!plans?.billingEnabled} label={t.create} onPress={()=>void invoice(p.code)}/>
+    </View>)}
+   </ScrollView>
   </SectionCard>
   <SectionCard><Label weight="bold">{t.invoice}</Label>
    {!invoices.length?<Label muted>{t.empty}</Label>:null}
    {invoices.map(i=><View key={i.id} style={{gap:6,paddingVertical:8,borderTopWidth:1,borderColor:colors.border}}>
-    <Label>{i.productCode} · {i.amountAfn.toLocaleString()} AFN</Label>
-    <Label muted>{t.status}: {i.status}</Label>
+    <Label weight="medium">{i.productCode.replaceAll("_"," ")} · {formatNumber(i.amountAfn,locale)} AFN</Label>
+    <StatusBadge label={i.status.replaceAll("_"," ")} tone={i.status==="confirmed"?"success":i.status==="rejected"?"error":"warning"}/>
+    <Label muted style={{fontSize:12}}>{t.status}: {i.status} · {new Intl.DateTimeFormat(locale==="en"?"en-GB":locale==="fa"?"fa-AF":"ps-AF",{timeZone:"Asia/Kabul",year:"numeric",month:"short",day:"numeric"}).format(new Date(i.createdAt))}</Label>
     {["unpaid","rejected"].includes(i.status)?
      <Action kind="secondary" label={locale==="en"?"Submit claim for this invoice":"ارسال رسید برای این فاکتور"}
       onPress={()=>setSelectedInvoice(i.id)}/>:null}
@@ -185,7 +194,7 @@ export function BillingScreen({agencyId,listingId}:{agencyId?:string;listingId?:
   </SectionCard>:null}
   {token?<BillingAdjustmentUI token={token} invoices={invoices}/>:null}
   {message?<SectionCard><Label style={{color:colors.success}}>{message}</Label></SectionCard>:null}
-  {error?<SectionCard><Label style={{color:colors.error}}>{error}</Label></SectionCard>:null}
+  {error?<StateNotice message={error} retryLabel={t.return} onRetry={()=>void load()}/>:null}
   <Action kind="secondary" label={t.return} disabled={busy} onPress={()=>void load()}/>
  </Page>;
 }
