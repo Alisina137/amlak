@@ -35,7 +35,7 @@ test("Explore, listing cards, gallery, detail, navigation and inbox animate",()=
  includes(gallery,"<MotionImage imageKey={photo.id}","<MotionReveal delay={30}>","pagingEnabled",
   "setFullScreen(true)");
  includes(detail,"<FavoriteGlyph saved={isSaved(id)}/>","<MotionReveal delay={35}>","<MotionReveal delay={85}>");
- includes(tab,"<AnimatedTabIcon","useMotion()","friction:7","focused?1:0");
+ includes(tab,"<PremiumTabIcon","useMotion()","friction:7","focused?1:0","useNativeDriver:true");
  includes(inbox,'key="inquiries-controls"','key="viewings-controls"','key="notifications-controls"');
  includes(sections,"<MotionSkeleton>");
 });

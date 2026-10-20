@@ -37,7 +37,7 @@ test("Tab, Saved, Inbox, Account and protected admin use the same design system"
   account=read("apps/mobile/app/(tabs)/account.tsx"),
   staff=read("apps/admin/app/globals.css");
  includes(tab,"...elevation.floating","initialRouteName=\"index\"",
-  'rtl?["account","inbox","saved","search","index"]');
+  "const order=rtl?[...tabs].reverse():tabs","tabBar={props=><PremiumTabBar");
  includes(saved,"colors.primaryWash","colors.primarySoft","ListingCard");
  includes(inbox,"colors.primarySoft","colors.primaryWash","borderStartWidth");
  includes(account,"colors.primaryDark","colors.secondary","AccountLink","LanguagePicker");
