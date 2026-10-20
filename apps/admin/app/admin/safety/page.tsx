@@ -1,3 +1,4 @@
+import {StaffNav} from "../staff-nav";
 import Link from "next/link";
 import {redirect} from "next/navigation";
 import {getStaff} from "../../../lib/staff";
@@ -6,9 +7,12 @@ export default async function SafetyAdmin(){
  const person=await getStaff();if(!person)redirect("/admin/login");
  if(!["moderator","support","verification","admin","super_admin"].includes(person.role))redirect("/admin");
  return <main className="admin-workspace" dir="rtl">
+  <StaffNav role={person.role}/>
+  <div className="admin-main-content">
   <Link href="/admin">→ بازگشت به مدیریت</Link>
   <h1>ایمنی، شکایات، اعتراض و تأییدها</h1>
   <p>گزارش‌ها اتهام اثبات‌شده نیستند. هیچ ملک یا سند مالکیت به صورت خودکار تأیید نمی‌شود؛ تصمیم‌ها با دلیل و ثبت حسابرسی انجام می‌شوند.</p>
   <SafetyPanel role={person.role}/>
+  </div>
  </main>;
 }
