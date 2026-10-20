@@ -19,7 +19,8 @@ const en={
  limit:"Select between two and four properties."
 };
 type Key=keyof typeof en;
-const fa:Record<Key,typeof en[Key]|string|readonly string[]>={
+type Translation={tabs:readonly string[]} & Record<Exclude<Key,"tabs">,string>;
+const fa:Translation={
  tabs:["علاقه‌مندی‌ها","جستجوهای ذخیره‌شده","فهرست‌های مشترک"],savedTitle:"ذخیره‌شده‌ها",savedSubtitle:"ملک‌ها و جستجوهای دلخواه شما",
  manage:"مدیریت",browse:"جستجوی ملک",compare:"مقایسه",selected:"انتخاب‌شده",select:"انتخاب ملک",
  remove:"حذف",undo:"بازگرداندن",removed:"از علاقه‌مندی‌ها حذف شد",removeFailed:"حذف ملک ممکن نشد.",emptyFavorites:"هنوز ملکی ذخیره نشده است.",history:"ملک‌های غیرموجود تا زمان حذف در ذخیره‌ها باقی می‌مانند.",
@@ -38,7 +39,7 @@ const fa:Record<Key,typeof en[Key]|string|readonly string[]>={
  interestedCount:"علاقه‌مند",passCount:"مخالف",notes:"یادداشت‌های گروه",safe:"خصوصی برای اعضا؛ نظر به معنای تأیید ملک نیست.",
  limit:"بین دو تا چهار ملک انتخاب کنید."
 };
-const ps:Record<Key,string|readonly string[]>={
+const ps:Translation={
  tabs:["خوښې","خوندي پلټنې","ګډ فهرستونه"],savedTitle:"خوندي شوي",savedSubtitle:"ستاسو خوښ ملکیتونه او پلټنې",
  manage:"مدیریت",browse:"ملکیتونه ولټوئ",compare:"پرتله",selected:"غوره شوي",select:"ملکیت وټاکئ",
  remove:"لرې کړه",undo:"بېرته راوړه",removed:"له خوښو لرې شو",removeFailed:"خوندي ملکیت لرې نه شو.",emptyFavorites:"تر اوسه ملکیت نه دی خوندي شوی.",history:"نه موجود ملکیتونه تر لرې کولو پورې پاتې کېږي.",
