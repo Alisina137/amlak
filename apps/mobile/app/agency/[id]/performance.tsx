@@ -92,6 +92,11 @@ export default function AgencyPerformance(){
     <Label weight="bold">{a.displayName} · {a.role==="owner"?uiText(locale,"localeAgencyRoleOwner"):a.role==="manager"?uiText(locale,"localeAgencyRoleManager"):uiText(locale,"localeAgencyRoleAgent")}</Label>
     <Label muted>{t.assigned}: {formatNumber(a.assigned,locale)} · {t.pending}: {formatNumber(a.awaitingFirstReply,locale)}</Label>
     <Label muted>{t.timely}: {formatNumber(a.answeredWithin24h,locale)} · {t.average}: {a.avgFirstResponseMinutes===null?"—":formatNumber(a.avgFirstResponseMinutes,locale)}</Label>
+    <View style={{height:8,backgroundColor:colors.border,borderRadius:5,overflow:"hidden"}}>
+     <View style={{height:8,borderRadius:5,backgroundColor:colors.primary,
+      width:((Math.min(100,100*a.answeredWithin24h/Math.max(1,a.assigned)))+"%") as `${number}%`}}/>
+    </View>
+    <Label muted style={{fontSize:11}}>{t.timely} / {t.assigned} · {formatNumber(a.answeredWithin24h,locale)}/{formatNumber(a.assigned,locale)}</Label>
    </View>)}
   </SectionCard>
   <SectionCard>
@@ -121,6 +126,7 @@ export default function AgencyPerformance(){
      kind="secondary" label={t.assign+": "+a.displayName} onPress={()=>void assign(lead,a.userId)}/>:null)}
    </View>)}
   </SectionCard>
+  {report?.agents.length===0?<SectionCard><Label muted>{t.empty}</Label></SectionCard>:null}
   {report?.sampled?<SectionCard><Label muted>{t.estimate}</Label></SectionCard>:null}
   {report?<SectionCard><Label muted>{t.subtitle} {t.estimate}</Label></SectionCard>:null}
   <Action kind="secondary" label={t.load} onPress={()=>void load()}/>
