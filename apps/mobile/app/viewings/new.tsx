@@ -1,5 +1,5 @@
-import {router,useLocalSearchParams} from "expo-router";
-import {useMemo,useState} from "react";
+import {router,useFocusEffect,useLocalSearchParams} from "expo-router";
+import {useCallback,useMemo,useRef,useState} from "react";
 import {Pressable,View} from "react-native";
 import {colors} from "@amlaklink/design-tokens";
 import {formatNumber,isRTL} from "@amlaklink/localization";
@@ -7,6 +7,7 @@ import {useAuth} from "../../src/auth";
 import {usePreferences} from "../../src/context";
 import {kabulSlots,requestId,displayKabul,requestViewing} from "../../src/engagement-client";
 import {et} from "../../src/engagement-copy";
+import {ix} from "../../src/inbox-experience";
 import {Action,AppInput,BackButton,Label,Page,ScreenHeading,SectionCard,StateNotice} from "../../src/ui";
 
 const copy={
@@ -18,7 +19,9 @@ const copy={
 export default function NewViewing(){
  const {inquiryId}=useLocalSearchParams<{inquiryId?:string}>(),{token}=useAuth(),{locale}=usePreferences();
  const rtl=isRTL(locale);
- const options=useMemo(()=>kabulSlots(),[]);
+ const [options,setOptions]=useState(()=>kabulSlots());
+ const submitLock=useRef(false);
+ useFocusEffect(useCallback(()=>{setOptions(kabulSlots());},[]));
  const days=useMemo(()=>{
   const result:{key:string;date:Date;slots:typeof options}[]=[];
   for(const slot of options){
@@ -31,13 +34,23 @@ export default function NewViewing(){
  },[options]);
  const [chosen,setChosen]=useState<string[]>([]),[note,setNote]=useState(""),[key,setKey]=useState(requestId()),[busy,setBusy]=useState(false),[error,setError]=useState("");
  async function submit(){
-  if(!token||!inquiryId||chosen.length<2||chosen.length>3||busy)return;
-  setBusy(true);setError("");
+  if(!token||!inquiryId||chosen.length<2||chosen.length>3||busy||submitLock.current)return;
+  // Never submit stale slots, duplicated selections or appointment times in the past.
+  const times=chosen.map(t=>new Date(t).getTime());
+  if(new Set(times).size!==chosen.length||times.some(n=>!Number.isFinite(n)||n<=Date.now()+30*60000||n>=Date.now()+45*86400000)){
+   setError(ix(locale,"selectSlot"));setOptions(kabulSlots());setChosen([]);return;
+  }
+  submitLock.current=true;setBusy(true);setError("");
   try{
    await requestViewing(inquiryId,token,chosen,note.trim(),key);
    setKey(requestId());
    router.replace({pathname:"/inquiries/[id]",params:{id:inquiryId}});
-  }catch(e){setError((e as Error).message||et(locale,"unknown"));}finally{setBusy(false);}
+  }catch(e){
+   const message=(e as Error).message||"";
+   const conflict=/CONFLICT|VIEWING_TIME|INVALID_VIEWING_TIMES|INQUIRY_CLOSED/i.test(message);
+   setError(conflict?ix(locale,"conflict"):et(locale,"unknown"));
+   if(conflict){setOptions(kabulSlots());setChosen([]);}
+  }finally{submitLock.current=false;setBusy(false);}
  }
  if(!inquiryId)return <Page><BackButton onPress={()=>router.back()}/>
   <StateNotice message={copy[locale].invalid} tone="warning"/></Page>;
@@ -49,7 +62,7 @@ export default function NewViewing(){
    <Action label={copy[locale].signin} onPress={()=>router.push({pathname:"/auth/[action]",params:{action:"login"}})}/>
   </SectionCard>:<SectionCard>
    <Label weight="bold" style={{fontSize:16}}>{copy[locale].select}</Label>
-   <Label muted style={{fontSize:12}}>{copy[locale].timeZone}</Label>
+   <Label muted style={{fontSize:12}}>{ix(locale,"timeZone")}</Label>
    {days.length===0?<Label muted>{copy[locale].none}</Label>:days.map(day=><View key={day.key} style={{gap:8}}>
     <Label weight="medium">{new Intl.DateTimeFormat(locale==="en"?"en-US":locale==="ps"?"ps-AF":"fa-AF",{
      timeZone:"Asia/Kabul",weekday:"long",month:"short",day:"numeric"
@@ -75,7 +88,7 @@ export default function NewViewing(){
     editable={!busy} accessibilityLabel={et(locale,"noteForViewing")}
     style={{minHeight:92,textAlignVertical:"top"}}/>
    {error?<StateNotice message={error}/>:null}
-   <Action disabled={busy||chosen.length<2||chosen.length>3} label={busy?et(locale,"sending"):et(locale,"newViewing")} onPress={()=>void submit()}/>
+   <Action disabled={busy||chosen.length<2||chosen.length>3||days.length===0} label={busy?et(locale,"sending"):et(locale,"newViewing")} onPress={()=>void submit()}/>
   </SectionCard>}
   <Label muted style={{fontSize:12}}>{et(locale,"safety")}</Label>
  </Page>;
