@@ -27,6 +27,7 @@ test("Screen reader, navigation events, accessibility labels and tab long press 
 test("Dock handles physical phone insets, software keyboard and minimum controls",()=>{
  const s=read("apps/mobile/app/(tabs)/_layout.tsx");
  includes(s,"useSafeAreaInsets","Math.max(insets.bottom,10)",
+  'dock:{flexDirection:"row"',
   'Keyboard.addListener("keyboardDidShow"','Keyboard.addListener("keyboardDidHide"',
   'if(keyboardOpen)return null','minHeight:68','paddingHorizontal:12',
   "styles.iconPlateActive","styles.indicatorActive","...elevation.floating");
