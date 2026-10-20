@@ -2,7 +2,7 @@ import { findProvince } from "@amlaklink/catalog";
 import { colors } from "@amlaklink/design-tokens";
 import { isRTL, t } from "@amlaklink/localization";
 import { router } from "expo-router";
-import { ActivityIndicator, Pressable, ScrollView, View } from "react-native";
+import { Pressable, ScrollView, View } from "react-native";
 import { useEffect, useState } from "react";
 import { requestJson } from "../../src/auth";
 import { ListingCard } from "../../src/listing-ui";
@@ -14,12 +14,15 @@ import { ListingFeed } from "../../src/listing-ui";
 import { useApiStatus } from "../../src/api";
 import { Action, Label, Page, ScreenHeading, SectionCard } from "../../src/ui";
 import { uiText } from "../../src/ui-copy";
+import { BrowseProvinces, FeaturedPlaceholder, HomeNextSteps, RecentlyViewedSection, homeText } from "../../src/home-sections";
 
 export default function Explore() {
  const { locale, provinceId } = usePreferences();
  const { setFilters, filters } = useSearchFilters();
  const [featured, setFeatured] = useState<ListingDTO[]>([]);
  const [featuredLoading, setFeaturedLoading] = useState(true);
+ const [featuredError, setFeaturedError] = useState(false);
+ const [featuredRetry, setFeaturedRetry] = useState(0);
  const openSearch = () => {
   setFilters({ provinceId });
   router.push({ pathname: "/(tabs)/search", params: { focusSearch: "1" } });
@@ -34,14 +37,15 @@ export default function Explore() {
  useEffect(() => {
   let active = true;
   setFeaturedLoading(true);
+  setFeaturedError(false);
   setFeatured([]);
   const intent = filters.intent ?? "sale";
   requestJson<{items:ListingDTO[]}>("/v1/promotions/featured?" + queryString({provinceId,intent}))
-   .then(data => { if(active) setFeatured(data.items.filter(item => item.data.location.provinceId === provinceId && item.data.transactionType === intent).slice(0,8)); })
-   .catch(() => { if(active) setFeatured([]); })
+   .then(data => { if(active) setFeatured((data.items || []).filter(item => item.status === "published" && item.available !== false && item.data.location.provinceId === provinceId && item.data.transactionType === intent).slice(0,8)); })
+   .catch(() => { if(active){ setFeatured([]); setFeaturedError(true); } })
    .finally(() => { if(active) setFeaturedLoading(false); });
   return () => { active = false; };
- }, [provinceId, filters.intent, reconnectEpoch]);
+ }, [provinceId, filters.intent, reconnectEpoch, featuredRetry]);
  const categories = (["house","apartment","land","shop","office","commercial"] as const);
  const categoryNames = {en:["House","Apartment","Land","Shop","Office","Commercial"],fa:["خانه","آپارتمان","زمین","دکان","دفتر","تجاری"],ps:["کور","اپارتمان","ځمکه","دوکان","دفتر","تجارتي"]};
  const categoryIcons = ["⌂","▥","▱","▣","▤","▦"];
@@ -78,8 +82,8 @@ export default function Explore() {
   <SectionCard>
    <View style={{ flexDirection: rtl ? "row-reverse" : "row", gap: 8 }}>
     {(["buy", "rent", "gharawi"] as const).map(intent => <View key={intent} style={{ flex: 1, minWidth: 0 }}>
-     <Action label={t(locale, intent)} kind="secondary"
-      onPress={() => router.push({ pathname: "/(tabs)/search", params: { intent } })} />
+     <Action label={t(locale, intent)} kind={filters.intent === (intent === "buy" ? "sale" : intent) ? "primary" : "secondary"}
+      onPress={() => { setFilters({ provinceId, intent: intent === "buy" ? "sale" : intent }); router.push("/(tabs)/search"); }} />
     </View>)}
    </View>
   </SectionCard>
@@ -106,16 +110,26 @@ export default function Explore() {
     </Pressable>)}
    </ScrollView>
   </View>
+  <BrowseProvinces />
   <View style={{gap:8}}>
    <Label weight="bold" style={{fontSize:18}}>{locale==="en"?"Featured properties":locale==="fa"?"ملکیت‌های ویژه":"ځانګړي ملکیتونه"}</Label>
-   {featuredLoading?<ActivityIndicator color={colors.primary}/>:null}
-   {!featuredLoading&&featured.length>0?<ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{flexDirection:rtl?"row-reverse":"row",gap:12}}>
+   {featuredLoading?<FeaturedPlaceholder />:null}
+   {!featuredLoading&&featuredError?<SectionCard>
+    <Label muted>{homeText(locale,"featuredError")}</Label>
+    <Action kind="secondary" label={homeText(locale,"retry")} onPress={()=>setFeaturedRetry(value=>value+1)}/>
+   </SectionCard>:null}
+   {!featuredLoading&&!featuredError&&featured.length===0?<SectionCard>
+    <Label muted>{homeText(locale,"featuredEmpty")}</Label>
+    <Action kind="secondary" label={homeText(locale,"browseAll")} onPress={()=>router.push("/(tabs)/search")}/>
+   </SectionCard>:null}
+   {!featuredLoading&&!featuredError&&featured.length>0?<ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{flexDirection:rtl?"row-reverse":"row",gap:12}}>
     {featured.map(item=><View key={item.id} style={{width:258}}>
      <Label muted style={{fontSize:12}}>{locale==="en"?"Sponsored":locale==="fa"?"تبلیغاتی":"تمویل شوی"}</Label>
      <ListingCard item={item}/>
     </View>)}
    </ScrollView>:null}
   </View>
+  <RecentlyViewedSection reconnectEpoch={reconnectEpoch} />
   <View style={{ flexDirection: rtl ? "row-reverse" : "row", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
    <Label weight="bold" style={{ fontSize: 18, flex: 1 }}>{uiText(locale, "recentProperties")}</Label>
    <Pressable accessibilityRole="button" onPress={() => router.push("/(tabs)/search")}
@@ -124,6 +138,7 @@ export default function Explore() {
    </Pressable>
   </View>
   <ListingFeed provinceId={provinceId} reconnectEpoch={reconnectEpoch} />
+  <HomeNextSteps />
 
   {offline ? <Pressable accessibilityRole="button" onPress={() => void refresh()}
    style={{ minHeight: 44, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface }}>

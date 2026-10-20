@@ -6,6 +6,7 @@ import {colors} from "@amlaklink/design-tokens";
 import {findProvince} from "@amlaklink/catalog";
 import {usePreferences} from "../../src/context";
 import {getPublic,type ListingDTO} from "../../src/listing-client";
+import {markRecentlyViewed} from "../../src/recently-viewed";
 import {advertiserId,advertiserKind,getContact} from "../../src/discovery-client";
 import {dt} from "../../src/discovery-copy";
 import {et} from "../../src/engagement-copy";
@@ -19,7 +20,7 @@ export default function PropertyDetails(){
  const [data,setData]=useState<ListingDTO|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState(""),[busy,setBusy]=useState<"call"|"whatsapp"|null>(null);
  const [authorizationReviewed,setAuthorizationReviewed]=useState(false);
  useEffect(()=>{let live=true;setLoading(true);setError("");
-  void getPublic(id).then(v=>{if(live)setData(v);}).catch(()=>{if(live)setError(locale==="en"?"This property is not available.":"این ملک فعلاً قابل مشاهده نیست.");})
+  void getPublic(id).then(v=>{if(live){setData(v);if(v.status==="published")void markRecentlyViewed(v.id).catch(()=>{});}}).catch(()=>{if(live)setError(locale==="en"?"This property is not available.":"این ملک فعلاً قابل مشاهده نیست.");})
    .finally(()=>{if(live)setLoading(false);});
   return()=>{live=false;};
  },[id,locale]);
