@@ -1,5 +1,5 @@
 import {useEffect,useState} from "react";
-import {Image,Pressable,View} from "react-native";
+import {Animated,Pressable,View} from "react-native";
 import {router} from "expo-router";
 import {colors} from "@amlaklink/design-tokens";
 import type {ListingDTO} from "./listing-client";
@@ -12,6 +12,7 @@ import {Action} from "./ui";
 import {formatNumber,isRTL,type Locale} from "@amlaklink/localization";
 import {uiText} from "./ui-copy";
 import {findProvince} from "@amlaklink/catalog";
+import {FavoriteGlyph,MotionImage,usePressScale} from "./motion";
 const labels={
  en:{sale:"Sale",rent:"Rent",gharawi:"Gharawi",house:"House",apartment:"Apartment",land:"Land",shop:"Shop",office:"Office",commercial:"Commercial",published:"Published",paused:"Paused",pending_review:"Under review",rejected:"Rejected",draft:"Draft",sold:"Sold",rented:"Rented",available:"Confirmed available",notAvailable:"Not currently available",deposit:"Refundable deposit",principal:"Refundable gharawi principal",monthly:"Monthly rent"},
  fa:{sale:"فروش",rent:"کرایه",gharawi:"گروی",house:"خانه",apartment:"آپارتمان",land:"زمین",shop:"دکان",office:"دفتر",commercial:"تجاری",published:"نشرشده",paused:"متوقف",pending_review:"در حال بررسی",rejected:"ردشده",draft:"پیش‌نویس",sold:"فروخته‌شده",rented:"به کرایه داده‌شده",available:"موجودی تأیید شده",notAvailable:"موجودی تأیید نشده",deposit:"پیش‌پرداخت/تضمین",principal:"مبلغ قابل بازپرداخت گروی",monthly:"کرایه ماهانه"},
@@ -32,7 +33,7 @@ export function ListingCard({item}:{item:ListingDTO}){
  const {locale}=usePreferences(),d=item.data,photo=item.photos[0]?.id;
  const {isSaved,toggle}=useFavorites();
  const [error,setError]=useState("");
- const rtl=isRTL(locale);
+ const rtl=isRTL(locale),motion=usePressScale();
  const area=d.attributes.areaM2;
  const areaText=typeof area==="number"&&Number.isFinite(area)&&area>0?formatNumber(area,locale)+" m²":null;
  const location=[findProvince(d.location.provinceId)?.names[locale],d.location.district].filter(Boolean).join(" · ");
@@ -40,11 +41,12 @@ export function ListingCard({item}:{item:ListingDTO}){
  const confirmationText=confirmation&&!Number.isNaN(confirmation.getTime())?
   (locale==="en"?"Availability checked: ":locale==="fa"?"بررسی موجودیت: ":"شتون کتل شوی: ")+
   confirmation.toLocaleDateString(locale==="en"?"en-US":locale==="ps"?"ps-AF":"fa-AF"):null;
- return <Pressable accessibilityRole="button" accessibilityLabel={d.title}
+ return <Animated.View style={motion.pressStyle}><Pressable accessibilityRole="button" accessibilityLabel={d.title}
+  onPressIn={motion.onPressIn} onPressOut={motion.onPressOut}
   onPress={()=>router.push({pathname:"/property/[id]",params:{id:item.id}})}>
   <View style={{backgroundColor:colors.surface,borderColor:colors.border,borderWidth:1,borderRadius:18,overflow:"hidden",marginBottom:12}}>
    <View style={{position:"relative"}}>
-    {photo?<Image source={photoSource(photo)} accessibilityLabel={d.title}
+    {photo?<MotionImage imageKey={photo} source={photoSource(photo)} accessibilityLabel={d.title}
      style={{width:"100%",aspectRatio:4/3,backgroundColor:colors.border}} resizeMode="cover"/>:
      <View style={{width:"100%",aspectRatio:4/3,backgroundColor:colors.border,justifyContent:"center",alignItems:"center"}}>
       <Label style={{fontSize:36}}>⌂</Label>
@@ -55,7 +57,7 @@ export function ListingCard({item}:{item:ListingDTO}){
     <Pressable accessibilityRole="button" accessibilityLabel={isSaved(item.id)?dt(locale,"unsave"):dt(locale,"save")}
      onPress={event=>{event.stopPropagation();void toggle(item.id).catch(()=>setError(dt(locale,"favoriteError")));}}
      style={{position:"absolute",top:8,end:8,width:44,height:44,borderRadius:22,backgroundColor:colors.surface,justifyContent:"center",alignItems:"center"}}>
-     <Label style={{fontSize:23,color:colors.primary,textAlign:"center"}}>{isSaved(item.id)?"♥":"♡"}</Label>
+     <FavoriteGlyph saved={isSaved(item.id)}/>
     </Pressable>
     {item.photos.length>1?<View style={{position:"absolute",bottom:10,end:10,paddingHorizontal:10,paddingVertical:5,borderRadius:14,backgroundColor:"rgba(15,20,19,0.82)"}}>
      <Label style={{fontSize:12,color:"#fff"}}>▣ {formatNumber(item.photos.length,locale)}</Label>
@@ -72,7 +74,7 @@ export function ListingCard({item}:{item:ListingDTO}){
     {error?<Label style={{fontSize:12,color:colors.error}}>{error}</Label>:null}
    </View>
   </View>
- </Pressable>;
+ </Pressable></Animated.View>;
 }
 export function ListingFeed({provinceId,reconnectEpoch=0}:{provinceId?:string;reconnectEpoch?:number}){
  const [items,setItems]=useState<ListingDTO[]>([]),[loading,setLoading]=useState(true),[error,setError]=useState(""),[retry,setRetry]=useState(0);
