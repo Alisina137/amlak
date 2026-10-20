@@ -1,6 +1,6 @@
 import {findProvince,searchProvinces} from "@amlaklink/catalog";
 import {colors} from "@amlaklink/design-tokens";
-import {isRTL,t} from "@amlaklink/localization";
+import {formatNumber,isRTL,t} from "@amlaklink/localization";
 import {useLocalSearchParams,router} from "expo-router";
 import {useCallback,useEffect,useMemo,useRef,useState} from "react";
 import {ActivityIndicator,Modal,Pressable,ScrollView,View} from "react-native";
@@ -82,7 +82,13 @@ export default function Search(){
  };
  const clearSearch=()=>{setQuery("");setShowSuggestions(false);reset();};
  return <Page>
-  <ScreenHeading title={t(locale,"search")} subtitle={findProvince(filters.provinceId||"")?.names[locale]||dt(locale,"all")}/>
+  <View style={{flexDirection:rtl?"row-reverse":"row",alignItems:"center",justifyContent:"space-between",gap:10}}>
+   <View style={{flex:1}}><ScreenHeading title={t(locale,"search")} subtitle={findProvince(filters.provinceId||"")?.names[locale]||dt(locale,"all")}/></View>
+   <Pressable accessibilityRole="button" accessibilityLabel={t(locale,"chooseProvince")}
+    onPress={()=>router.push("/locations")} style={{minHeight:44,borderRadius:12,borderWidth:1,borderColor:colors.border,backgroundColor:colors.surface,paddingHorizontal:14,justifyContent:"center"}}>
+    <Label weight="medium" style={{color:colors.primary,fontSize:13}}>⌖ {t(locale,"chooseProvince")}</Label>
+   </Pressable>
+  </View>
   <AppInput autoFocus={params.focusSearch==="1"} accessibilityLabel={dt(locale,"searchPlaceholder")} value={query} onChangeText={value=>{setQuery(value);setShowSuggestions(true);}}
    placeholder={dt(locale,"searchPlaceholder")} autoCorrect={false}
    style={{minHeight:50,backgroundColor:colors.surface,borderRadius:12,borderColor:colors.border,borderWidth:1,padding:12,color:colors.text,fontSize:16,writingDirection:rtl?"rtl":"ltr",textAlign:rtl?"right":"left"}}/>
@@ -114,7 +120,7 @@ export default function Search(){
   </SectionCard>:null}
   <Action kind="secondary" label={locale==="en"?"Save this search / manage alerts":locale==="fa"?"ذخیره جستجو و مدیریت اعلان‌ها":"پلټنه خوندي کړئ / خبرتیاوې"} onPress={()=>router.push("/saved-searches")}/>
   <View style={{flexDirection:rtl?"row-reverse":"row",gap:8,alignItems:"center",justifyContent:"space-between"}}>
-   <Label weight="bold" style={{fontSize:18}}>{dt(locale,"results")} · {visibleItems.length}{visibleCursor?"+":""}</Label>
+   <Label weight="bold" style={{fontSize:18}}>{dt(locale,"results")} · {formatNumber(visibleItems.length,locale)}{visibleCursor?"+":""}</Label>
    <Pressable accessibilityRole="button" style={{padding:10}} onPress={()=>void load()}>
     <Label style={{color:colors.primary}}>{dt(locale,"refresh")}</Label>
    </Pressable>
@@ -179,7 +185,7 @@ function FilterSheet({visible,close,filters,apply,clear,locale}:{visible:boolean
      <Label weight="bold" style={{fontSize:20}}>{dt(locale,"filter")} · {activeFilterKeys(draft).length}</Label>
      <Pressable accessibilityRole="button" onPress={close} style={{padding:12}}><Label>✕</Label></Pressable>
     </View>
-    <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{gap:20,paddingBottom:24}}>
+    <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{gap:18,paddingBottom:24}}>
      {options(dt(locale,"category"),"type",[{value:"",label:dt(locale,"all")},...(["house","apartment","land","shop","office","commercial"] as const).map(type=>({value:type,label:({en:{house:"House",apartment:"Apartment",land:"Land",shop:"Shop",office:"Office",commercial:"Commercial"},fa:{house:"خانه",apartment:"آپارتمان",land:"زمین",shop:"دکان",office:"دفتر",commercial:"تجاری"},ps:{house:"کور",apartment:"اپارتمان",land:"ځمکه",shop:"دوکان",office:"دفتر",commercial:"تجارتي"}})[locale][type]}))])}
      <View style={{gap:8}}>
       <Label weight="bold">{dt(locale,"region")}</Label>
@@ -191,14 +197,17 @@ function FilterSheet({visible,close,filters,apply,clear,locale}:{visible:boolean
         style={{borderWidth:1,borderColor:colors.border,padding:10,borderRadius:10,color:colors.text}}/>
       </View>)}
      </View>
+     <Label weight="bold" style={{fontSize:16}}>{dt(locale,"price")} / {dt(locale,"areaMin")}</Label>
      {options(dt(locale,"currency"),"currency",[{value:"AFN",label:"AFN"},{value:"USD",label:"USD"}])}
      <View style={{flexDirection:rtl?"row-reverse":"row",gap:10,flexWrap:"wrap"}}>
       {numericField("minPrice",dt(locale,"priceMin"))}{numericField("maxPrice",dt(locale,"priceMax"))}
       {numericField("minArea",dt(locale,"areaMin"))}{numericField("maxArea",dt(locale,"areaMax"))}
       {numericField("bedrooms",dt(locale,"bedrooms"))}{numericField("bathrooms",dt(locale,"bathrooms"))}
      </View>
+     <Label weight="bold" style={{fontSize:16}}>{locale==="en"?"Amenities":locale==="fa"?"امکانات":"اسانتیاوې"}</Label>
      {(["furnished","parking","water","electricity"] as const).map(key=>
       <View key={key}>{options(dt(locale,key),key,[{value:"",label:dt(locale,"all")},{value:"true",label:"✓"},{value:"false",label:"✕"}])}</View>)}
+     <Label weight="bold" style={{fontSize:16}}>{dt(locale,"professional")}</Label>
      {options(dt(locale,"professional"),"advertiser",[{value:"",label:dt(locale,"all")},{value:"private",label:uiText(locale,"searchPrivate")},{value:"independent_agent",label:uiText(locale,"searchAgent")},{value:"agency",label:uiText(locale,"searchAgency")}])}
      {options(dt(locale,"verified"),"verifiedAgency",[{value:"",label:dt(locale,"all")},{value:"true",label:"✓"}])}
     </ScrollView>
