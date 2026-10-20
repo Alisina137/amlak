@@ -287,7 +287,7 @@ export default function ListingEditor(){
     const photo=photoInfoFor(data,photoId);
     return <View key={photoId} style={{gap:10,borderWidth:1,borderColor:colors.border,padding:12,borderRadius:14}}>
      <View style={{flexDirection:locale==="en"?"row":"row-reverse",gap:12,alignItems:"center"}}>
-      <Image source={photoSource(photoId,token)} style={{width:126,height:106,backgroundColor:colors.border,borderRadius:10}}/>
+      <PrivatePhotoPreview photoId={photoId} token={token} failure={media.imageUnavailable}/>
       <View style={{flex:1,gap:6}}>
        <Label weight="bold">{i===0?media.cover:formatNumber(i+1,locale)+" / "+formatNumber(data.photoIds.length,locale)}</Label>
        <Label muted>{roomName(locale,photo.room)}</Label>
@@ -419,5 +419,18 @@ function Field({label,value,onChange,multiline=false,numeric=false,inputDirectio
   <AppInput accessibilityLabel={label} value={value} onChangeText={onChange} placeholder={placeholder}
    multiline={multiline} keyboardType={numeric?"decimal-pad":"default"} inputDirection={numeric?"ltr":inputDirection}
    style={{minHeight:multiline?100:48,padding:12,color:colors.text,fontSize:16,borderRadius:12,borderWidth:1,borderColor:colors.border,textAlignVertical:multiline?"top":"center"}}/>
+ </View>;
+}
+
+function PrivatePhotoPreview({photoId,token,failure}:{photoId:string;token:string|null;failure:string}){
+ const [failed,setFailed]=useState(false),[retry,setRetry]=useState(0);
+ useEffect(()=>{setFailed(false);setRetry(0);},[photoId,token]);
+ return <View style={{width:126,height:106,backgroundColor:colors.border,borderRadius:10,overflow:"hidden"}}>
+  {failed?<Pressable accessibilityRole="button" accessibilityLabel={failure}
+   onPress={()=>{setFailed(false);setRetry(n=>n+1);}} style={{flex:1,alignItems:"center",justifyContent:"center",padding:8}}>
+   <Label style={{fontSize:12,textAlign:"center"}}>{failure}</Label>
+  </Pressable>:<Image key={retry} source={photoSource(photoId,token)}
+   accessibilityLabel={photoId} resizeMode="cover" onError={()=>setFailed(true)}
+   style={{width:126,height:106}}/>}
  </View>;
 }
