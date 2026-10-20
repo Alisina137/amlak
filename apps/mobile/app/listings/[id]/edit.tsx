@@ -197,6 +197,21 @@ export default function ListingEditor(){
   try{await requestJson("/v1/listings/"+id+"/withdraw",{method:"POST",token});await refresh();}
   catch(e){setError((e as Error).message);}finally{setBusy(false);}
  }
+ function confirmLifecycle(action:"pause"|"resume"|"close"|"confirm-availability",outcome?:"sold"|"rented"){
+  const messages={
+   en:{pause:"Pause this public listing?",resume:"Resume this listing?",close:"Mark this property unavailable? This closes the listing.",
+    "confirm-availability":"Confirm this property is still available?",yes:"Confirm",cancel:"Cancel"},
+   fa:{pause:"آگهی عمومی متوقف شود؟",resume:"آگهی دوباره فعال شود؟",close:"ملک غیرموجود ثبت شود؟ آگهی بسته خواهد شد.",
+    "confirm-availability":"تأیید می‌کنید ملک هنوز موجود است؟",yes:"تأیید",cancel:"انصراف"},
+   ps:{pause:"خپور اعلان ودروو؟",resume:"اعلان بیا فعال کړو؟",close:"ملکیت نور نه شته؟ اعلان به وتړل شي.",
+    "confirm-availability":"ملکیت لا موجود دی؟",yes:"تایید",cancel:"لغوه"}
+  } as const;
+  const copy=messages[locale];
+  Alert.alert(copy[action],ox(locale,"note"),[
+   {text:copy.cancel,style:"cancel"},
+   {text:copy.yes,style:action==="close"?"destructive":"default",onPress:()=>void listingAction(action,outcome)}
+  ]);
+ }
  async function listingAction(action:"pause"|"resume"|"close"|"confirm-availability",outcome?:"sold"|"rented"){
   if(!token||busy)return;
   setBusy(true);setError("");setNotice("");
@@ -379,16 +394,26 @@ export default function ListingEditor(){
   </SectionCard>
   {status==="published"?<SectionCard>
    <Label weight="bold">{uiText(locale,"editorAvailability")}</Label>
-   <Action kind="secondary" disabled={busy} label={uiText(locale,"editorConfirmAvailability")} onPress={()=>void listingAction("confirm-availability")}/>
-   <Action kind="secondary" disabled={busy} label={uiText(locale,"editorPause")} onPress={()=>void listingAction("pause")}/>
-   <Action kind="secondary" disabled={busy} label={data.transactionType==="sale"?uiText(locale,"editorSold"):uiText(locale,"editorRented")} onPress={()=>void listingAction("close",data.transactionType==="sale"?"sold":"rented")}/>
+   <Action kind="secondary" disabled={busy} label={uiText(locale,"editorConfirmAvailability")} onPress={()=>confirmLifecycle("confirm-availability")}/>
+   <Action kind="secondary" disabled={busy} label={uiText(locale,"editorPause")} onPress={()=>confirmLifecycle("pause")}/>
+   <Action kind="secondary" disabled={busy} label={data.transactionType==="sale"?uiText(locale,"editorSold"):uiText(locale,"editorRented")} onPress={()=>confirmLifecycle("close",data.transactionType==="sale"?"sold":"rented")}/>
   </SectionCard>:null}
   {status==="paused"?<SectionCard><Label muted>{uiText(locale,"editorPausedWarning")}</Label>
-   <Action disabled={busy} label={uiText(locale,"editorResume")} onPress={()=>void listingAction("resume")}/>
+   <Action disabled={busy} label={uiText(locale,"editorResume")} onPress={()=>confirmLifecycle("resume")}/>
   </SectionCard>:null}
-  {revisionStatus==="submitted"?<SectionCard><Label>{tx("review")}</Label><Action kind="secondary" label={tx("withdraw")} disabled={busy} onPress={()=>void withdraw()}/></SectionCard>:null}
+  {revisionStatus==="submitted"?<SectionCard>
+   <StatusBadge tone="warning" label={listingStatus(locale,"pending_review")}/>
+   <Label>{tx("review")}</Label><Label muted>{ox(locale,"note")}</Label>
+   <Action kind="secondary" label={tx("withdraw")} disabled={busy} onPress={()=>Alert.alert(tx("withdraw"),ox(locale,"note"),[
+    {text:locale==="en"?"Cancel":locale==="fa"?"انصراف":"لغوه",style:"cancel"},
+    {text:tx("withdraw"),style:"destructive",onPress:()=>void withdraw()}
+   ])}/>
+  </SectionCard>:null}
   {revisionStatus==="rejected"?<SectionCard><Label>{tx("rejected")}</Label><Label muted>{revisionReason}</Label></SectionCard>:null}
-  {status==="published"&&revisionStatus!=="submitted"?<SectionCard><Label style={{color:colors.success}}>{tx("approval")}</Label></SectionCard>:null}
+  {status==="published"?<SectionCard><Label weight="bold" style={{color:colors.success}}>{tx("approval")}</Label>
+   <Label muted>{ox(locale,"note")}</Label>
+   <Action kind="secondary" label={ox(locale,"viewPublic")} onPress={()=>router.push({pathname:"/property/[id]",params:{id}})}/>
+  </SectionCard>:null}
   {mutable?form():null}
   {pendingConflict?<SectionCard>
    <Label style={{color:colors.warning}}>{tx("conflict")}</Label>
