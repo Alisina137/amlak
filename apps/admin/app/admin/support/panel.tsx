@@ -1,5 +1,5 @@
 "use client";
-import {useCallback,useEffect,useState} from "react";
+import {useCallback,useEffect,useRef,useState} from "react";
 type Ticket={id:string;subject:string;category:string;status:string;userId:string;updatedAt:string};
 type Entry={ticket:Ticket;userName:string};
 type Msg={id:string;body:string;authorUserId:string|null;authorStaffId:string|null;createdAt:string};
@@ -7,6 +7,10 @@ export function SupportPanel(){
  const [items,setItems]=useState<Entry[]>([]),[selected,setSelected]=useState<Ticket|null>(null);
  const [messages,setMessages]=useState<Msg[]>([]),[body,setBody]=useState(""),[reason,setReason]=useState("");
  const [busy,setBusy]=useState(false),[error,setError]=useState(""),[notice,setNotice]=useState("");
+ const [query,setQuery]=useState(""),[statusFilter,setStatusFilter]=useState<"all"|"open"|"awaiting_user"|"resolved"|"closed">("all");
+ const replyKey=useRef(crypto.randomUUID());
+ const visible=items.filter(entry=>(statusFilter==="all"||entry.ticket.status===statusFilter)&&
+  (entry.ticket.subject+" "+entry.userName+" "+entry.ticket.category).toLowerCase().includes(query.trim().toLowerCase()));
  const get=useCallback(async()=>{
   setBusy(true);try{
    const resp=await fetch("/api/support/tickets",{cache:"no-store"});
@@ -21,7 +25,7 @@ export function SupportPanel(){
    const resp=await fetch("/api/support/tickets/"+id,{cache:"no-store"});
    const obj=await resp.json() as {ticket?:Ticket;messages?:Msg[];error?:string};
    if(!resp.ok||!obj.ticket)throw Error(obj.error||"REQUEST_FAILED");
-   setSelected(obj.ticket);setMessages(obj.messages||[]);setError("");
+   setSelected(obj.ticket);setMessages(obj.messages||[]);setError("");replyKey.current=crypto.randomUUID();
   }catch(e){setError((e as Error).message);}
   finally{setBusy(false);}
  },[]);
@@ -34,16 +38,25 @@ export function SupportPanel(){
     method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
    const res=await resp.json() as {error?:string};
    if(!resp.ok)throw Error(res.error||"REQUEST_FAILED");
-   setNotice("تغییر ثبت شد.");setBody("");setReason("");
+   setNotice("تغییر ثبت شد.");setBody("");setReason("");replyKey.current=crypto.randomUUID();
    await open(selected.id);await get();
   }catch(e){setError((e as Error).message);}finally{setBusy(false);}
  }
  return <section className="admin-card" style={{display:"grid",gap:14}}>
-  <button className="admin-button secondary" disabled={busy} onClick={()=>void get()}>تازه‌سازی درخواست‌ها</button>
+  <div className="admin-queue-tools">
+   <label htmlFor="support-search">جستجوی موضوع، کاربر یا دسته‌بندی</label>
+   <input id="support-search" type="search" value={query} onChange={e=>setQuery(e.target.value)}/>
+   <label htmlFor="support-status">وضعیت</label>
+   <select id="support-status" value={statusFilter} onChange={e=>setStatusFilter(e.target.value as typeof statusFilter)}>
+    <option value="all">همه</option><option value="open">باز</option><option value="awaiting_user">در انتظار پاسخ کاربر</option>
+    <option value="resolved">حل‌شده</option><option value="closed">بسته</option>
+   </select>
+   <button className="admin-button secondary" disabled={busy} onClick={()=>void get()}>تازه‌سازی درخواست‌ها</button>
+  </div><p aria-live="polite">{visible.length.toLocaleString("fa-AF")} / {items.length.toLocaleString("fa-AF")} درخواست</p>
   {error?<p role="alert" className="notice">{error}</p>:null}
   {notice?<p role="status">{notice}</p>:null}
   {!items.length?<p>درخواست باز یا در انتظار پاسخ وجود ندارد.</p>:null}
-  {items.map(({ticket,userName})=><article className="agency-review" key={ticket.id}>
+  {visible.map(({ticket,userName})=><article className="agency-review" key={ticket.id}>
    <strong>{ticket.subject}</strong><p>{userName} · {ticket.category} · {ticket.status}</p>
    <button className="admin-button secondary" onClick={()=>void open(ticket.id)}>دیدن گفتگو</button>
   </article>)}
@@ -58,7 +71,7 @@ export function SupportPanel(){
     <label htmlFor="support-reply">پاسخ پشتیبانی</label>
     <textarea id="support-reply" value={body} maxLength={2000} onChange={e=>setBody(e.target.value)}/>
     <button className="admin-button" disabled={busy||body.trim().length<2}
-     onClick={()=>void post("replies",{requestId:crypto.randomUUID(),body:body.trim()})}>ارسال پاسخ</button>
+     onClick={()=>void post("replies",{requestId:replyKey.current,body:body.trim()})}>ارسال پاسخ</button>
     <label htmlFor="support-reason">دلیل تغییر وضعیت (حداقل ۸ حرف)</label>
     <textarea id="support-reason" value={reason} maxLength={500} onChange={e=>setReason(e.target.value)}/>
     <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
