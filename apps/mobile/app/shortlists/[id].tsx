@@ -73,6 +73,15 @@ export default function ShortlistDetail(){
   {busy?<ActivityIndicator color={colors.primary}/>:null}
   {error?<StateNotice message={error} retryLabel={t.refresh} onRetry={()=>void load()}/>:null}
   {detail?<><SectionCard>
+   <Label weight="bold">{savedText(locale,"groupSummary")}</Label>
+   <View style={{flexDirection:rtl?"row-reverse":"row",gap:8,flexWrap:"wrap"}}>
+    <StatusBadge tone="success" label={savedText(locale,"interestedCount")+": "+
+     formatNumber(detail.items.filter(item=>item.available).reduce((n,item)=>n+item.votes.filter(v=>v.vote==="interested").length,0),locale)}/>
+    <StatusBadge tone="neutral" label={savedText(locale,"passCount")+": "+
+     formatNumber(detail.items.filter(item=>item.available).reduce((n,item)=>n+item.votes.filter(v=>v.vote==="pass").length,0),locale)}/>
+   </View>
+   <Label muted style={{fontSize:12}}>{savedText(locale,"safe")}</Label>
+  </SectionCard><SectionCard>
    <Label weight="bold">{t.members} ({formatNumber(detail.members.length,locale)}/5)</Label>
    {detail.members.map(member=><View key={member.userId} style={{gap:5}}>
     <Label>{member.userId===detail.ownerId?savedText(locale,"owner"):member.displayName}</Label>
