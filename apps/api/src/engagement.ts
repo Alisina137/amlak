@@ -140,9 +140,12 @@ export function registerEngagementRoutes(app:FastifyInstance,db:Database){
   for(const row of rows){
    const l=await getListing(db,row.listingId);
    const revision=l.approvedRevisionId?await getRevision(db,l.approvedRevisionId):null;
+   const [recentMessage]=await db.select({body:schema.messages.body}).from(schema.messages)
+    .where(eq(schema.messages.inquiryId,row.id)).orderBy(desc(schema.messages.createdAt)).limit(1);
    result.push({id:row.id,listingId:row.listingId,title:revision?listingDraftSchema.parse(revision.data).title:"Property",
     side:row.seekerId===actor.id?"seeker":"advertiser",status:row.status,leadStatus:row.leadStatus,
-    assignedTo:row.assignedTo,agencyId:row.agencyId,lastMessageAt:row.lastMessageAt});
+    assignedTo:row.assignedTo,agencyId:row.agencyId,lastMessageAt:row.lastMessageAt,
+    lastMessagePreview:recentMessage?.body.slice(0,140)||null});
   }
   return {items:result};
  });
