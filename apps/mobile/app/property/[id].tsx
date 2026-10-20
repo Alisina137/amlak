@@ -24,7 +24,7 @@ const detailCopy={
  fa:{location:"موقعیت",details:"مشخصات ملک",description:"توضیحات",available:"موجودیت",checked:"آخرین تأیید موجودی",price:"جزئیات قیمت",area:"مساحت",beds:"اتاق خواب",baths:"حمام",yes:"بلی",no:"نخیر",features:"امکانات",months:"ماه",viewing:"درخواست بازدید",photos:"تصاویر",retry:"تلاش دوباره",notFound:"بارگذاری این آگهی ممکن نشد.",updated:"اطلاعات آگهی",about:"درباره آگهی‌دهنده",noAddress:"آدرس دقیق تنها با اجازه شریک می‌شود",noDescription:"توضیحی ثبت نشده است.",month:"ماهانه",safe:"تنها از روش‌های تماس مجاز آگهی‌دهنده استفاده کنید"},
  ps:{location:"موقعیت",details:"د ملک ځانګړنې",description:"تفصیل",available:"شتون",checked:"د شتون وروستی تایید",price:"د بیې جزییات",area:"مساحت",beds:"د خوب خونې",baths:"تشنابونه",yes:"هو",no:"نه",features:"اسانتیاوې",months:"میاشتې",viewing:"د لیدنې غوښتنه",photos:"انځورونه",retry:"بیا هڅه",notFound:"دا اعلان پورته نه شو.",updated:"د اعلان معلومات",about:"د اعلان ورکوونکي په اړه",noAddress:"کره پته یوازې په اجازه شریکېږي",noDescription:"تفصیل نه دی ورکړل شوی.",month:"میاشتنی",safe:"یوازې د اعلان ورکوونکي له اجازې سره سم اړیکه ونیسئ"}
 } as const;
-function InfoMetric({label,value}:{label:string;value:string}){return <View style={{flexGrow:1,flexBasis:"29%",minWidth:90,gap:3,padding:10,borderWidth:1,borderColor:colors.border,borderRadius:12,backgroundColor:colors.primaryWash}}><Label muted style={{fontSize:12,lineHeight:18}}>{label}</Label><Label weight="bold" style={{fontSize:15,lineHeight:23}}>{value}</Label></View>;}
+function InfoMetric({label,value}:{label:string;value:string}){return <View style={{flexGrow:1,flexBasis:"29%",minWidth:90,gap:3,padding:10,borderWidth:1,borderColor:colors.borderStrong,borderRadius:16,backgroundColor:colors.primaryWash}}><Label muted style={{fontSize:12,lineHeight:18}}>{label}</Label><Label weight="bold" style={{fontSize:15,lineHeight:23}}>{value}</Label></View>;}
 
 export default function PropertyDetails(){
  const {id}=useLocalSearchParams<{id:string}>(),{locale}=usePreferences(),{isSaved,toggle}=useFavorites();
@@ -72,7 +72,7 @@ export default function PropertyDetails(){
        onPress={()=>void toggle(id).catch(()=>setError(dt(locale,"favoriteError")))} style={{padding:12,minHeight:44}}>
       <FavoriteGlyph saved={isSaved(id)}/>
      </Pressable>
-     <Pressable accessibilityRole="button" accessibilityLabel={dt(locale,"share")} onPress={()=>void share()} style={{padding:12,minHeight:44}}><Label>↗</Label></Pressable>
+     <Pressable accessibilityRole="button" accessibilityLabel={dt(locale,"share")} onPress={()=>void share()} style={{padding:12,minHeight:44,borderRadius:14,backgroundColor:colors.surface,borderWidth:1,borderColor:colors.border}}><Label style={{color:colors.primary,fontSize:19}}>↗</Label></Pressable>
     </View>
    </View>
    {error?<StateNotice message={error}/>:null}
@@ -84,9 +84,9 @@ export default function PropertyDetails(){
     </View>
     <ScreenHeading title={d.title} subtitle={location||copy.noAddress}/>
    </View>
-   <MotionReveal delay={85}><SectionCard>
-    <Label muted style={{fontSize:13}}>{copy.price}</Label>
-    <Label weight="bold" style={{fontSize:25,lineHeight:34,color:colors.primary}}>{priceSummary(d,locale)}</Label>
+   <MotionReveal delay={85}><SectionCard style={{backgroundColor:colors.accentSoft,borderColor:"#EAD9BC"}}>
+    <Label muted style={{fontSize:13,color:colors.accent}}>{copy.price}</Label>
+    <Label weight="bold" style={{fontSize:27,lineHeight:37,color:colors.primaryDark,letterSpacing:-0.3}}>{priceSummary(d,locale)}</Label>
     {d.transactionType==="rent"?<>
      <Label>{lt(locale,"deposit")}: {cash(p.refundableDeposit)}</Label><Label>{lt(locale,"monthly")}: {cash(p.monthlyRent)}</Label>
     </>:null}
@@ -125,8 +125,8 @@ export default function PropertyDetails(){
    <Label muted style={{fontSize:12}}>{copy.safe}</Label>
    <Action kind="secondary" label={st(locale,"report")} onPress={()=>router.push({pathname:"/report/[listingId]",params:{listingId:id}})}/>
   </Page>
-  <SafeAreaView edges={["bottom"]} style={{backgroundColor:colors.surface}}>
-   <View style={{gap:8,padding:12,borderTopWidth:1,borderColor:colors.border}}>
+  <SafeAreaView edges={["bottom"]} style={{backgroundColor:colors.surface,...elevation.floating}}>
+   <View style={{gap:9,paddingHorizontal:16,paddingTop:14,paddingBottom:12,borderTopWidth:1,borderColor:colors.border}}>
    {contactError?<Label style={{fontSize:13,lineHeight:20,color:colors.error}}>{contactError}</Label>:null}
    <Action label={et(locale,"newInquiry")} disabled={!canContact} onPress={()=>router.push({pathname:"/inquiries/new",params:{listingId:id}})}/>
    <Action kind="secondary" label={copy.viewing} disabled={!canContact} onPress={()=>router.push({pathname:"/inquiries/new",params:{listingId:id,intent:"viewing"}})}/>
