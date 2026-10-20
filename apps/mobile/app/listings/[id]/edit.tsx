@@ -2,7 +2,8 @@ import {useEffect,useRef,useState} from "react";
 import {router,useLocalSearchParams} from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import {Image,Pressable,ScrollView,View,ActivityIndicator} from "react-native";
+import {Alert,Image,Pressable,ScrollView,View} from "react-native";
+import {isRTL,formatNumber} from "@amlaklink/localization";
 import {colors} from "@amlaklink/design-tokens";
 import {findProvince,searchProvinces} from "@amlaklink/catalog";
 import {listingDraftSchema,photoInfoFor,type ListingDraft,type PhotoDetail} from "@amlaklink/contracts";
@@ -12,7 +13,8 @@ import {PropertyLocationPicker} from "../../../src/location-picker";
 import {lt,priceSummary} from "../../../src/listing-ui";
 import {mediaCopy,roomName,photoRoomTypes} from "../../../src/media-copy";
 import {getOwned,photoSource,uploadPhoto,type ListingDTO} from "../../../src/listing-client";
-import {Action,AppInput,BackButton,DirectionalRow,Label,Page,ScreenHeading,SectionCard} from "../../../src/ui";
+import {Action,AppInput,BackButton,DirectionalRow,Label,Page,ScreenHeading,SectionCard,LoadingCard,StateNotice,StatusBadge} from "../../../src/ui";
+import {ox,listingStatus} from "../../../src/owner-experience";
 import {uiText} from "../../../src/ui-copy";
 const steps={
  en:["Category","Transaction","Location","Property details","Pricing","Photos","Contact","Review"],
@@ -57,6 +59,13 @@ export default function ListingEditor(){
   const current=photoInfoFor(latest.current,photoId);
   change({...latest.current,photoDetails:{...latest.current.photoDetails,
    [photoId]:{...current,...updates}}});
+ };
+ const movePhoto=(photoId:string,direction:-1|1)=>{
+  const from=latest.current.photoIds.indexOf(photoId),to=from+direction;
+  if(from<0||to<0||to>=latest.current.photoIds.length)return;
+  const list=[...latest.current.photoIds];
+  [list[from],list[to]]=[list[to],list[from]];
+  change({...latest.current,photoIds:list});
  };
  const removePhotoFromDraft=(photoId:string)=>{
   const details={...latest.current.photoDetails};delete details[photoId];
@@ -198,7 +207,7 @@ export default function ListingEditor(){
   finally{setBusy(false);}
  }
  async function transmitPhoto(asset:{uri:string;mime:string;bytes?:number}){
-  if(!token||busy)return;
+  if(!token||busy||!mutable||latest.current.photoIds.length>=20)return;
   setBusy(true);setError("");setNotice("");
   try{
    const response=await uploadPhoto(id,token,asset.uri,asset.mime);
@@ -214,7 +223,7 @@ export default function ListingEditor(){
   }finally{setBusy(false);}
  }
  async function choosePhoto(){
-  if(!token||busy)return;
+  if(!token||busy||!mutable||latest.current.photoIds.length>=20)return;
   const selection=await ImagePicker.launchImageLibraryAsync({mediaTypes:["images"],quality:0.8,allowsMultipleSelection:false});
   if(selection.canceled||!selection.assets[0])return;
   const a=selection.assets[0];
@@ -270,7 +279,7 @@ export default function ListingEditor(){
   if(step===5)return <SectionCard>
    <Label weight="bold">{media.photos} · {data.photoIds.length}/20</Label>
    <Label muted>{locale==="en"?"At least one photo. Maximum 20; images are re-encoded to remove metadata.":locale==="fa"?"حداقل یک عکس، حداکثر ۲۰ عکس؛ معلومات مخفی عکس حذف می‌شود.":"لږ تر لږه یو انځور، تر ۲۰ پورې؛ پټ عکس معلومات لرې کېږي."}</Label>
-   <Label muted>{media.note}</Label>
+   <Label muted>{media.note}</Label><Label muted style={{fontSize:12}}>{ox(locale,"photosTip")}</Label>
    <Action label={busy?"…":tx("photo")} disabled={busy||!mutable||data.photoIds.length>=20} onPress={()=>void choosePhoto()}/>
    {pendingImage?<View style={{gap:8}}><Label muted>{(pendingImage.bytes?Math.round(pendingImage.bytes/1024):"?")+" KB"} · {busy?"Uploading…":error}</Label>
     <Action kind="secondary" disabled={busy||!mutable} label={uiText(locale,"editorPhotoRetry")} onPress={()=>void transmitPhoto(pendingImage)}/></View>:null}
@@ -278,9 +287,9 @@ export default function ListingEditor(){
     const photo=photoInfoFor(data,photoId);
     return <View key={photoId} style={{gap:10,borderWidth:1,borderColor:colors.border,padding:12,borderRadius:14}}>
      <View style={{flexDirection:locale==="en"?"row":"row-reverse",gap:12,alignItems:"center"}}>
-      <Image source={photoSource(photoId,token)} style={{width:126,height:106,backgroundColor:colors.border,borderRadius:10}}/>
+      <PrivatePhotoPreview photoId={photoId} token={token} failure={media.imageUnavailable}/>
       <View style={{flex:1,gap:6}}>
-       <Label weight="bold">{i===0?media.cover:"#"+(i+1)}</Label>
+       <Label weight="bold">{i===0?media.cover:formatNumber(i+1,locale)+" / "+formatNumber(data.photoIds.length,locale)}</Label>
        <Label muted>{roomName(locale,photo.room)}</Label>
       </View>
      </View>
@@ -305,10 +314,23 @@ export default function ListingEditor(){
        color:colors.text,textAlign:locale==="en"?"left":"right",
        writingDirection:locale==="en"?"ltr":"rtl"}}/>
      <Label muted style={{fontSize:12}}>{media.captionHint}</Label>
+     <View style={{flexDirection:isRTL(locale)?"row-reverse":"row",gap:8}}>
+      {i>0?<View style={{flex:1}}><Action kind="secondary" disabled={!mutable||busy}
+       label={locale==="en"?"Move earlier":locale==="fa"?"انتقال به قبل":"مخکې یې یوسه"}
+       onPress={()=>movePhoto(photoId,-1)}/></View>:null}
+      {i<data.photoIds.length-1?<View style={{flex:1}}><Action kind="secondary" disabled={!mutable||busy}
+       label={locale==="en"?"Move later":locale==="fa"?"انتقال به بعد":"وروسته یې یوسه"}
+       onPress={()=>movePhoto(photoId,1)}/></View>:null}
+     </View>
      {i>0?<Action kind="secondary" disabled={!mutable||busy} label={media.coverAction}
       onPress={()=>change({...latest.current,photoIds:[photoId,...latest.current.photoIds.filter(p=>p!==photoId)]})}/>:null}
      <Action kind="secondary" disabled={!mutable||busy} label={media.remove}
-      onPress={()=>{removePhotoFromDraft(photoId);if(roomEditor===photoId)setRoomEditor(null);}}/>
+      onPress={()=>Alert.alert(media.remove,ox(locale,"photosTip"),[
+        {text:locale==="en"?"Cancel":locale==="fa"?"انصراف":"لغوه",style:"cancel"},
+        {text:media.remove,style:"destructive",onPress:()=>{
+         removePhotoFromDraft(photoId);if(roomEditor===photoId)setRoomEditor(null);
+        }}
+       ])}/>
     </View>;
    })}
   </SectionCard>;
@@ -329,11 +351,32 @@ export default function ListingEditor(){
    <Label muted>{validation.success?"":"⚠ "+tx("required")}</Label>
   </SectionCard>;
  };
- if(loading)return <Page><ActivityIndicator color={colors.primary}/></Page>;
+ if(loading)return <Page><LoadingCard rows={3}/><LoadingCard withImage rows={3}/></Page>;
  return <Page>
   <BackButton onPress={()=>router.back()}/>
-  <ScreenHeading title={uiText(locale,"editorTitle")} subtitle={steps[locale][step]+" · "+(step+1)+"/8"}/>
-  <Label muted>{uiText(locale,"invalidState")}: {status} · v{version}</Label>
+  <ScreenHeading title={uiText(locale,"editorTitle")} subtitle={ox(locale,"editSub")}/>
+  <SectionCard>
+   <View style={{flexDirection:isRTL(locale)?"row-reverse":"row",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+    <StatusBadge tone={status==="published"?"success":status==="rejected"?"error":"neutral"}
+     label={listingStatus(locale,status)}/>
+    <Label muted style={{fontSize:12}}>v{formatNumber(version,locale)}</Label>
+   </View>
+   <Label weight="bold">{ox(locale,"step")} {formatNumber(step+1,locale)} {ox(locale,"of")} {formatNumber(8,locale)} · {steps[locale][step]}</Label>
+   <View style={{flexDirection:isRTL(locale)?"row-reverse":"row",gap:4}}>
+    {steps[locale].map((name,index)=><View key={name} style={{
+     height:6,flex:1,borderRadius:4,backgroundColor:index<=step?colors.primary:colors.border}}/>)}
+   </View>
+   <ScrollView horizontal showsHorizontalScrollIndicator={false}
+    contentContainerStyle={{flexDirection:isRTL(locale)?"row-reverse":"row",gap:7,paddingVertical:2}}>
+    {steps[locale].map((name,index)=><Pressable key={name} accessibilityRole="button"
+     accessibilityLabel={name} accessibilityState={{selected:step===index,disabled:index>step||busy}}
+     disabled={index>step||busy} onPress={()=>setStep(index)}
+     style={{minHeight:44,justifyContent:"center",borderWidth:1,borderRadius:12,paddingHorizontal:12,
+      borderColor:step===index?colors.primary:colors.border,backgroundColor:step===index?"#E1F0E9":colors.surface}}>
+     <Label style={{fontSize:12}}>{formatNumber(index+1,locale)} · {name}</Label>
+    </Pressable>)}
+   </ScrollView>
+  </SectionCard>
   {status==="published"?<SectionCard>
    <Label weight="bold">{uiText(locale,"editorAvailability")}</Label>
    <Action kind="secondary" disabled={busy} label={uiText(locale,"editorConfirmAvailability")} onPress={()=>void listingAction("confirm-availability")}/>
@@ -360,13 +403,10 @@ export default function ListingEditor(){
     void AsyncStorage.removeItem(localKey).catch(()=>{});
    }}/>
   </SectionCard>:null}
-  {error?<SectionCard><Label style={{color:colors.error}}>{error}</Label>
-   <Action kind="secondary" disabled={busy} label={tx("save")}
-    onPress={()=>void save(true).then(()=>refresh()).catch(()=>setNotice(tx("offline")))}/>
-  </SectionCard>:null}
+  {error?<StateNotice message={error} retryLabel={ox(locale,"refresh")} onRetry={()=>void refresh()}/>:null}
   {notice?<SectionCard><Label muted>{notice}</Label></SectionCard>:null}
   {mutable?<View style={{gap:10}}>
-   {step===7?<Action disabled={busy} label={busy?"…":tx("submit")} onPress={()=>void submit()}/>:<Action disabled={busy} label={busy?"…":tx("next")} onPress={()=>void next()}/>}
+   {step===7?<Action disabled={busy} label={busy?ox(locale,"saving"):tx("submit")} onPress={()=>void submit()}/>:<Action disabled={busy} label={busy?ox(locale,"saving"):tx("next")} onPress={()=>void next()}/>}
    {step>0?<Action kind="secondary" disabled={busy} label={tx("back")} onPress={()=>setStep(s=>s-1)}/>:null}
    <Action kind="secondary" disabled={busy} label={tx("save")} onPress={()=>void save(true).then(()=>setNotice(tx("save"))).catch(()=>setError(tx("offline")))}/>
   </View>:null}
@@ -379,5 +419,18 @@ function Field({label,value,onChange,multiline=false,numeric=false,inputDirectio
   <AppInput accessibilityLabel={label} value={value} onChangeText={onChange} placeholder={placeholder}
    multiline={multiline} keyboardType={numeric?"decimal-pad":"default"} inputDirection={numeric?"ltr":inputDirection}
    style={{minHeight:multiline?100:48,padding:12,color:colors.text,fontSize:16,borderRadius:12,borderWidth:1,borderColor:colors.border,textAlignVertical:multiline?"top":"center"}}/>
+ </View>;
+}
+
+function PrivatePhotoPreview({photoId,token,failure}:{photoId:string;token:string|null;failure:string}){
+ const [failed,setFailed]=useState(false),[retry,setRetry]=useState(0);
+ useEffect(()=>{setFailed(false);setRetry(0);},[photoId,token]);
+ return <View style={{width:126,height:106,backgroundColor:colors.border,borderRadius:10,overflow:"hidden"}}>
+  {failed?<Pressable accessibilityRole="button" accessibilityLabel={failure}
+   onPress={()=>{setFailed(false);setRetry(n=>n+1);}} style={{flex:1,alignItems:"center",justifyContent:"center",padding:8}}>
+   <Label style={{fontSize:12,textAlign:"center"}}>{failure}</Label>
+  </Pressable>:<Image key={retry} source={photoSource(photoId,token)}
+   accessibilityLabel={photoId} resizeMode="cover" onError={()=>setFailed(true)}
+   style={{width:126,height:106}}/>}
  </View>;
 }
