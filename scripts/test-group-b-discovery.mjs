@@ -46,7 +46,7 @@ test("Group B: full province catalog is searchable and device recents are bounde
  assert.match(s,/searchProvinces\(query,locale\)/);
  assert.match(s,/AsyncStorage\.setItem\(RECENTS_KEY/);
  assert.match(s,/findProvince\(x\)/);
- const codes=[...catalog.matchAll(/^\s+\["([a-z]+(?:-[a-z]+)?)","/gm)];
+ const codes=[...catalog.matchAll(/^\s+\["([a-z-]+)","/gm)];
  assert.equal(codes.length,34);
 });
 test("Group B: map only renders authorized exact pins and has an offline list fallback",()=>{
