@@ -4,7 +4,8 @@ import {ActivityIndicator,Switch,View} from "react-native";
 import {colors} from "@amlaklink/design-tokens";
 import {useAuth,requestJson} from "../src/auth";
 import {usePreferences} from "../src/context";
-import {Action,Label,Page,ScreenHeading,SectionCard} from "../src/ui";
+import {Action,BackButton,Label,Page,ScreenHeading,SectionCard,StateNotice,LoadingCard} from "../src/ui";
+import {ix} from "../src/inbox-experience";
 import {checkSystemPermission,nativePushAvailable,readPushSettings,registerCurrentDevice,
  type PushSettings,type PushPreferences} from "../src/push-client";
 const copy={
@@ -86,7 +87,12 @@ export default function PushSettingsScreen(){
  }
  const consented=!!state?.preferences.enabled;
  return <Page>
+  <BackButton onPress={()=>router.back()}/>
   <ScreenHeading title={t.title} subtitle={t.sub}/>
+  <SectionCard><Label weight="bold">{ix(locale,"notices")}</Label>
+   <Label muted style={{fontSize:13}}>{ix(locale,"settingsHint")}</Label>
+   <Action kind="secondary" label={ix(locale,"inbox")} onPress={()=>router.push("/(tabs)/inbox")}/>
+  </SectionCard>
   {!token||!user?.verified?<SectionCard><Label>{t.noAccount}</Label>
    <Action label={locale==="en"?"Sign in":"ورود"} onPress={()=>
     router.push({pathname:"/auth/[action]",params:{action:"login"}})}/>
@@ -116,7 +122,7 @@ export default function PushSettingsScreen(){
   </SectionCard></>}
   <SectionCard><Label muted>{t.disclaimer}</Label></SectionCard>
   {busy?<ActivityIndicator color={colors.primary}/>:null}
-  {error?<SectionCard><Label style={{color:colors.error}}>{error}</Label></SectionCard>:null}
+  {error?<StateNotice message={error} retryLabel={t.retry} onRetry={()=>void refresh()}/>:null}
   <Action kind="secondary" disabled={busy} label={t.retry} onPress={()=>void refresh()}/>
  </Page>;
 }

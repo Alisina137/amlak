@@ -78,7 +78,7 @@ export function routeForNotification(data:Record<string,unknown>){
  if(kind==="freshness")return "/my-listings" as const;
  if(kind==="support"&&ref)return {pathname:"/support/[id]" as const,params:{id:ref}};
  if(kind==="viewing"&&ref)return {pathname:"/viewings/[id]" as const,params:{id:ref}};
- if(["inquiry","lead"].includes(kind)&&ref)
+ if(["inquiry","lead","message"].includes(kind)&&ref)
   return {pathname:"/inquiries/[id]" as const,params:{id:ref}};
  return "/(tabs)/inbox" as const;
 }

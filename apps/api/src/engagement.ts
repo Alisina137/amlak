@@ -76,9 +76,9 @@ async function messageRecipients(db:Database,thread:Inquiry,exclude:string){
  const people=active.filter(m=>m.role!=="agent"||m.userId===thread.assignedTo).map(m=>m.userId);
  return [...new Set([thread.seekerId,...people])].filter(id=>id!==exclude);
 }
-async function notifyOthers(db:Database,thread:Inquiry,exclude:string,kind:string,nonce:string,title:string){
+async function notifyOthers(db:Database,thread:Inquiry,exclude:string,kind:string,nonce:string,title:string,referenceId=thread.id){
  for(const recipient of await messageRecipients(db,thread,exclude))
-  await alert(db,recipient,kind,thread.id,kind+":"+nonce,title);
+  await alert(db,recipient,kind,referenceId,kind+":"+nonce,title);
 }
 async function listAccessible(db:Database,actor:Actor){
  const memberships=await db.select().from(schema.memberships).innerJoin(schema.agencies,eq(schema.agencies.id,schema.memberships.agencyId))
@@ -140,9 +140,12 @@ export function registerEngagementRoutes(app:FastifyInstance,db:Database){
   for(const row of rows){
    const l=await getListing(db,row.listingId);
    const revision=l.approvedRevisionId?await getRevision(db,l.approvedRevisionId):null;
+   const [recentMessage]=await db.select({body:schema.messages.body}).from(schema.messages)
+    .where(eq(schema.messages.inquiryId,row.id)).orderBy(desc(schema.messages.createdAt)).limit(1);
    result.push({id:row.id,listingId:row.listingId,title:revision?listingDraftSchema.parse(revision.data).title:"Property",
     side:row.seekerId===actor.id?"seeker":"advertiser",status:row.status,leadStatus:row.leadStatus,
-    assignedTo:row.assignedTo,agencyId:row.agencyId,lastMessageAt:row.lastMessageAt});
+    assignedTo:row.assignedTo,agencyId:row.agencyId,lastMessageAt:row.lastMessageAt,
+    lastMessagePreview:recentMessage?.body.slice(0,140)||null});
   }
   return {items:result};
  });
@@ -160,6 +163,17 @@ export function registerEngagementRoutes(app:FastifyInstance,db:Database){
    agencyId:row.agencyId,assignedTo:row.assignedTo,status:row.status,leadStatus:row.leadStatus,
    priceSnapshot:row.priceSnapshot,priceChanged:!!rev&&JSON.stringify(row.priceSnapshot)!==JSON.stringify(listingDraftSchema.parse(rev.data).price),
    messages:messages.reverse(),viewings:appointments};
+ });
+ // Mark only this actor's inquiry/message notifications as read when viewing the conversation.
+ // Status updates and other kinds remain unread until inspected in Notifications.
+ app.post<{Params:{id:string}}>("/v1/inquiries/:id/read-notifications",async request=>{
+  const row=await lookup(db,request.params.id),permission=await access(db,request,row);
+  await db.update(schema.notifications).set({isRead:true}).where(and(
+   eq(schema.notifications.userId,permission.actor.id),
+   eq(schema.notifications.referenceId,row.id),
+   inArray(schema.notifications.kind,["inquiry","lead","message"])
+  ));
+  return {success:true};
  });
  app.post<{Params:{id:string}}>("/v1/inquiries/:id/messages",{config:{rateLimit:{max:20,timeWindow:"1 minute"}}},async request=>{
   const row=await lookup(db,request.params.id),permission=await access(db,request,row);
@@ -223,7 +237,7 @@ export function registerEngagementRoutes(app:FastifyInstance,db:Database){
    if(!prior||prior.inquiryId!==inquiry.id)throw new HttpProblem(409,"VIEWING_RETRY_CONFLICT");
    return {id:prior.id,status:prior.status,version:prior.version,reused:true};
   }
-  await notifyOthers(db,inquiry,permission.actor.id,"viewing",created.id,"New property viewing request");
+  await notifyOthers(db,inquiry,permission.actor.id,"viewing",created.id,"New property viewing request",created.id);
   return {id:created.id,status:created.status,version:created.version,reused:false};
  });
  app.get("/v1/viewings",async request=>{
@@ -233,6 +247,17 @@ export function registerEngagementRoutes(app:FastifyInstance,db:Database){
   const rows=await db.select().from(schema.viewings).where(inArray(schema.viewings.inquiryId,[...allowed]))
    .orderBy(desc(schema.viewings.createdAt)).limit(100);
   return {items:rows};
+ });
+ // Mark this user's viewing notices read only after the actor is authorized for this viewing.
+ app.post<{Params:{id:string}}>("/v1/viewings/:id/read-notifications",async request=>{
+  const visit=await getViewing(db,request.params.id),thread=await lookup(db,visit.inquiryId),
+   permission=await access(db,request,thread);
+  await db.update(schema.notifications).set({isRead:true}).where(and(
+   eq(schema.notifications.userId,permission.actor.id),
+   eq(schema.notifications.kind,"viewing"),
+   eq(schema.notifications.referenceId,visit.id)
+  ));
+  return {success:true};
  });
  app.post<{Params:{id:string}}>("/v1/viewings/:id/decision",async request=>{
   const v=await getViewing(db,request.params.id),thread=await lookup(db,v.inquiryId);
@@ -280,7 +305,7 @@ export function registerEngagementRoutes(app:FastifyInstance,db:Database){
     targetType:"viewing",targetId:v.id,reason:status});
    return {id:v.id,status,version:updated.version,confirmedSlot:updated.confirmedSlot,counterSlot:updated.counterSlot};
   });
-  await notifyOthers(db,thread,p.actor.id,"viewing",v.id+":"+outcome.version,"Property viewing updated");
+  await notifyOthers(db,thread,p.actor.id,"viewing",v.id+":"+outcome.version,"Property viewing updated",v.id);
   return outcome;
  });
  app.post<{Params:{id:string}}>("/v1/inquiries/:id/assign",async request=>{
