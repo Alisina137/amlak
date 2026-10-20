@@ -1,7 +1,7 @@
 import * as Crypto from "expo-crypto";
 import {requestJson} from "./auth";
 export type InquirySummary={id:string;listingId:string;title:string;side:"seeker"|"advertiser";status:string;leadStatus:string;
- assignedTo:string|null;agencyId:string|null;lastMessageAt:string};
+ assignedTo:string|null;agencyId:string|null;lastMessageAt:string;lastMessagePreview?:string|null};
 export type ChatMessage={id:string;authorId:string;body:string;createdAt:string};
 export type Viewing={id:string;inquiryId:string;seekerId:string;clientRequestId:string;proposedSlots:string[];
  counterSlot:string|null;confirmedSlot:string|null;note:string|null;status:"requested"|"counterproposed"|"confirmed"|"declined"|"cancelled"|"completed"|"no_show";version:number;createdAt:string;updatedAt:string};
