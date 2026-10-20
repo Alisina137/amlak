@@ -2,7 +2,12 @@ import { findProvince } from "@amlaklink/catalog";
 import { colors } from "@amlaklink/design-tokens";
 import { isRTL, t } from "@amlaklink/localization";
 import { router } from "expo-router";
-import { Pressable, ScrollView, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, View } from "react-native";
+import { useEffect, useState } from "react";
+import { requestJson } from "../../src/auth";
+import { ListingCard } from "../../src/listing-ui";
+import type { ListingDTO } from "../../src/listing-client";
+import { queryString } from "../../src/discovery-client";
 import { useSearchFilters } from "../../src/search-context";
 import { usePreferences } from "../../src/context";
 import { ListingFeed } from "../../src/listing-ui";
@@ -12,7 +17,9 @@ import { uiText } from "../../src/ui-copy";
 
 export default function Explore() {
  const { locale, provinceId } = usePreferences();
- const { setFilters } = useSearchFilters();
+ const { setFilters, filters } = useSearchFilters();
+ const [featured, setFeatured] = useState<ListingDTO[]>([]);
+ const [featuredLoading, setFeaturedLoading] = useState(true);
  const openSearch = () => {
   setFilters({ provinceId });
   router.push({ pathname: "/(tabs)/search", params: { focusSearch: "1" } });
@@ -24,6 +31,20 @@ export default function Explore() {
  const rtl = isRTL(locale);
  const locationLabel = province?.names[locale] ?? t(locale, "kabul");
  const offline = status !== "connected";
+ useEffect(() => {
+  let active = true;
+  setFeaturedLoading(true);
+  setFeatured([]);
+  const intent = filters.intent ?? "sale";
+  requestJson<{items:ListingDTO[]}>("/v1/promotions/featured?" + queryString({provinceId,intent}))
+   .then(data => { if(active) setFeatured(data.items.filter(item => item.data.location.provinceId === provinceId && item.data.transactionType === intent).slice(0,8)); })
+   .catch(() => { if(active) setFeatured([]); })
+   .finally(() => { if(active) setFeaturedLoading(false); });
+  return () => { active = false; };
+ }, [provinceId, filters.intent, reconnectEpoch]);
+ const categories = (["house","apartment","land","shop","office","commercial"] as const);
+ const categoryNames = {en:["House","Apartment","Land","Shop","Office","Commercial"],fa:["خانه","آپارتمان","زمین","دکان","دفتر","تجاری"],ps:["کور","اپارتمان","ځمکه","دوکان","دفتر","تجارتي"]};
+ const categoryIcons = ["⌂","▥","▱","▣","▤","▦"];
  const locationAccessibility = locale === "en" ? "Change location" : locale === "fa" ? "تغییر موقعیت" : "ځای بدل کړئ";
  const notificationsLabel = locale === "en" ? "Notification settings" : locale === "fa" ? "تنظیمات اعلان‌ها" : "د خبرتیاوو تنظیمات";
  const connection = status === "unconfigured" ? t(locale, "networkUnconfigured") : t(locale, "networkOffline");
@@ -74,6 +95,27 @@ export default function Explore() {
    </Pressable>)}
   </ScrollView>
 
+  <View style={{gap:8}}>
+   <Label weight="bold" style={{fontSize:18}}>{locale==="en"?"Property categories":locale==="fa"?"دسته‌بندی ملکیت‌ها":"د ملکیتونو ډولونه"}</Label>
+   <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{flexDirection:rtl?"row-reverse":"row",gap:10}}>
+    {categories.map((type,index)=><Pressable key={type} accessibilityRole="button" accessibilityLabel={categoryNames[locale][index]}
+     onPress={()=>{setFilters({provinceId,type});router.push("/(tabs)/search");}}
+     style={{width:104,minHeight:94,alignItems:"center",justifyContent:"center",gap:6,padding:10,borderWidth:1,borderColor:colors.border,borderRadius:16,backgroundColor:colors.surface}}>
+     <Label style={{fontSize:27,color:colors.primary,textAlign:"center"}}>{categoryIcons[index]}</Label>
+     <Label weight="medium" style={{fontSize:12,textAlign:"center"}}>{categoryNames[locale][index]}</Label>
+    </Pressable>)}
+   </ScrollView>
+  </View>
+  <View style={{gap:8}}>
+   <Label weight="bold" style={{fontSize:18}}>{locale==="en"?"Featured properties":locale==="fa"?"ملکیت‌های ویژه":"ځانګړي ملکیتونه"}</Label>
+   {featuredLoading?<ActivityIndicator color={colors.primary}/>:null}
+   {!featuredLoading&&featured.length>0?<ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{flexDirection:rtl?"row-reverse":"row",gap:12}}>
+    {featured.map(item=><View key={item.id} style={{width:258}}>
+     <Label muted style={{fontSize:12}}>{locale==="en"?"Sponsored":locale==="fa"?"تبلیغاتی":"تمویل شوی"}</Label>
+     <ListingCard item={item}/>
+    </View>)}
+   </ScrollView>:null}
+  </View>
   <View style={{ flexDirection: rtl ? "row-reverse" : "row", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
    <Label weight="bold" style={{ fontSize: 18, flex: 1 }}>{uiText(locale, "recentProperties")}</Label>
    <Pressable accessibilityRole="button" onPress={() => router.push("/(tabs)/search")}
