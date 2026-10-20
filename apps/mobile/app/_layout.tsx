@@ -13,26 +13,8 @@ function NavigationShell(){
  const {locale}=usePreferences();
  return <Stack screenOptions={{headerShown:false,animation:isRTL(locale)?"slide_from_left":"slide_from_right"}}>
   <Stack.Screen name="(tabs)" />
-  <Stack.Screen name="locations" />
-  <Stack.Screen name="auth" />
-  <Stack.Screen name="agency" />
-  <Stack.Screen name="agent" />
-  <Stack.Screen name="listings" />
-  <Stack.Screen name="my-listings" />
-  <Stack.Screen name="property" />
-  <Stack.Screen name="advertiser" />
-  <Stack.Screen name="search-map" />
-  <Stack.Screen name="report" />
-  <Stack.Screen name="safety" />
-  <Stack.Screen name="inquiries" />
-  <Stack.Screen name="viewings" />
-  <Stack.Screen name="shortlists" />
-  <Stack.Screen name="support" />
-  <Stack.Screen name="saved-searches" />
-  <Stack.Screen name="compare" />
-  <Stack.Screen name="upgrade" />
-  <Stack.Screen name="notification-settings" />
-  <Stack.Screen name="account-sessions" />
+  {/* All other file-based routes register automatically (including /viewings/[id]).
+      Folder names without their own _layout.tsx are NOT navigators. */}
  </Stack>;
 }
 export default function RootLayout(){
