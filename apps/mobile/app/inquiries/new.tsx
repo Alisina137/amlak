@@ -1,6 +1,7 @@
 import {router,useLocalSearchParams} from "expo-router";
 import {useState} from "react";
 import {isRTL} from "@amlaklink/localization";
+import {colors} from "@amlaklink/design-tokens";
 import {useAuth} from "../../src/auth";
 import {usePreferences} from "../../src/context";
 import {openInquiry,requestId} from "../../src/engagement-client";
