@@ -1,7 +1,7 @@
 import {useEffect,useState} from "react";
 import {requestJson} from "../../src/auth";
 import {router,useLocalSearchParams} from "expo-router";
-import {ActivityIndicator,Linking,Pressable,Share,View} from "react-native";
+import {Linking,Pressable,Share,View} from "react-native";
 import {colors} from "@amlaklink/design-tokens";
 import {findProvince} from "@amlaklink/catalog";
 import {usePreferences} from "../../src/context";
@@ -14,7 +14,9 @@ import {st} from "../../src/safety-copy";
 import {useFavorites} from "../../src/favorites";
 import {lt,priceSummary} from "../../src/listing-ui";
 import {PropertyGallery} from "../../src/property-gallery";
-import {Action,Label,Page,ScreenHeading,SectionCard} from "../../src/ui";
+import {Action,BackButton,Label,Page,ScreenHeading,SectionCard,LoadingCard,StateNotice,StatusBadge} from "../../src/ui";
+import {localeDate} from "../../src/foundation-copy";
+import {isRTL} from "@amlaklink/localization";
 export default function PropertyDetails(){
  const {id}=useLocalSearchParams<{id:string}>(),{locale}=usePreferences(),{isSaved,toggle}=useFavorites();
  const [data,setData]=useState<ListingDTO|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState(""),[busy,setBusy]=useState<"call"|"whatsapp"|null>(null);
@@ -45,18 +47,15 @@ export default function PropertyDetails(){
   try{await Share.share({message:data.data.title+"\n"+priceSummary(data.data,locale)+"\n"+"amlaklink://property/"+data.id});}
   catch{setError(dt(locale,"unknown"));}
  }
- if(loading)return <Page><ActivityIndicator color={colors.primary}/></Page>;
- if(!data)return <Page><SectionCard><Label style={{color:colors.error}}>{error}</Label></SectionCard>
-  <Action kind="secondary" label="←" onPress={()=>router.back()}/></Page>;
+ if(loading)return <Page><LoadingCard withImage rows={4}/><LoadingCard rows={3}/></Page>;
+ if(!data)return <Page><BackButton onPress={()=>router.back()}/><StateNotice message={error||"—"}/></Page>;
  const d=data.data,p=d.price,a=d.attributes,canContact=!!data.available&&data.status==="published";
  const cash=(amount:number|undefined)=>amount===undefined?"—":new Intl.NumberFormat(locale==="en"?"en-US":"fa-AF").format(amount)+" "+p.currency;
  const profileId=advertiserId(data),kind=advertiserKind(data);
  return <View style={{flex:1,backgroundColor:colors.background}}>
   <Page>
-   <View style={{flexDirection:"row",justifyContent:"space-between",alignItems:"center"}}>
-    <Pressable accessibilityRole="button" onPress={()=>router.back()} style={{padding:12,minHeight:44}}>
-     <Label weight="medium">←</Label>
-    </Pressable>
+   <View style={{flexDirection:isRTL(locale)?"row-reverse":"row",justifyContent:"space-between",alignItems:"center"}}>
+    <BackButton onPress={()=>router.back()}/>
     <View style={{flexDirection:"row",gap:8}}>
      <Pressable accessibilityRole="button" accessibilityLabel={isSaved(id)?dt(locale,"unsave"):dt(locale,"save")}
        onPress={()=>void toggle(id).catch(()=>setError(dt(locale,"favoriteError")))} style={{padding:12,minHeight:44}}>
@@ -67,7 +66,7 @@ export default function PropertyDetails(){
    </View>
    <PropertyGallery photos={data.photos} title={d.title}/>
    <ScreenHeading title={d.title} subtitle={lt(locale,d.transactionType)+" · "+lt(locale,d.propertyType)}/>
-   <Label style={{color:canContact?colors.success:colors.warning}}>{canContact?dt(locale,"active"):dt(locale,"unavailable")}</Label>
+   <StatusBadge tone={canContact?"success":"warning"} label={canContact?dt(locale,"active"):dt(locale,"unavailable")}/>
    <SectionCard>
     <Label weight="bold" style={{fontSize:24,color:colors.primary}}>{priceSummary(d,locale)}</Label>
     {d.transactionType==="rent"?<>
@@ -83,7 +82,7 @@ export default function PropertyDetails(){
    <SectionCard><Label weight="bold">{locale==="en"?"Location":"موقعیت"}</Label>
     <Label>{findProvince(d.location.provinceId)?.names[locale]} · {d.location.city} · {d.location.district} · {d.location.neighborhood}</Label>
     <Label muted>{d.location.precision==="approximate"?dt(locale,"approximate"):dt(locale,"limited")}</Label>
-    {data.lastConfirmedAt?<Label muted>{locale==="en"?"Last availability confirmation:":"آخرین تأیید موجودی:"} {new Date(data.lastConfirmedAt).toLocaleDateString(locale==="en"?"en-US":"fa-AF")}</Label>:null}
+    {data.lastConfirmedAt?<Label muted>{locale==="en"?"Last availability confirmation:":"آخرین تأیید موجودی:"} {localeDate(data.lastConfirmedAt,locale)}</Label>:null}
    </SectionCard>
    <SectionCard><Label weight="bold">{locale==="en"?"Property details":"مشخصات ملک"}</Label>
     <Label>{a.areaM2} m² {a.bedrooms!==undefined?" · "+a.bedrooms+" 🛏":""}{a.bathrooms!==undefined?" · "+a.bathrooms+" 🚿":""}</Label>
@@ -103,7 +102,7 @@ export default function PropertyDetails(){
   </Page>
   <View style={{gap:8,backgroundColor:colors.surface,padding:12,borderTopWidth:1,borderColor:colors.border,paddingBottom:20}}>
    <Action label={et(locale,"newInquiry")} disabled={!canContact} onPress={()=>router.push({pathname:"/inquiries/new",params:{listingId:id}})}/>
-   <View style={{flexDirection:"row",gap:10}}>
+   <View style={{flexDirection:isRTL(locale)?"row-reverse":"row",gap:10}}>
    <View style={{flex:1}}><Action label={busy==="call"?"…":dt(locale,"call")} disabled={!canContact||!d.contact.allowPhone||busy!==null} onPress={()=>void contact("call")}/></View>
    <View style={{flex:1}}><Action kind="secondary" label={busy==="whatsapp"?"…":dt(locale,"whatsapp")} disabled={!canContact||!d.contact.allowWhatsApp||busy!==null} onPress={()=>void contact("whatsapp")}/></View>
    </View>

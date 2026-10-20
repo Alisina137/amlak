@@ -12,8 +12,9 @@ import {dt} from "../../src/discovery-copy";
 import {mapText} from "../../src/map-copy";
 import {ListingCard} from "../../src/listing-ui";
 import type {ListingDTO} from "../../src/listing-client";
-import {Action,AppInput,Label,Page,ScreenHeading,SectionCard} from "../../src/ui";
+import {Action,AppInput,Label,Page,ScreenHeading,SectionCard,LoadingCard,StateNotice} from "../../src/ui";
 import {uiText} from "../../src/ui-copy";
+import {foundationText,localeDate} from "../../src/foundation-copy";
 export default function Search(){
  const {locale,provinceId,setProvinceId}=usePreferences();
  const {filters,setFilters,reset,hydrated}=useSearchFilters();
@@ -95,10 +96,10 @@ export default function Search(){
     <Label style={{color:colors.primary}}>{dt(locale,"refresh")}</Label>
    </Pressable>
   </View>
-  {visibleCache?<SectionCard><Label style={{color:colors.warning}}>{dt(locale,"offline")} · {new Date(visibleCache!).toLocaleDateString()}</Label></SectionCard>:null}
-  {loading?<SectionCard><ActivityIndicator color={colors.primary}/><Label muted>{dt(locale,"loading")}</Label></SectionCard>:null}
-  {!loading&&error?<SectionCard><Label style={{color:colors.error}}>{error}</Label><Action kind="secondary" label={dt(locale,"retry")} onPress={()=>void load()}/></SectionCard>:null}
-  {!loading&&!visibleItems.length&&!error?<SectionCard><Label weight="bold">{dt(locale,"noResults")}</Label><Label muted>{dt(locale,"relax")}</Label><Action kind="secondary" label={dt(locale,"reset")} onPress={reset}/></SectionCard>:null}
+  {visibleCache?<StateNotice tone="warning" message={foundationText(locale,"cached")+" · "+localeDate(visibleCache,locale)}/>:null}
+  {loading?<View style={{gap:12}}><LoadingCard withImage rows={3} label={dt(locale,"loading")}/><LoadingCard rows={2}/></View>:null}
+  {!loading&&error?<StateNotice message={error} retryLabel={dt(locale,"retry")} onRetry={()=>void load()}/>:null}
+  {!loading&&!visibleItems.length&&!visibleFeatured.length&&!error?<SectionCard><Label weight="bold">{dt(locale,"noResults")}</Label><Label muted>{dt(locale,"relax")}</Label><Action kind="secondary" label={dt(locale,"reset")} onPress={reset}/></SectionCard>:null}
   {visibleFeatured.length>0&&!loading?<SectionCard>
    <Label weight="bold">{locale==="en"?"Sponsored listings":locale==="fa"?"آگهی‌های تبلیغاتی":"تمویل شوي اعلانونه"}</Label>
    <Label muted>{locale==="en"?"Paid placements. Availability and moderation checks still apply.":locale==="fa"?"نمایش پولی؛ شرط موجودیت و بررسی همچنان برقرار است.":"پیسې ورکړل شوې؛ د شتون او ارزونې شرطونه لا هم پلي دي."}</Label>
