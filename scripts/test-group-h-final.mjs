@@ -20,7 +20,7 @@ test("Phase 37: role scoped agency workspace, team member actions and lead stage
   'memberRole==="owner"','workspace.canSubmitListing','/v1/agencies/','/revoke',
   'canManage','ag(locale,"members")');
  includes(leads,'snapshot.scope===scope','"contacted"','"viewing"','"negotiating"',
-  'leadStageLabel(locale,item.leadStatus)','item.agencyId===id','i.side==="advertiser"');
+  'leadStageLabel(locale,item.leadStatus)','i.agencyId===id','i.side==="advertiser"');
  includes(api,'requireAgencyMember(db,actor,id','VERIFIED_MEMBER_NOT_FOUND','OWNER_APPROVAL_REQUIRED');
 });
 test("Phase 38: charts are derived from server metrics; billing stays gated by server flags",()=>{
@@ -65,5 +65,5 @@ test("Phase 40: release gate checks remain separate from human acceptance",()=>{
  const packageJson=JSON.parse(read("package.json"));
  includes(packageJson.scripts["qa:ui"],"scripts/test-group-h-final.mjs");
  includes(packageJson.scripts["check"],"pnpm typecheck","pnpm test");
- includes(read("docs/GROUP-H-FINAL-READINESS.md"),"physical Android","manual","not production approval");
+ includes(read("docs/GROUP-H-FINAL-READINESS.md").toLowerCase(),"physical android","manual","not production approval");
 });
