@@ -1,98 +1,161 @@
 import {router,useFocusEffect} from "expo-router";
-import {useCallback,useRef,useState} from "react";
-import {Pressable,ScrollView} from "react-native";
+import {useCallback,useMemo,useRef,useState} from "react";
+import {Pressable,View} from "react-native";
 import {colors} from "@amlaklink/design-tokens";
 import {formatNumber,isRTL} from "@amlaklink/localization";
 import {useAuth} from "../../src/auth";
 import {usePreferences} from "../../src/context";
 import {inbox,fetchViewings,fetchAlerts,readAllAlerts,readAlert,displayKabul,type InquirySummary,type Viewing,type Alert} from "../../src/engagement-client";
 import {et} from "../../src/engagement-copy";
+import {ix,inquiryStatus,isPastVisit,notificationGroup,noticeLabel,unreadForThreads,viewingLabel} from "../../src/inbox-experience";
 import {routeForNotification} from "../../src/push-client";
-import {Action,Label,Page,ScreenHeading,SectionCard,LoadingCard,StateNotice} from "../../src/ui";
+import {Action,AppInput,FilterChip,Label,Page,ScreenHeading,SectionCard,LoadingCard,StateNotice,StatusBadge} from "../../src/ui";
+
+type Tab="inquiries"|"viewings"|"notifications";
+type ConversationFilter="all"|"sent"|"received"|"active"|"closed";
+type VisitFilter="all"|"upcoming"|"history";
+type AlertFilter="all"|"unread"|"read";
 export default function Inbox(){
- const {locale}=usePreferences(),{token}=useAuth();
- const [tab,setTab]=useState<"inquiries"|"viewings"|"notifications">("inquiries");
+ const {locale}=usePreferences(),{token}=useAuth(),rtl=isRTL(locale);
+ const [tab,setTab]=useState<Tab>("inquiries"),[query,setQuery]=useState("");
+ const [threadFilter,setThreadFilter]=useState<ConversationFilter>("all");
+ const [visitFilter,setVisitFilter]=useState<VisitFilter>("all"),[alertFilter,setAlertFilter]=useState<AlertFilter>("all");
  const [items,setItems]=useState<InquirySummary[]>([]),[viewings,setViewings]=useState<Viewing[]>([]),[alerts,setAlerts]=useState<Alert[]>([]);
- const [busy,setBusy]=useState(false),[error,setError]=useState("");
- const [dataToken,setDataToken]=useState<string|null>(null);
- const tokenRef=useRef(token),requestSequence=useRef(0);
+ const [loading,setLoading]=useState(true),[refreshing,setRefreshing]=useState(false),[mutating,setMutating]=useState(false),[error,setError]=useState("");
+ const [dataToken,setDataToken]=useState<string|null>(null),tokenRef=useRef(token),requestSequence=useRef(0);
  tokenRef.current=token;
  const refresh=useCallback(async()=>{
   const sequence=++requestSequence.current;
-  if(!token){setDataToken(null);setItems([]);setViewings([]);setAlerts([]);setBusy(false);return;}
-  setBusy(true);
+  if(!token){setDataToken(null);setItems([]);setViewings([]);setAlerts([]);setLoading(false);setRefreshing(false);setError("");return;}
+  setRefreshing(true);
   try{
    const [threads,visits,notes]=await Promise.all([inbox(token),fetchViewings(token),fetchAlerts(token)]);
    if(tokenRef.current===token&&sequence===requestSequence.current){
     setItems(threads.items);setViewings(visits.items);setAlerts(notes.items);
     setDataToken(token);setError("");
    }
-  }catch{if(tokenRef.current===token&&sequence===requestSequence.current)setError(et(locale,"unknown"));}
-  finally{if(tokenRef.current===token&&sequence===requestSequence.current)setBusy(false);}
+  }catch{
+   if(tokenRef.current===token&&sequence===requestSequence.current)setError(et(locale,"unknown"));
+  }finally{if(tokenRef.current===token&&sequence===requestSequence.current){setLoading(false);setRefreshing(false);}}
  },[token,locale]);
  useFocusEffect(useCallback(()=>{
   void refresh();
-  if(!token)return;
+  if(!token)return()=>{requestSequence.current++;};
   const timer=setInterval(()=>void refresh(),20000);
-  return()=>clearInterval(timer);
+  return()=>{clearInterval(timer);requestSequence.current++;};
  },[refresh,token]));
- const safeItems=dataToken===token?items:[];
- const safeViewings=dataToken===token?viewings:[];
- const safeAlerts=dataToken===token?alerts:[];
- const unread=safeAlerts.filter(x=>!x.isRead).length;
+ const safeItems=dataToken===token?items:[],safeViewings=dataToken===token?viewings:[],safeAlerts=dataToken===token?alerts:[];
+ const unread=safeAlerts.filter(x=>!x.isRead).length,unreadThreads=unreadForThreads(safeItems,safeAlerts);
+ const conversations=useMemo(()=>safeItems.filter(item=>{
+  const q=query.trim().toLocaleLowerCase();
+  if(q&&!item.title.toLocaleLowerCase().includes(q))return false;
+  if(threadFilter==="sent"&&item.side!=="seeker"||threadFilter==="received"&&item.side!=="advertiser")return false;
+  if(threadFilter==="closed"&&item.status!=="closed"||threadFilter==="active"&&["closed","blocked"].includes(item.status))return false;
+  return true;
+ }),[safeItems,query,threadFilter]);
+ const filteredViewings=useMemo(()=>safeViewings.filter(v=>visitFilter==="all"||
+  (visitFilter==="history"?isPastVisit(v):!isPastVisit(v))),[safeViewings,visitFilter]);
+ const filteredAlerts=useMemo(()=>safeAlerts.filter(n=>alertFilter==="all"||(alertFilter==="unread"?!n.isRead:n.isRead)),[safeAlerts,alertFilter]);
+ const notificationSections=(["recent","older"] as const).map(group=>({group,items:filteredAlerts.filter(n=>notificationGroup(n)===group)}));
+ async function markAll(){
+  if(!token||mutating||!unread)return;setMutating(true);setError("");
+  try{await readAllAlerts(token);await refresh();}catch{setError(et(locale,"unknown"));}finally{setMutating(false);}
+ }
+ async function openNotice(n:Alert){
+  if(!token||mutating)return;setMutating(true);setError("");
+  try{if(!n.isRead)await readAlert(n.id,token);await refresh();}
+  catch{setError(et(locale,"unknown"));}finally{setMutating(false);}
+  router.push(routeForNotification({kind:n.kind,referenceId:n.referenceId}));
+ }
+ const tabText:Record<Tab,string>={inquiries:ix(locale,"messages"),viewings:ix(locale,"viewings"),notifications:ix(locale,"notices")};
  return <Page>
-  <ScreenHeading title={locale==="en"?"Inbox":locale==="fa"?"پیام‌ها و بازدیدها":"پیغامونه او لیدنې"}
-   subtitle={et(locale,"safety")}/>
+  <ScreenHeading title={ix(locale,"inbox")} subtitle={ix(locale,"inboxSub")}/>
+  <View style={{flexDirection:rtl?"row-reverse":"row",flexWrap:"wrap",gap:8}}>
+   {(["inquiries","viewings","notifications"] as const).map(key=><Pressable key={key}
+    accessibilityRole="tab" accessibilityState={{selected:tab===key}}
+    onPress={()=>setTab(key)} style={{minHeight:48,flexGrow:1,paddingHorizontal:10,justifyContent:"center",alignItems:"center",
+     backgroundColor:tab===key?colors.primary:colors.surface,borderWidth:1,borderColor:tab===key?colors.primary:colors.border,borderRadius:12}}>
+    <Label weight="medium" style={{fontSize:13,color:tab===key?colors.surface:colors.text}}>
+     {tabText[key]}{key==="notifications"&&unread?" ("+formatNumber(unread,locale)+")":""}
+    </Label>
+   </Pressable>)}
+  </View>
   {!token?<SectionCard><Label>{et(locale,"login")}</Label>
-    <Action label={et(locale,"login")} onPress={()=>router.push({pathname:"/auth/[action]",params:{action:"login"}})}/>
-   </SectionCard>:null}
-  <ScrollView horizontal showsHorizontalScrollIndicator={false}
-   contentContainerStyle={{flexDirection:isRTL(locale)?"row-reverse":"row",gap:8,paddingVertical:3}}
-   accessibilityRole="tablist">
-   {(["inquiries","viewings","notifications"] as const).map(key=>
-    <Pressable key={key} accessibilityRole="tab" accessibilityState={{selected:tab===key}}
-     accessibilityLabel={et(locale,key)} onPress={()=>setTab(key)}
-     style={{minWidth:112,minHeight:48,paddingHorizontal:14,justifyContent:"center",alignItems:"center",
-      borderWidth:1,borderRadius:14,borderColor:tab===key?colors.primary:colors.border,
-      backgroundColor:tab===key?colors.primary:colors.surface}}>
-     <Label weight="medium" style={{textAlign:"center",color:tab===key?colors.surface:colors.text}}>
-      {et(locale,key)}{key==="notifications"&&unread?" ("+formatNumber(unread,locale)+")":""}
-     </Label>
-    </Pressable>)}
-  </ScrollView>
-  {token?<Action kind="secondary" disabled={busy} label={et(locale,"refresh")} onPress={()=>void refresh()}/>:null}
-  {busy&&safeItems.length===0&&safeViewings.length===0&&safeAlerts.length===0&&token?<LoadingCard rows={3}/>:null}
-  {error?<StateNotice message={error} retryLabel={et(locale,"refresh")} onRetry={()=>void refresh()}/>:null}
-  {token&&tab==="inquiries"&&safeItems.length===0&&!busy?<SectionCard><Label>{et(locale,"none")}</Label></SectionCard>:null}
-  {token&&tab==="inquiries"&&safeItems.map(i=><SectionCard key={i.id}>
-   <Pressable accessibilityRole="button" onPress={()=>router.push({pathname:"/inquiries/[id]",params:{id:i.id}})} style={{gap:5,minHeight:44}}>
-    <Label weight="bold">{i.title}</Label>
-    <Label muted>{i.side==="seeker"?et(locale,"sent"):et(locale,"received")} · {i.status==="closed"?et(locale,"closed"):i.status==="responded"?et(locale,"responded"):et(locale,"new")}</Label>
-    <Label muted>{displayKabul(i.lastMessageAt,locale)}</Label>
-   </Pressable>
-   <Action kind="secondary" label={et(locale,"open")} onPress={()=>router.push({pathname:"/inquiries/[id]",params:{id:i.id}})}/>
-  </SectionCard>)}
-  {token&&tab==="viewings"&&safeViewings.length===0&&!busy?<SectionCard><Label>{et(locale,"empty")}</Label></SectionCard>:null}
-  {token&&tab==="viewings"&&safeViewings.map(v=><SectionCard key={v.id}>
-   <Label weight="bold">{et(locale,v.status)}</Label>
-   <Label muted>{v.confirmedSlot?displayKabul(v.confirmedSlot,locale):v.counterSlot?displayKabul(v.counterSlot,locale):v.proposedSlots.map(s=>displayKabul(s,locale)).join(" · ")}</Label>
-   <Action kind="secondary" label={et(locale,"more")} onPress={()=>router.push({pathname:"/viewings/[id]",params:{id:v.id}})}/>
-  </SectionCard>)}
-  {token&&tab==="notifications"&&<Action kind="secondary" label={et(locale,"allRead")} onPress={()=>void readAllAlerts(token).then(refresh).catch(()=>setError(et(locale,"unknown")))}/>}
-  {token&&tab==="notifications"&&safeAlerts.length===0&&!busy?<SectionCard><Label>{et(locale,"empty")}</Label></SectionCard>:null}
-  {token&&tab==="notifications"&&safeAlerts.map(n=><Pressable accessibilityRole="button" key={n.id}
-   onPress={()=>{
-    if(token)void readAlert(n.id,token).then(()=>refresh()).catch(()=>{});
-    router.push(routeForNotification({kind:n.kind,referenceId:n.referenceId}));
-   }}>
+   <Action label={et(locale,"login")} onPress={()=>router.push({pathname:"/auth/[action]",params:{action:"login"}})}/></SectionCard>:null}
+  {token&&tab==="inquiries"?<View style={{gap:10}}>
+   <AppInput accessibilityLabel={ix(locale,"search")} placeholder={ix(locale,"search")}
+    value={query} onChangeText={setQuery}/>
+   <View style={{flexDirection:rtl?"row-reverse":"row",flexWrap:"wrap",gap:8}}>
+    {(["all","sent","received","active","closed"] as const).map(key=><FilterChip key={key}
+     label={ix(locale,key)} selected={threadFilter===key} onPress={()=>setThreadFilter(key)}/>)}
+   </View>
+   {!loading?<Label muted style={{fontSize:12}}>{formatNumber(conversations.length,locale)} {ix(locale,"conversation")}</Label>:null}
+  </View>:null}
+  {token&&tab==="viewings"?<View style={{gap:10}}>
+   <View style={{flexDirection:rtl?"row-reverse":"row",flexWrap:"wrap",gap:8}}>
+    {(["all","upcoming","history"] as const).map(key=><FilterChip key={key}
+     label={ix(locale,key)} selected={visitFilter===key} onPress={()=>setVisitFilter(key)}/>)}
+   </View>
+   <Label muted style={{fontSize:12}}>{ix(locale,"timeZone")} {ix(locale,"viewingHint")}</Label>
+  </View>:null}
+  {token&&tab==="notifications"?<View style={{gap:10}}>
+   <View style={{flexDirection:rtl?"row-reverse":"row",flexWrap:"wrap",gap:8}}>
+    {(["all","unread","read"] as const).map(key=><FilterChip key={key}
+     label={ix(locale,key)} selected={alertFilter===key} onPress={()=>setAlertFilter(key)}/>)}
+   </View>
+   <Label muted style={{fontSize:12}}>{ix(locale,"settingsHint")}</Label>
+   <Action kind="secondary" label={ix(locale,"settings")} onPress={()=>router.push("/notification-settings")}/>
+   <Action kind="secondary" disabled={mutating||refreshing||!unread} label={ix(locale,"markAll")} onPress={()=>void markAll()}/>
+  </View>:null}
+  {token&&loading?<View style={{gap:10}}><LoadingCard rows={3}/><LoadingCard rows={2}/></View>:null}
+  {error?<StateNotice message={error} retryLabel={ix(locale,"retry")} onRetry={()=>void refresh()}/>:null}
+  {token&&!loading&&tab==="inquiries"&&conversations.length===0?<SectionCard>
+   <Label muted>{safeItems.length?ix(locale,"searchEmpty"):et(locale,"none")}</Label>
+  </SectionCard>:null}
+  {token&&!loading&&tab==="inquiries"&&conversations.map(i=><Pressable key={i.id}
+   accessibilityRole="button" accessibilityLabel={i.title+" · "+inquiryStatus(locale,i.status)}
+   onPress={()=>router.push({pathname:"/inquiries/[id]",params:{id:i.id}})}>
    <SectionCard>
-    <Label weight={n.isRead?"regular":"bold"}>{n.kind==="freshness"?
-     (locale==="en"?"Availability":locale==="fa"?"تأیید موجودی":"د شتون تایید"):
-     n.kind==="safety"?(locale==="en"?"Safety":locale==="fa"?"ایمنی":"خوندیتوب"):
-     (n.kind==="subscription_agency"||n.kind==="subscription_solo")?(locale==="en"?"Subscription":locale==="fa"?"اشتراک":"ګډون"):n.kind==="saved_search"?(locale==="en"?"Saved search":locale==="fa"?"جستجوی ذخیره‌شده":"خوندي پلټنه"):n.kind==="support"?(locale==="en"?"Support":locale==="fa"?"پشتیبانی":"ملاتړ"):n.kind==="viewing"?et(locale,"viewings"):n.kind==="lead"?et(locale,"lead"):et(locale,"inquiries")}</Label>
-    <Label>{n.title}</Label>
-    <Label muted>{displayKabul(n.createdAt,locale)} {n.isRead?"":"●"}</Label>
+    <View style={{flexDirection:rtl?"row-reverse":"row",alignItems:"center",justifyContent:"space-between",gap:8}}>
+     <Label weight="bold" style={{flex:1,fontSize:16}}>{i.title}</Label>
+     {unreadThreads.has(i.id)?<StatusBadge tone="warning" label={ix(locale,"unread")}/>:null}
+    </View>
+    <View style={{flexDirection:rtl?"row-reverse":"row",gap:8,flexWrap:"wrap"}}>
+     <StatusBadge label={inquiryStatus(locale,i.status)} tone={i.status==="closed"?"warning":"neutral"}/>
+     <Label muted style={{fontSize:12}}>{i.side==="seeker"?ix(locale,"sent"):ix(locale,"received")}</Label>
+    </View>
+    <Label muted style={{fontSize:12}}>{ix(locale,"lastActivity")}: {displayKabul(i.lastMessageAt,locale)}</Label>
    </SectionCard>
   </Pressable>)}
+  {token&&!loading&&tab==="viewings"&&filteredViewings.length===0?<SectionCard><Label muted>{ix(locale,"noVisits")}</Label></SectionCard>:null}
+  {token&&!loading&&tab==="viewings"&&filteredViewings.map(v=><Pressable key={v.id} accessibilityRole="button"
+   onPress={()=>router.push({pathname:"/viewings/[id]",params:{id:v.id}})}>
+   <SectionCard>
+    <StatusBadge label={et(locale,v.status)} tone={v.status==="confirmed"?"success":isPastVisit(v)?"warning":"neutral"}/>
+    <Label weight="medium">{viewingLabel(v,locale)}</Label>
+    <Label muted style={{fontSize:12}}>{ix(locale,"viewingHint")}</Label>
+   </SectionCard>
+  </Pressable>)}
+  {token&&!loading&&tab==="notifications"&&filteredAlerts.length===0?<SectionCard><Label muted>{ix(locale,"noNotices")}</Label></SectionCard>:null}
+  {token&&!loading&&tab==="notifications"&&notificationSections.map(section=>section.items.length?
+   <View key={section.group} style={{gap:10}}>
+    <Label weight="bold" style={{fontSize:16}}>{ix(locale,section.group)}</Label>
+    {section.items.map(n=><Pressable accessibilityRole="button" accessibilityLabel={n.title} key={n.id}
+     disabled={mutating} onPress={()=>void openNotice(n)}>
+     <SectionCard style={{backgroundColor:n.isRead?colors.surface:"#F1F8F4"}}>
+      <View style={{flexDirection:rtl?"row-reverse":"row",gap:8,alignItems:"center"}}>
+       {!n.isRead?<View style={{width:9,height:9,borderRadius:5,backgroundColor:colors.primary}}/>:null}
+       <Label weight={n.isRead?"regular":"bold"} style={{fontSize:13,flex:1}}>{noticeLabel(locale,n.kind)}</Label>
+       <Label muted style={{fontSize:11}}>{displayKabul(n.createdAt,locale)}</Label>
+      </View>
+      <Label style={{fontSize:14}}>{n.title}</Label>
+      <Label muted style={{fontSize:11}}>{ix(locale,n.isRead?"read":"unread")}</Label>
+     </SectionCard>
+    </Pressable>)}
+   </View>:null)}
+  {token?<Pressable accessibilityRole="button" disabled={refreshing||mutating} onPress={()=>void refresh()}
+   style={{minHeight:44,alignSelf:rtl?"flex-end":"flex-start",justifyContent:"center",paddingHorizontal:8}}>
+   <Label style={{fontSize:13,color:colors.primary}}>{refreshing?"…":ix(locale,"reload")+" ↻"}</Label>
+  </Pressable>:null}
  </Page>;
 }
