@@ -1,7 +1,7 @@
 import {router,useFocusEffect} from "expo-router";
 import {useCallback,useRef,useState} from "react";
 import {Alert,Pressable,Switch,View} from "react-native";
-import {colors} from "@amlaklink/design-tokens";
+import {colors,elevation} from "@amlaklink/design-tokens";
 import {findProvince} from "@amlaklink/catalog";
 import {isRTL,t} from "@amlaklink/localization";
 import {usePreferences} from "../../src/context";
@@ -14,13 +14,14 @@ function AccountLink({icon,label,subtitle,onPress,disabled=false}:{icon:string;l
  const {locale}=usePreferences(),rtl=isRTL(locale);
  return <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{disabled}}
   disabled={disabled} onPress={onPress}
-  style={{flexDirection:rtl?"row-reverse":"row",minHeight:56,alignItems:"center",gap:12,
-   borderWidth:1,borderColor:colors.border,borderRadius:14,padding:12,opacity:disabled?0.5:1}}>
-  <View style={{width:34,height:34,borderRadius:12,backgroundColor:"#E1F0E9",alignItems:"center",justifyContent:"center"}}>
-   <Label style={{fontSize:17,color:colors.primary,textAlign:"center"}}>{icon}</Label>
+  style={({pressed})=>({flexDirection:rtl?"row-reverse":"row",minHeight:60,alignItems:"center",gap:12,
+   borderWidth:1,borderColor:colors.border,borderRadius:16,padding:13,opacity:disabled?0.5:1,
+   backgroundColor:pressed?colors.primarySoft:colors.surfaceMuted})}>
+  <View style={{width:40,height:40,borderRadius:13,backgroundColor:colors.primarySoft,alignItems:"center",justifyContent:"center"}}>
+   <Label style={{fontSize:20,color:colors.primary,textAlign:"center"}}>{icon}</Label>
   </View>
   <View style={{flex:1,gap:1}}>
-   <Label weight="medium" style={{fontSize:14,lineHeight:20}}>{label}</Label>
+   <Label weight="medium" style={{fontSize:14,lineHeight:21}}>{label}</Label>
    {subtitle?<Label muted style={{fontSize:12,lineHeight:18}}>{subtitle}</Label>:null}
   </View>
   <Label muted style={{fontSize:20}}>{rtl?"‹":"›"}</Label>
@@ -44,7 +45,10 @@ export default function Account(){
  useFocusEffect(useCallback(()=>{setError("");void loadAgencies();void refresh();
   return()=>{epoch.current++;};
  },[loadAgencies,refresh]));
- const section=(title:string)=> <Label weight="bold" style={{fontSize:17,lineHeight:24}}>{title}</Label>;
+ const section=(title:string)=><View style={{flexDirection:rtl?"row-reverse":"row",gap:10,alignItems:"center",paddingBottom:2}}>
+  <View style={{width:4,height:23,borderRadius:3,backgroundColor:colors.secondary}}/>
+  <Label weight="bold" style={{fontSize:18,lineHeight:26,flex:1}}>{title}</Label>
+ </View>;
  const verified=!!user?.verified,canAdvertise=!!user?.advertiserEnabled||user?.independentAgentStatus==="approved";
  async function activate(){
   if(!token||!accept||!verified||busy)return;
@@ -75,9 +79,9 @@ export default function Account(){
  }
  return <Page>
   <ScreenHeading title={ax(locale,"title")} subtitle={ax(locale,"subtitle")}/>
-  {!user?<SectionCard>
+  {!user?<SectionCard style={{backgroundColor:colors.primaryWash,borderColor:colors.borderStrong}}>
    <View style={{flexDirection:rtl?"row-reverse":"row",gap:12,alignItems:"center"}}>
-    <View style={{width:54,height:54,borderRadius:27,backgroundColor:"#E1F0E9",alignItems:"center",justifyContent:"center"}}>
+    <View style={{width:60,height:60,borderRadius:20,backgroundColor:colors.primarySoft,alignItems:"center",justifyContent:"center"}}>
      <Label style={{fontSize:25,color:colors.primary,textAlign:"center"}}>◎</Label>
     </View>
     <View style={{flex:1,gap:4}}><Label weight="bold">{t(locale,"guest")}</Label><Label muted style={{fontSize:13}}>{ax(locale,"guest")}</Label></View>
@@ -85,25 +89,25 @@ export default function Account(){
    <Action label={authT(locale,"login")} onPress={()=>router.push({pathname:"/auth/[action]",params:{action:"login"}})}/>
    <Action kind="secondary" label={authT(locale,"register")} onPress={()=>router.push({pathname:"/auth/[action]",params:{action:"register"}})}/>
   </SectionCard>:<>
-   <SectionCard>
-    <View style={{flexDirection:rtl?"row-reverse":"row",alignItems:"center",gap:12}}>
-     <View style={{width:55,height:55,borderRadius:28,backgroundColor:"#E1F0E9",alignItems:"center",justifyContent:"center"}}>
+   <SectionCard style={{backgroundColor:colors.primaryDark,borderColor:colors.primaryDark,padding:20,...elevation.floating}}>
+    <View style={{flexDirection:rtl?"row-reverse":"row",alignItems:"center",gap:14}}>
+     <View style={{width:64,height:64,borderRadius:20,backgroundColor:colors.primarySoft,alignItems:"center",justifyContent:"center"}}>
       <Label weight="bold" style={{fontSize:24,color:colors.primary,textAlign:"center"}}>{user.displayName.trim().charAt(0)||"●"}</Label>
      </View>
      <View style={{flex:1,gap:3,minWidth:0}}>
-      <Label weight="bold" style={{fontSize:17}}>{user.displayName}</Label>
-      <Label muted style={{fontSize:12}}>{user.email}</Label>
-      <StatusBadge tone={verified?"success":"warning"} label={ax(locale,verified?"verified":"unverified")}/>
+      <Label weight="bold" style={{fontSize:20,lineHeight:29,color:"#FFFFFF"}}>{user.displayName}</Label>
+      <Label style={{fontSize:12,lineHeight:19,color:"#D9EAE0"}}>{user.email}</Label>
+      <View style={{alignSelf:"flex-start",backgroundColor:"#FFFFFF",borderRadius:20}}><StatusBadge tone={verified?"success":"warning"} label={ax(locale,verified?"verified":"unverified")}/></View>
      </View>
     </View>
     {editing?<View style={{gap:8}}>
-     <Label>{ax(locale,"name")}</Label>
+     <Label style={{color:"#FFFFFF"}}>{ax(locale,"name")}</Label>
      <AppInput accessibilityLabel={ax(locale,"name")} value={name} editable={!busy} maxLength={120} onChangeText={setName}/>
-     <Label muted style={{fontSize:12}}>{ax(locale,"nameRules")}</Label>
+     <Label style={{color:"#D9EAE0",fontSize:12}}>{ax(locale,"nameRules")}</Label>
      <Action label={ax(locale,"save")} disabled={busy||name.trim().length<2} onPress={()=>void updateProfile()}/>
      <Action kind="secondary" label={ax(locale,"cancel")} onPress={()=>setEditing(false)}/>
     </View>:<Action kind="secondary" label={ax(locale,"editProfile")} onPress={()=>{setName(user.displayName);setEditing(true);}}/>}
-    {!verified?<Label muted style={{fontSize:13,color:colors.warning}}>{ax(locale,"permission")}</Label>:null}
+    {!verified?<Label style={{fontSize:13,color:"#F3D9A7"}}>{ax(locale,"permission")}</Label>:null}
    </SectionCard>
    <SectionCard>
     {section(ax(locale,"listing"))}
@@ -138,7 +142,7 @@ export default function Account(){
    <SectionCard>
     {section(ax(locale,"agency"))}
     {agencies.length===0?<Label muted style={{fontSize:13}}>{ax(locale,"none")}</Label>:null}
-    {agencies.map(a=><View key={a.agencyId} style={{gap:8,borderWidth:1,borderColor:colors.border,borderRadius:12,padding:12}}>
+    {agencies.map(a=><View key={a.agencyId} style={{gap:10,borderWidth:1,borderColor:colors.border,borderRadius:16,padding:14,backgroundColor:colors.surfaceMuted}}>
      <Label weight="medium">{a.name}</Label>
      <View style={{flexDirection:rtl?"row-reverse":"row",gap:8,flexWrap:"wrap"}}>
       <StatusBadge tone={a.agencyStatus==="active"?"success":"warning"}
