@@ -15,11 +15,14 @@ import type {ListingDTO} from "../../src/listing-client";
 import {Action,AppInput,Label,Page,ScreenHeading,SectionCard,LoadingCard,StateNotice} from "../../src/ui";
 import {uiText} from "../../src/ui-copy";
 import {foundationText,localeDate} from "../../src/foundation-copy";
+import {ActiveFilterRow,SortResultsRow} from "../../src/search-experience";
+import {sx} from "../../src/search-extras-copy";
+import {validateSearchFilters,normalizeSearchNumbers,patchSearchFilters,activeFilterKeys} from "../../src/search-filter-utils";
 export default function Search(){
- const {locale,provinceId,setProvinceId}=usePreferences();
+ const {locale}=usePreferences();
  const {filters,setFilters,reset,hydrated}=useSearchFilters();
  const params=useLocalSearchParams<{intent?:string;openFilters?:string;focusSearch?:string}>();
- const [query,setQuery]=useState(filters.q||"");
+ const [query,setQuery]=useState(filters.q||""),[showSuggestions,setShowSuggestions]=useState(true);
  const [items,setItems]=useState<ListingDTO[]>([]),[featured,setFeatured]=useState<ListingDTO[]>([]),[cursor,setCursor]=useState<string|null>(null),[loading,setLoading]=useState(true),[more,setMore]=useState(false);
  const [error,setError]=useState(""),[cached,setCached]=useState<number|null>(null),[sheet,setSheet]=useState(false);
  useEffect(()=>{if(params.openFilters==="1")setSheet(true);},[params.openFilters]);
@@ -69,11 +72,30 @@ export default function Search(){
  const visibleCursor=resultKey===filterKey?cursor:null;
  const visibleCache=resultKey===filterKey?cached:null;
  const intent=filters.intent||"sale";
+ const suggestions=useMemo(()=>query.trim().length>=2?searchProvinces(query,locale).slice(0,5):[],[query,locale]);
+ const removeFilter=(key:keyof SearchFilters)=>{
+  const patch:SearchFilters={[key]:undefined};
+  if(key==="provinceId")Object.assign(patch,{city:undefined,district:undefined,neighborhood:undefined,viewport:undefined,polygon:undefined});
+  if(key==="city")Object.assign(patch,{district:undefined,neighborhood:undefined});
+  if(key==="q"){setQuery("");setShowSuggestions(false);}
+  setFilters(patch);
+ };
+ const clearSearch=()=>{setQuery("");setShowSuggestions(false);reset();};
  return <Page>
-  <ScreenHeading title={t(locale,"search")} subtitle={findProvince(filters.provinceId||"kabul")?.names[locale]||dt(locale,"all")}/>
-  <AppInput autoFocus={params.focusSearch==="1"} accessibilityLabel={dt(locale,"searchPlaceholder")} value={query} onChangeText={setQuery}
+  <ScreenHeading title={t(locale,"search")} subtitle={findProvince(filters.provinceId||"")?.names[locale]||dt(locale,"all")}/>
+  <AppInput autoFocus={params.focusSearch==="1"} accessibilityLabel={dt(locale,"searchPlaceholder")} value={query} onChangeText={value=>{setQuery(value);setShowSuggestions(true);}}
    placeholder={dt(locale,"searchPlaceholder")} autoCorrect={false}
    style={{minHeight:50,backgroundColor:colors.surface,borderRadius:12,borderColor:colors.border,borderWidth:1,padding:12,color:colors.text,fontSize:16,writingDirection:rtl?"rtl":"ltr",textAlign:rtl?"right":"left"}}/>
+  {showSuggestions&&suggestions.length>0?<SectionCard>
+   <Label muted style={{fontSize:12}}>{sx(locale,"search")}</Label>
+   {suggestions.map(province=><Pressable key={province.id} accessibilityRole="button"
+    accessibilityLabel={province.names[locale]} onPress={()=>{
+     setQuery("");setShowSuggestions(false);
+     setFilters({provinceId:province.id,q:undefined,city:undefined,district:undefined,neighborhood:undefined,viewport:undefined,polygon:undefined});
+    }} style={{paddingVertical:8,minHeight:44,justifyContent:"center",borderBottomWidth:1,borderColor:colors.border}}>
+    <Label style={{color:colors.primary}}>⌖ {province.names[locale]}</Label>
+   </Pressable>)}
+  </SectionCard>:null}
   <View style={{flexDirection:rtl?"row-reverse":"row",gap:8}}>
    {(["sale","rent","gharawi"] as const).map(x=><View style={{flex:1}} key={x}>
     <Action kind={intent===x?"primary":"secondary"} label={t(locale,x==="sale"?"buy":x)} onPress={()=>setFilters({intent:x})}/>
@@ -83,6 +105,7 @@ export default function Search(){
    <View style={{flex:1}}><Action kind="secondary" label={"⚙ "+dt(locale,"filter")} onPress={()=>setSheet(true)}/></View>
    <View style={{flex:1}}><Action kind="secondary" label={"⌖ "+dt(locale,"map")} onPress={()=>router.push("/search-map")}/></View>
   </View>
+  <ActiveFilterRow locale={locale} filters={filters} remove={removeFilter} clear={clearSearch}/>
   {filters.polygon||filters.viewport?<SectionCard>
    <Label weight="bold" style={{color:colors.primary}}>{mapText(locale,"area")}</Label>
    <Label muted>{mapText(locale,"privacy")}</Label>
@@ -96,10 +119,11 @@ export default function Search(){
     <Label style={{color:colors.primary}}>{dt(locale,"refresh")}</Label>
    </Pressable>
   </View>
+  <SortResultsRow locale={locale} filters={filters} change={setFilters}/>
   {visibleCache?<StateNotice tone="warning" message={foundationText(locale,"cached")+" · "+localeDate(visibleCache,locale)}/>:null}
   {loading?<View style={{gap:12}}><LoadingCard withImage rows={3} label={dt(locale,"loading")}/><LoadingCard rows={2}/></View>:null}
   {!loading&&error?<StateNotice message={error} retryLabel={dt(locale,"retry")} onRetry={()=>void load()}/>:null}
-  {!loading&&!visibleItems.length&&!visibleFeatured.length&&!error?<SectionCard><Label weight="bold">{dt(locale,"noResults")}</Label><Label muted>{dt(locale,"relax")}</Label><Action kind="secondary" label={dt(locale,"reset")} onPress={reset}/></SectionCard>:null}
+  {!loading&&!visibleItems.length&&!visibleFeatured.length&&!error?<SectionCard><Label weight="bold">{dt(locale,"noResults")}</Label><Label muted>{dt(locale,"relax")}</Label><Action kind="secondary" label={dt(locale,"reset")} onPress={clearSearch}/></SectionCard>:null}
   {visibleFeatured.length>0&&!loading?<SectionCard>
    <Label weight="bold">{locale==="en"?"Sponsored listings":locale==="fa"?"آگهی‌های تبلیغاتی":"تمویل شوي اعلانونه"}</Label>
    <Label muted>{locale==="en"?"Paid placements. Availability and moderation checks still apply.":locale==="fa"?"نمایش پولی؛ شرط موجودیت و بررسی همچنان برقرار است.":"پیسې ورکړل شوې؛ د شتون او ارزونې شرطونه لا هم پلي دي."}</Label>
