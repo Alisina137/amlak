@@ -5,7 +5,8 @@ import * as SecureStore from "expo-secure-store";
 import {Platform} from "react-native";
 import {requestJson} from "./auth";
 
-const INSTALL_KEY="amlaklink:push-installation:v1";
+// Separate OS-keystore key; no colons (unsupported by Expo SecureStore).
+const INSTALL_KEY="amlaklink.push-installation.v1";
 export type PushPreferences={enabled:boolean;savedSearches:boolean;inquiries:boolean;viewings:boolean;
  account:boolean;enabledAt:string|null;updatedAt?:string};
 export type PushSettings={preferences:PushPreferences;registeredDevices:number;serverConfigured:boolean};
