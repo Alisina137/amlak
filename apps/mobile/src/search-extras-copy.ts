@@ -1,0 +1,7 @@
+import type {Locale} from "@amlaklink/localization";
+const x={
+ en:{selected:"Selected filters",quick:"Explore provinces",none:"Nothing found for this location.",locationHint:"Choose a province; changing it clears local street and map filters.",validation:"Check the values below.",more:"Search a province by name to see all 34.",searchArea:"Search in this area",pins:"Locations displayed with advertiser permission",otherArea:"View more properties in list",search:"Suggestions",viewing:"View on map",viewList:"List view"},
+ fa:{selected:"فیلترهای انتخاب‌شده",quick:"جستجو بر اساس ولایت",none:"نتیجه‌ای برای این موقعیت یافت نشد.",locationHint:"ولایت را انتخاب کنید؛ جزئیات محله و نقشه پاک می‌شود.",validation:"مقدارهای زیر را بررسی کنید.",more:"برای دیدن همهٔ ۳۴ ولایت، نام ولایت را جستجو کنید.",searchArea:"جستجو در این محدوده",pins:"موقعیت‌های دارای اجازهٔ نشر نمایش داده شده‌اند",otherArea:"ملک‌های بیشتر در فهرست",search:"پیشنهادها",viewing:"نمایش روی نقشه",viewList:"نمایش فهرست"},
+ ps:{selected:"ټاکل شوي چاڼونه",quick:"د ولایت له مخې لټون",none:"د دې ځای لپاره پایله نشته.",locationHint:"ولایت وټاکئ؛ د سیمې او نقشې پخواني فلټرونه پاکېږي.",validation:"لاندې ارزښتونه وګورئ.",more:"د ټولو ۳۴ ولایتونو لپاره نوم ولټوئ.",searchArea:"په دې سیمه کې لټون",pins:"یوازې اجازه لرونکي موقعیتونه ښکاري",otherArea:"نور ملکیتونه په لړلیک کې",search:"وړاندیزونه",viewing:"په نقشه کې وګورئ",viewList:"لړلیک وګورئ"}
+} as const;
+export function sx(locale:Locale,key:keyof typeof x.en){return x[locale][key];}
