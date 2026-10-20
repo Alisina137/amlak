@@ -49,5 +49,6 @@ test("Group E phase 25: read/unread notifications, deep links and conditional pu
  assert.match(api,/"New property viewing request",created.id/);
  assert.match(api,/"Property viewing updated",v.id/);
  assert.match(router,/kind==="viewing"&&ref/);
+ assert.match(router,/\["inquiry","lead","message"\]\.includes\(kind\)\&\&ref/);
  for(const token of ['nativePushAvailable','serverConfigured','registerCurrentDevice','settingsHint'])assert.ok(prefs.includes(token)||p.includes(token),token);
 });
