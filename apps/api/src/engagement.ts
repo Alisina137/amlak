@@ -245,6 +245,17 @@ export function registerEngagementRoutes(app:FastifyInstance,db:Database){
    .orderBy(desc(schema.viewings.createdAt)).limit(100);
   return {items:rows};
  });
+ // Mark this user's viewing notices read only after the actor is authorized for this viewing.
+ app.post<{Params:{id:string}}>("/v1/viewings/:id/read-notifications",async request=>{
+  const visit=await getViewing(db,request.params.id),thread=await lookup(db,visit.inquiryId),
+   permission=await access(db,request,thread);
+  await db.update(schema.notifications).set({isRead:true}).where(and(
+   eq(schema.notifications.userId,permission.actor.id),
+   eq(schema.notifications.kind,"viewing"),
+   eq(schema.notifications.referenceId,visit.id)
+  ));
+  return {success:true};
+ });
  app.post<{Params:{id:string}}>("/v1/viewings/:id/decision",async request=>{
   const v=await getViewing(db,request.params.id),thread=await lookup(db,v.inquiryId);
   const p=await access(db,request,thread),input=parse(decisionInput,request.body);
