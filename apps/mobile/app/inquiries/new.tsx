@@ -6,20 +6,24 @@ import {useAuth} from "../../src/auth";
 import {usePreferences} from "../../src/context";
 import {openInquiry,requestId} from "../../src/engagement-client";
 import {et} from "../../src/engagement-copy";
+import {pd} from "../../src/property-detail-copy";
 import {Action,BackButton,Label,Page,ScreenHeading,SectionCard} from "../../src/ui";
 export default function NewInquiry(){
- const {listingId}=useLocalSearchParams<{listingId:string}>(),{token,user}=useAuth(),{locale}=usePreferences();
- const [body,setBody]=useState(""),[key,setKey]=useState(requestId()),[busy,setBusy]=useState(false),[error,setError]=useState("");
+ const {listingId,intent}=useLocalSearchParams<{listingId:string;intent?:string}>(),{token,user}=useAuth(),{locale}=usePreferences();
+ const [body,setBody]=useState(()=>intent==="viewing"?pd(locale,"viewingMessage"):""),[key,setKey]=useState(requestId()),[busy,setBusy]=useState(false),[error,setError]=useState("");
  async function submit(){
   if(!token||body.trim().length<1||busy)return;
   setBusy(true);setError("");
   try{
    const r=await openInquiry(listingId,token,body.trim(),key);
-   setKey(requestId());router.replace({pathname:"/inquiries/[id]",params:{id:r.id}});
+   setKey(requestId());
+   if(intent==="viewing")router.replace({pathname:"/viewings/new",params:{inquiryId:r.id}});
+   else router.replace({pathname:"/inquiries/[id]",params:{id:r.id}});
   }catch(e){setError((e as Error).message);}finally{setBusy(false);}
  }
  return <Page><ScreenHeading title={et(locale,"newInquiry")} subtitle={et(locale,"inquiryPrompt")}/>
   <SectionCard>
+   {intent==="viewing"?<Label muted>{et(locale,"pickSlots")} {et(locale,"pending")}</Label>:null}
    {token&&user?.verified?<><Label>{et(locale,"message")}</Label>
     <TextInput accessibilityLabel={et(locale,"message")} value={body} multiline maxLength={3000}
      onChangeText={setBody} placeholder={et(locale,"message")}
