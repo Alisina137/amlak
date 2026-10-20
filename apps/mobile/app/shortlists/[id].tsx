@@ -1,6 +1,7 @@
 import {router,useFocusEffect,useLocalSearchParams} from "expo-router";
 import {useCallback,useRef,useState} from "react";
 import {ActivityIndicator,Alert,View} from "react-native";
+import {colors} from "@amlaklink/design-tokens";
 import {isRTL} from "@amlaklink/localization";
 import {useAuth,requestJson} from "../../src/auth";
 import {usePreferences} from "../../src/context";
