@@ -85,13 +85,13 @@ export default function Search(){
   <View style={{flexDirection:rtl?"row-reverse":"row",alignItems:"center",justifyContent:"space-between",gap:10}}>
    <View style={{flex:1}}><ScreenHeading title={t(locale,"search")} subtitle={findProvince(filters.provinceId||"")?.names[locale]||dt(locale,"all")}/></View>
    <Pressable accessibilityRole="button" accessibilityLabel={t(locale,"chooseProvince")}
-    onPress={()=>router.push("/locations")} style={{minHeight:44,borderRadius:12,borderWidth:1,borderColor:colors.border,backgroundColor:colors.surface,paddingHorizontal:14,justifyContent:"center"}}>
+    onPress={()=>router.push("/locations")} style={{minHeight:44,borderRadius:14,borderWidth:1,borderColor:colors.borderStrong,backgroundColor:colors.surface,paddingHorizontal:14,justifyContent:"center"}}>
     <Label weight="medium" style={{color:colors.primary,fontSize:13}}>⌖ {t(locale,"chooseProvince")}</Label>
    </Pressable>
   </View>
   <AppInput autoFocus={params.focusSearch==="1"} accessibilityLabel={dt(locale,"searchPlaceholder")} value={query} onChangeText={value=>{setQuery(value);setShowSuggestions(true);}}
    placeholder={dt(locale,"searchPlaceholder")} autoCorrect={false}
-   style={{minHeight:50,backgroundColor:colors.surface,borderRadius:12,borderColor:colors.border,borderWidth:1,padding:12,color:colors.text,fontSize:16,writingDirection:rtl?"rtl":"ltr",textAlign:rtl?"right":"left"}}/>
+   style={{minHeight:58,backgroundColor:colors.surface,borderRadius:16,fontSize:16}}/>
   {showSuggestions&&suggestions.length>0?<SectionCard>
    <Label muted style={{fontSize:12}}>{sx(locale,"search")}</Label>
    {suggestions.map(province=><Pressable key={province.id} accessibilityRole="button"
@@ -102,12 +102,12 @@ export default function Search(){
     <Label style={{color:colors.primary}}>⌖ {province.names[locale]}</Label>
    </Pressable>)}
   </SectionCard>:null}
-  <View style={{flexDirection:rtl?"row-reverse":"row",gap:8}}>
+  <View style={{flexDirection:rtl?"row-reverse":"row",gap:5,padding:5,backgroundColor:colors.primarySoft,borderRadius:17}}>
    {(["sale","rent","gharawi"] as const).map(x=><View style={{flex:1}} key={x}>
     <Action kind={intent===x?"primary":"secondary"} label={t(locale,x==="sale"?"buy":x)} onPress={()=>setFilters({intent:x})}/>
    </View>)}
   </View>
-  <View style={{flexDirection:rtl?"row-reverse":"row",gap:8}}>
+  <View style={{flexDirection:rtl?"row-reverse":"row",gap:10}}>
    <View style={{flex:1}}><Action kind="secondary" label={"⚙ "+dt(locale,"filter")} onPress={()=>setSheet(true)}/></View>
    <View style={{flex:1}}><Action kind="secondary" label={"⌖ "+dt(locale,"map")} onPress={()=>router.push("/search-map")}/></View>
   </View>
@@ -120,8 +120,8 @@ export default function Search(){
   </SectionCard>:null}
   <Action kind="secondary" label={locale==="en"?"Save this search / manage alerts":locale==="fa"?"ذخیره جستجو و مدیریت اعلان‌ها":"پلټنه خوندي کړئ / خبرتیاوې"} onPress={()=>router.push("/saved-searches")}/>
   <View style={{flexDirection:rtl?"row-reverse":"row",gap:8,alignItems:"center",justifyContent:"space-between"}}>
-   <Label weight="bold" style={{fontSize:18}}>{dt(locale,"results")} · {formatNumber(visibleItems.length,locale)}{visibleCursor?"+":""}</Label>
-   <Pressable accessibilityRole="button" style={{padding:10}} onPress={()=>void load()}>
+   <Label weight="bold" style={{fontSize:20,color:colors.primaryDark}}>{dt(locale,"results")} · {formatNumber(visibleItems.length,locale)}{visibleCursor?"+":""}</Label>
+   <Pressable accessibilityRole="button" style={{paddingHorizontal:13,paddingVertical:10,borderWidth:1,borderColor:colors.border,borderRadius:14,backgroundColor:colors.surface}} onPress={()=>void load()}>
     <Label style={{color:colors.primary}}>{dt(locale,"refresh")}</Label>
    </Pressable>
   </View>
@@ -180,7 +180,7 @@ function FilterSheet({visible,close,filters,apply,clear,locale}:{visible:boolean
   </View>;
  return <Modal animationType="slide" transparent visible={visible} onRequestClose={close}>
   <View style={{flex:1,backgroundColor:"#0007",justifyContent:"flex-end"}}>
-   <View style={{maxHeight:"92%",backgroundColor:colors.background,borderTopLeftRadius:22,borderTopRightRadius:22,padding:16,gap:10}}>
+   <View style={{maxHeight:"92%",backgroundColor:colors.background,borderTopLeftRadius:28,borderTopRightRadius:28,padding:20,gap:12}}>
     <View style={{flexDirection:rtl?"row-reverse":"row",justifyContent:"space-between",alignItems:"center"}}>
      <Label weight="bold" style={{fontSize:20}}>{dt(locale,"filter")} · {activeFilterKeys(draft).length}</Label>
      <Pressable accessibilityRole="button" onPress={close} style={{padding:12}}><Label>✕</Label></Pressable>

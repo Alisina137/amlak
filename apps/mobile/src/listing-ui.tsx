@@ -1,7 +1,7 @@
 import {useEffect,useState} from "react";
 import {Animated,Pressable,View} from "react-native";
 import {router} from "expo-router";
-import {colors} from "@amlaklink/design-tokens";
+import {colors,elevation} from "@amlaklink/design-tokens";
 import type {ListingDTO} from "./listing-client";
 import {photoSource} from "./listing-client";
 import {usePreferences} from "./context";
@@ -44,33 +44,43 @@ export function ListingCard({item}:{item:ListingDTO}){
  return <Animated.View style={motion.pressStyle}><Pressable accessibilityRole="button" accessibilityLabel={d.title}
   onPressIn={motion.onPressIn} onPressOut={motion.onPressOut}
   onPress={()=>router.push({pathname:"/property/[id]",params:{id:item.id}})}>
-  <View style={{backgroundColor:colors.surface,borderColor:colors.border,borderWidth:1,borderRadius:18,overflow:"hidden",marginBottom:12}}>
+  <View style={{backgroundColor:colors.surface,borderColor:colors.border,borderWidth:1,
+   borderRadius:22,overflow:"hidden",marginBottom:16,...elevation.card}}>
    <View style={{position:"relative"}}>
     {photo?<MotionImage imageKey={photo} source={photoSource(photo)} accessibilityLabel={d.title}
-     style={{width:"100%",aspectRatio:4/3,backgroundColor:colors.border}} resizeMode="cover"/>:
-     <View style={{width:"100%",aspectRatio:4/3,backgroundColor:colors.border,justifyContent:"center",alignItems:"center"}}>
-      <Label style={{fontSize:36}}>⌂</Label>
+     style={{width:"100%",aspectRatio:1.63,backgroundColor:colors.surfaceMuted}} resizeMode="cover"/>:
+     <View style={{width:"100%",aspectRatio:1.63,backgroundColor:colors.primarySoft,justifyContent:"center",alignItems:"center"}}>
+      <Label style={{fontSize:40,color:colors.primary}}>⌂</Label>
      </View>}
-    <View style={{position:"absolute",top:10,start:10,backgroundColor:"rgba(15,20,19,0.82)",paddingHorizontal:10,paddingVertical:5,borderRadius:12}}>
+    <View style={{position:"absolute",top:10,start:10,backgroundColor:"rgba(8,43,35,0.92)",paddingHorizontal:12,paddingVertical:7,borderRadius:12}}>
      <Label style={{fontSize:12,color:"#fff"}}>{lt(locale,d.transactionType)} · {lt(locale,d.propertyType)}</Label>
     </View>
     <Pressable accessibilityRole="button" accessibilityLabel={isSaved(item.id)?dt(locale,"unsave"):dt(locale,"save")}
      onPress={event=>{event.stopPropagation();void toggle(item.id).catch(()=>setError(dt(locale,"favoriteError")));}}
-     style={{position:"absolute",top:8,end:8,width:44,height:44,borderRadius:22,backgroundColor:colors.surface,justifyContent:"center",alignItems:"center"}}>
+     style={{position:"absolute",top:10,end:10,width:46,height:46,borderRadius:23,backgroundColor:colors.surface,justifyContent:"center",alignItems:"center",...elevation.card}}>
      <FavoriteGlyph saved={isSaved(item.id)}/>
     </Pressable>
-    {item.photos.length>1?<View style={{position:"absolute",bottom:10,end:10,paddingHorizontal:10,paddingVertical:5,borderRadius:14,backgroundColor:"rgba(15,20,19,0.82)"}}>
+    {item.photos.length>1?<View style={{position:"absolute",bottom:10,end:10,paddingHorizontal:10,paddingVertical:5,borderRadius:14,backgroundColor:"rgba(8,43,35,0.88)"}}>
      <Label style={{fontSize:12,color:"#fff"}}>▣ {formatNumber(item.photos.length,locale)}</Label>
     </View>:null}
    </View>
-   <View style={{padding:13,gap:4}}>
-    <Label weight="bold" style={{fontSize:18,lineHeight:25,color:colors.primary}}>{priceSummary(d,locale)}</Label>
-    <Label weight="medium" style={{fontSize:15,lineHeight:22}}>{d.title}</Label>
-    {location?<Label muted style={{fontSize:12,lineHeight:19}}>⌖ {location}</Label>:null}
-    {areaText?<View style={{flexDirection:rtl?"row-reverse":"row",gap:8,alignItems:"center"}}>
-     <Label muted style={{fontSize:12,lineHeight:18}}>▱ {areaText}</Label>
+   <View style={{padding:16,gap:8}}>
+    <Label weight="bold" style={{fontSize:21,lineHeight:29,color:colors.primaryDark,letterSpacing:-0.3}}>{priceSummary(d,locale)}</Label>
+    <Label weight="medium" style={{fontSize:15,lineHeight:23,color:colors.text}}>{d.title}</Label>
+    {location?<View style={{flexDirection:rtl?"row-reverse":"row",alignItems:"center",gap:7}}>
+     <View style={{width:24,height:24,backgroundColor:colors.primarySoft,borderRadius:8,alignItems:"center",justifyContent:"center"}}>
+      <Label style={{fontSize:13,color:colors.primary,textAlign:"center"}}>⌖</Label>
+     </View>
+     <Label muted style={{fontSize:12,lineHeight:19,flex:1}}>{location}</Label>
     </View>:null}
-    {confirmationText?<Label muted style={{fontSize:11,lineHeight:17}}>{confirmationText}</Label>:null}
+    {areaText?<View style={{flexDirection:rtl?"row-reverse":"row",gap:8,alignItems:"center"}}>
+     <Label muted style={{fontSize:12,lineHeight:18,color:colors.textSecondary}}>▱ {areaText}</Label>
+    </View>:null}
+    {confirmationText?<View style={{paddingTop:8,borderTopWidth:1,borderTopColor:colors.divider,
+     flexDirection:rtl?"row-reverse":"row",alignItems:"center",gap:6}}>
+     <View style={{width:7,height:7,borderRadius:4,backgroundColor:colors.success}}/>
+     <Label muted style={{fontSize:11,lineHeight:17,flex:1}}>{confirmationText}</Label>
+    </View>:null}
     {error?<Label style={{fontSize:12,color:colors.error}}>{error}</Label>:null}
    </View>
   </View>

@@ -40,3 +40,50 @@
 .admin-queue-tools select{min-width:160px}
 .admin-main-content article{min-width:0;overflow-wrap:anywhere}
 .admin-main-content figure img{max-width:100%}
+
+
+/* Amlak visual system v2: align the protected staff portal with the mobile UI. */
+:root{
+ --amlak-jade:#105747;--amlak-deep:#073C33;--amlak-sand:#C79854;
+ --amlak-canvas:#F4F6F3;--amlak-border:#E0E9E2;
+ --amlak-ink:#172F2A;--amlak-muted:#64766F;
+ --amlak-card-shadow:0 12px 32px rgba(16,44,37,.055);
+}
+html,body{background:var(--amlak-canvas);color:var(--amlak-ink)}
+.staff-side{background:linear-gradient(155deg,var(--amlak-jade),var(--amlak-deep))}
+.admin-workspace{gap:26px}
+.admin-main-content h1{letter-spacing:-.025em;font-weight:800}
+.admin-main-content h2{letter-spacing:-.014em}
+.admin-card,.login-box,.staff-nav{
+ border:1px solid var(--amlak-border);border-radius:22px;
+ box-shadow:var(--amlak-card-shadow);background:#fff
+}
+.staff-nav{padding:19px}
+.staff-nav-link{border-radius:13px;min-height:48px;transition:background-color .15s ease,color .15s ease}
+.staff-nav-link.active{
+ border-color:#B4D3C1;background:#E5F3EC;color:var(--amlak-deep)!important;
+ box-shadow:inset 3px 0 0 var(--amlak-sand)
+}
+.staff-brand-mark,.shield{border-radius:15px;background:#E5F3EC;color:var(--amlak-jade)}
+.admin-dashboard-header{padding:10px 1px 8px;border-bottom:1px solid var(--amlak-border)}
+.staff-kicker{color:#91621E;font-weight:800}
+.admin-quick-link{
+ border-radius:17px;border-color:var(--amlak-border);background:#F8FAF8;
+ min-height:110px;transition:background-color .15s ease,border-color .15s ease,transform .15s ease
+}
+.admin-quick-link:hover{border-color:#A8CBB8;background:#F0F8F3;transform:translateY(-2px)}
+.admin-quick-link strong{color:var(--amlak-deep)}
+.admin-workspace input:not([type=checkbox]),.admin-workspace select,
+.admin-workspace textarea,.fields input{
+ border:1px solid #C7D8CD;border-radius:13px;background:#F8FAF8;
+ color:var(--amlak-ink);padding:12px 14px
+}
+.admin-workspace input:focus-visible,.admin-workspace textarea:focus-visible,
+.admin-workspace select:focus-visible,.fields input:focus-visible{background:#fff;border-color:var(--amlak-jade)}
+.sign-in,.admin-button{border-radius:13px;min-height:50px;background:var(--amlak-jade);font-weight:700}
+.admin-button.secondary{border-color:#B4D3C1;color:var(--amlak-jade);background:#fff}
+.sign-in:hover:not(:disabled),.admin-button:not(.secondary):hover:not(:disabled){background:var(--amlak-deep)}
+.agency-review{border-top-color:var(--amlak-border);padding:21px 0}
+@media(prefers-reduced-motion:reduce){.staff-nav-link,.admin-quick-link{transition:none}.admin-quick-link:hover{transform:none}}
+@media(max-width:590px){.admin-workspace{gap:14px}.admin-card{border-radius:18px}
+ .admin-quick-link{min-height:93px}.admin-dashboard-header{padding-bottom:14px}}

@@ -85,7 +85,7 @@ export default function Saved(){
    {lastRemoved?<SectionCard><Label>{savedText(locale,"removed")}</Label>
     <Action kind="secondary" label={savedText(locale,"undo")} disabled={working} onPress={()=>void undo()}/></SectionCard>:null}
    {items.length===0?<SectionCard><Label muted>{savedText(locale,"emptyFavorites")}</Label></SectionCard>:null}
-   {items.length>0?<SectionCard>
+   {items.length>0?<SectionCard style={{backgroundColor:colors.primaryWash,borderColor:colors.borderStrong}}>
     <Label weight="bold">{savedText(locale,"select")} · {formatNumber(effectiveSelection.length,locale)}/4</Label>
     <Label muted style={{fontSize:12}}>{savedText(locale,"history")}</Label>
     <Action disabled={working||effectiveSelection.length<2||effectiveSelection.length>4}
@@ -99,13 +99,13 @@ export default function Saved(){
       disabled={!comparable(item)||working}
       onPress={()=>setSelected(previous=>previous.includes(item.id)?previous.filter(id=>id!==item.id):previous.length<4?[...previous,item.id]:previous)}
       style={{flex:1,minHeight:48,justifyContent:"center",padding:10,borderWidth:1,
-       borderColor:effectiveSelection.includes(item.id)?colors.primary:colors.border,borderRadius:12,
-       backgroundColor:effectiveSelection.includes(item.id)?"#E1F0E9":colors.surface}}>
+       borderColor:effectiveSelection.includes(item.id)?colors.primary:colors.borderStrong,borderRadius:14,
+       backgroundColor:effectiveSelection.includes(item.id)?colors.primarySoft:colors.surface}}>
       <Label style={{fontSize:13}}>{effectiveSelection.includes(item.id)?"☑":"☐"} {savedText(locale,"select")}</Label>
      </Pressable>
      <Pressable accessibilityRole="button" accessibilityLabel={savedText(locale,"remove")+" "+item.data.title}
       disabled={working} onPress={()=>void remove(item)} style={{minHeight:48,paddingHorizontal:14,
-       justifyContent:"center",borderWidth:1,borderRadius:12,borderColor:colors.border,backgroundColor:colors.surface}}>
+       justifyContent:"center",borderWidth:1,borderRadius:14,borderColor:colors.borderStrong,backgroundColor:colors.surface}}>
       <Label style={{fontSize:13,color:colors.error}}>{savedText(locale,"remove")}</Label>
      </Pressable>
     </View>
@@ -115,7 +115,7 @@ export default function Saved(){
   </View>:null}
   {token&&active==="searches"&&!loading?<View style={{gap:10}}>
    {searches.length===0?<SectionCard><Label muted>{savedText(locale,"searchesEmpty")}</Label></SectionCard>:null}
-   {searches.map(item=><SectionCard key={item.id}>
+   {searches.map(item=><SectionCard key={item.id} style={{borderStartWidth:4,borderStartColor:item.alertsEnabled?colors.success:colors.borderStrong}}>
     <Label weight="bold">{item.title}</Label>
     <Label muted style={{fontSize:13}}>{savedFilterSummary(item.filters,locale).slice(0,4).join(" · ")||savedText(locale,"unknown")}</Label>
     <StatusBadge tone={item.alertsEnabled?"success":"neutral"}
@@ -126,7 +126,7 @@ export default function Saved(){
   </View>:null}
   {token&&active==="shortlists"&&!loading?<View style={{gap:10}}>
    {shortlists.length===0?<SectionCard><Label muted>{savedText(locale,"listsEmpty")}</Label></SectionCard>:null}
-   {shortlists.map(item=><SectionCard key={item.id}>
+   {shortlists.map(item=><SectionCard key={item.id} style={{borderStartWidth:4,borderStartColor:colors.secondary}}>
     <Label weight="bold">{item.title}</Label>
     <StatusBadge tone={item.membershipStatus==="pending"?"warning":"success"}
      label={savedText(locale,item.membershipStatus==="pending"?"pending":item.role==="owner"?"owner":"member")}/>

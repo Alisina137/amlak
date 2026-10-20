@@ -71,12 +71,13 @@ export default function Inbox(){
  const tabText:Record<Tab,string>={inquiries:ix(locale,"messages"),viewings:ix(locale,"viewings"),notifications:ix(locale,"notices")};
  return <Page>
   <ScreenHeading title={ix(locale,"inbox")} subtitle={ix(locale,"inboxSub")}/>
-  <View style={{flexDirection:rtl?"row-reverse":"row",flexWrap:"wrap",gap:8}}>
+  <View style={{flexDirection:rtl?"row-reverse":"row",flexWrap:"wrap",gap:5,padding:5,borderRadius:18,backgroundColor:colors.primarySoft}}>
    {(["inquiries","viewings","notifications"] as const).map(key=><Pressable key={key}
     accessibilityRole="tab" accessibilityState={{selected:tab===key}}
     onPress={()=>setTab(key)} style={{minHeight:48,flexGrow:1,paddingHorizontal:10,justifyContent:"center",alignItems:"center",
-     backgroundColor:tab===key?colors.primary:colors.surface,borderWidth:1,borderColor:tab===key?colors.primary:colors.border,borderRadius:12}}>
-    <Label weight="medium" style={{fontSize:13,color:tab===key?colors.surface:colors.text}}>
+     backgroundColor:tab===key?colors.surface:"transparent",
+     borderWidth:1,borderColor:tab===key?colors.borderStrong:"transparent",borderRadius:14}}>
+    <Label weight="medium" style={{fontSize:13,color:tab===key?colors.primaryDark:colors.muted}}>
      {tabText[key]}{key==="notifications"&&unread?" ("+formatNumber(unread,locale)+")":""}
     </Label>
    </Pressable>)}
@@ -116,9 +117,13 @@ export default function Inbox(){
   {token&&!loading&&tab==="inquiries"&&conversations.map(i=><Pressable key={i.id}
    accessibilityRole="button" accessibilityLabel={i.title+" · "+inquiryStatus(locale,i.status)}
    onPress={()=>router.push({pathname:"/inquiries/[id]",params:{id:i.id}})}>
-   <SectionCard>
-    <View style={{flexDirection:rtl?"row-reverse":"row",alignItems:"center",justifyContent:"space-between",gap:8}}>
-     <Label weight="bold" style={{flex:1,fontSize:16}}>{i.title}</Label>
+   <SectionCard style={{borderStartWidth:unreadThreads.has(i.id)?4:1,
+    borderStartColor:unreadThreads.has(i.id)?colors.secondary:colors.border}}>
+    <View style={{flexDirection:rtl?"row-reverse":"row",alignItems:"center",justifyContent:"space-between",gap:10}}>
+     <View style={{width:40,height:40,borderRadius:14,backgroundColor:colors.primarySoft,alignItems:"center",justifyContent:"center"}}>
+      <Label style={{fontSize:20,color:colors.primary,textAlign:"center"}}>✉</Label>
+     </View>
+     <Label weight="bold" style={{flex:1,fontSize:16,lineHeight:23}}>{i.title}</Label>
      {unreadThreads.has(i.id)?<StatusBadge tone="warning" label={ix(locale,"unread")}/>:null}
     </View>
     <View style={{flexDirection:rtl?"row-reverse":"row",gap:8,flexWrap:"wrap"}}>
@@ -132,7 +137,7 @@ export default function Inbox(){
   {token&&!loading&&tab==="viewings"&&filteredViewings.length===0?<SectionCard><Label muted>{ix(locale,"noVisits")}</Label></SectionCard>:null}
   {token&&!loading&&tab==="viewings"&&filteredViewings.map(v=><Pressable key={v.id} accessibilityRole="button"
    onPress={()=>router.push({pathname:"/viewings/[id]",params:{id:v.id}})}>
-   <SectionCard>
+   <SectionCard style={{borderStartWidth:3,borderStartColor:v.status==="confirmed"?colors.success:colors.borderStrong}}>
     <StatusBadge label={et(locale,v.status)} tone={v.status==="confirmed"?"success":isPastVisit(v)?"warning":"neutral"}/>
     <Label weight="medium">{viewingLabel(v,locale)}</Label>
     <Label muted style={{fontSize:12}}>{ix(locale,"viewingHint")}</Label>
@@ -144,7 +149,7 @@ export default function Inbox(){
     <Label weight="bold" style={{fontSize:16}}>{ix(locale,section.group)}</Label>
     {section.items.map(n=><Pressable accessibilityRole="button" accessibilityLabel={n.title} key={n.id}
      disabled={mutating} onPress={()=>void openNotice(n)}>
-     <SectionCard style={{backgroundColor:n.isRead?colors.surface:"#F1F8F4"}}>
+     <SectionCard style={{backgroundColor:n.isRead?colors.surface:colors.primaryWash,borderStartWidth:n.isRead?1:4,borderStartColor:n.isRead?colors.border:colors.primary}}>
       <View style={{flexDirection:rtl?"row-reverse":"row",gap:8,alignItems:"center"}}>
        {!n.isRead?<View style={{width:9,height:9,borderRadius:5,backgroundColor:colors.primary}}/>:null}
        <Label weight={n.isRead?"regular":"bold"} style={{fontSize:13,flex:1}}>{noticeLabel(locale,n.kind)}</Label>
