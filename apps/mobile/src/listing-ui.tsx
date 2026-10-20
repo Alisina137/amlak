@@ -30,29 +30,46 @@ export function priceSummary(d:ListingDTO["data"],locale:Locale){
 }
 export function ListingCard({item}:{item:ListingDTO}){
  const {locale}=usePreferences(),d=item.data,photo=item.photos[0]?.id;
- const {isSaved,toggle}=useFavorites();const [error,setError]=useState("");
- return <Pressable accessibilityRole="button" onPress={()=>router.push({pathname:"/property/[id]",params:{id:item.id}})}>
-  <View style={{backgroundColor:colors.surface,borderColor:colors.border,borderWidth:1,borderRadius:18,overflow:"hidden",marginBottom:14}}>
-   {photo?<View>
-    <Image source={photoSource(photo)} accessibilityLabel={d.title}
-     style={{width:"100%",aspectRatio:4/3,backgroundColor:colors.border}} resizeMode="cover"/>
-    {item.photos.length>1?<View style={{position:"absolute",bottom:10,end:10,paddingHorizontal:11,paddingVertical:6,
-     borderRadius:16,backgroundColor:"rgba(15,20,19,0.82)"}}>
-     <Label style={{fontSize:12,color:"#fff"}}>▣ {item.photos.length}</Label>
-    </View>:null}
-   </View>:
-    <View style={{height:160,backgroundColor:colors.border,justifyContent:"center",alignItems:"center"}}><Label>⌂</Label></View>}
-   <View style={{padding:16,gap:6}}>
-    <View style={{flexDirection:isRTL(locale)?"row-reverse":"row",alignItems:"center",justifyContent:"flex-end"}}>
-     <Pressable accessibilityRole="button" accessibilityLabel={isSaved(item.id)?dt(locale,"unsave"):dt(locale,"save")} onPress={event=>{event.stopPropagation();void toggle(item.id).catch(()=>setError(dt(locale,"favoriteError")));}} style={{paddingHorizontal:15,paddingVertical:8,minHeight:44,borderRadius:18,backgroundColor:isSaved(item.id)?"#e1f0e9":colors.background}}>
-      <Label style={{fontSize:23,color:colors.primary}}>{isSaved(item.id)?"♥":"♡"}</Label>
-     </Pressable>
+ const {isSaved,toggle}=useFavorites();
+ const [error,setError]=useState("");
+ const rtl=isRTL(locale);
+ const area=d.attributes.areaM2;
+ const areaText=typeof area==="number"&&Number.isFinite(area)&&area>0?formatNumber(area,locale)+" m²":null;
+ const location=[findProvince(d.location.provinceId)?.names[locale],d.location.district].filter(Boolean).join(" · ");
+ const confirmation=item.lastConfirmedAt?new Date(item.lastConfirmedAt):null;
+ const confirmationText=confirmation&&!Number.isNaN(confirmation.getTime())?
+  (locale==="en"?"Availability checked: ":locale==="fa"?"بررسی موجودیت: ":"شتون کتل شوی: ")+
+  confirmation.toLocaleDateString(locale==="en"?"en-US":locale==="ps"?"ps-AF":"fa-AF"):null;
+ return <Pressable accessibilityRole="button" accessibilityLabel={d.title}
+  onPress={()=>router.push({pathname:"/property/[id]",params:{id:item.id}})}>
+  <View style={{backgroundColor:colors.surface,borderColor:colors.border,borderWidth:1,borderRadius:18,overflow:"hidden",marginBottom:12}}>
+   <View style={{position:"relative"}}>
+    {photo?<Image source={photoSource(photo)} accessibilityLabel={d.title}
+     style={{width:"100%",aspectRatio:4/3,backgroundColor:colors.border}} resizeMode="cover"/>:
+     <View style={{width:"100%",aspectRatio:4/3,backgroundColor:colors.border,justifyContent:"center",alignItems:"center"}}>
+      <Label style={{fontSize:36}}>⌂</Label>
+     </View>}
+    <View style={{position:"absolute",top:10,start:10,backgroundColor:"rgba(15,20,19,0.82)",paddingHorizontal:10,paddingVertical:5,borderRadius:12}}>
+     <Label style={{fontSize:12,color:"#fff"}}>{lt(locale,d.transactionType)} · {lt(locale,d.propertyType)}</Label>
     </View>
-    <Label weight="bold" style={{fontSize:20,color:colors.primary}}>{priceSummary(d,locale)}</Label>
-    <Label weight="bold">{d.title}</Label>
-    <Label muted>{lt(locale,d.transactionType)} · {lt(locale,d.propertyType)} · {findProvince(d.location.provinceId)?.names[locale]} / {d.location.district}</Label>
-    {error?<Label style={{color:colors.error}}>{error}</Label>:null}
-    <Label muted style={{fontSize:13}}>{formatNumber(d.attributes.areaM2||0,locale)} m² · {item.lastConfirmedAt?new Date(item.lastConfirmedAt).toLocaleDateString(locale==="en"?"en-US":locale==="ps"?"ps-AF":"fa-AF"):"—"}</Label>
+    <Pressable accessibilityRole="button" accessibilityLabel={isSaved(item.id)?dt(locale,"unsave"):dt(locale,"save")}
+     onPress={event=>{event.stopPropagation();void toggle(item.id).catch(()=>setError(dt(locale,"favoriteError")));}}
+     style={{position:"absolute",top:8,end:8,width:44,height:44,borderRadius:22,backgroundColor:colors.surface,justifyContent:"center",alignItems:"center"}}>
+     <Label style={{fontSize:23,color:colors.primary,textAlign:"center"}}>{isSaved(item.id)?"♥":"♡"}</Label>
+    </Pressable>
+    {item.photos.length>1?<View style={{position:"absolute",bottom:10,end:10,paddingHorizontal:10,paddingVertical:5,borderRadius:14,backgroundColor:"rgba(15,20,19,0.82)"}}>
+     <Label style={{fontSize:12,color:"#fff"}}>▣ {formatNumber(item.photos.length,locale)}</Label>
+    </View>:null}
+   </View>
+   <View style={{padding:13,gap:4}}>
+    <Label weight="bold" style={{fontSize:18,lineHeight:25,color:colors.primary}}>{priceSummary(d,locale)}</Label>
+    <Label weight="medium" style={{fontSize:15,lineHeight:22}}>{d.title}</Label>
+    {location?<Label muted style={{fontSize:12,lineHeight:19}}>⌖ {location}</Label>:null}
+    {areaText?<View style={{flexDirection:rtl?"row-reverse":"row",gap:8,alignItems:"center"}}>
+     <Label muted style={{fontSize:12,lineHeight:18}}>▱ {areaText}</Label>
+    </View>:null}
+    {confirmationText?<Label muted style={{fontSize:11,lineHeight:17}}>{confirmationText}</Label>:null}
+    {error?<Label style={{fontSize:12,color:colors.error}}>{error}</Label>:null}
    </View>
   </View>
  </Pressable>;
