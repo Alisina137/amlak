@@ -1,13 +1,14 @@
 import {router,useFocusEffect,useLocalSearchParams} from "expo-router";
-import {useCallback,useState} from "react";
-import {ActivityIndicator,Alert,TextInput,View} from "react-native";
-import {colors} from "@amlaklink/design-tokens";
+import {useCallback,useRef,useState} from "react";
+import {ActivityIndicator,Alert,View} from "react-native";
 import {isRTL} from "@amlaklink/localization";
 import {useAuth,requestJson} from "../../src/auth";
 import {usePreferences} from "../../src/context";
 import {ListingCard} from "../../src/listing-ui";
 import type {ListingDTO} from "../../src/listing-client";
-import {Action,Label,Page,ScreenHeading,SectionCard} from "../../src/ui";
+import {Action,AppInput,BackButton,Label,Page,ScreenHeading,SectionCard,StateNotice,LoadingCard,StatusBadge} from "../../src/ui";
+import {formatNumber} from "@amlaklink/localization";
+import {savedText} from "../../src/saved-copy";
 type Member={userId:string;id:string|null;displayName:string;status:string};
 type Item={id:string;listingId:string;addedBy:string;available:boolean;property:ListingDTO|null;
  votes:{userId:string;vote:"interested"|"pass";note:string}[]};
@@ -37,54 +38,61 @@ export default function ShortlistDetail(){
  const {user,token}=useAuth(),[detail,setDetail]=useState<Detail|null>(null),[favorites,setFavorites]=useState<ListingDTO[]>([]);
  const [email,setEmail]=useState(""),[busy,setBusy]=useState(false),[error,setError]=useState("");
  const [openPicker,setOpenPicker]=useState(false),[notes,setNotes]=useState<Record<string,string>>({});
+ const [loading,setLoading]=useState(true),epoch=useRef(0),tokenRef=useRef(token);
+ tokenRef.current=token;
  const load=useCallback(async()=>{
-  if(!token||!id){setDetail(null);return;}
+  const version=++epoch.current;
+  if(!token||!id){setDetail(null);setLoading(false);return;}
+  setLoading(true);
   try{
    const [list,likes]=await Promise.all([
     requestJson<Detail>("/v1/shortlists/"+id,{token}),
-    requestJson<{items:ListingDTO[]}>("/v1/favorites",{token})
+    requestJson<{items:ListingDTO[]}>("/v1/favorites",{token}).catch(()=>({items:[]}))
    ]);
+   if(version!==epoch.current||tokenRef.current!==token)return;
    setDetail(list);setFavorites(likes.items);setError("");
-  }catch{setDetail(null);setError(t.error);}
+  }catch{if(version===epoch.current&&tokenRef.current===token){setDetail(null);setError(t.error);}}
+  finally{if(version===epoch.current&&tokenRef.current===token)setLoading(false);}
  },[token,id,t.error]);
- useFocusEffect(useCallback(()=>{void load();},[load]));
- async function mutate(path:string,method:"POST"|"PUT"|"DELETE",body?:object){
-  if(!token||busy)return;
+ useFocusEffect(useCallback(()=>{void load();return()=>{epoch.current++;};},[load]));
+ async function mutate(path:string,method:"POST"|"PUT"|"DELETE",body?:object):Promise<boolean>{
+  if(!token||busy)return false;
   setBusy(true);setError("");
-  try{await requestJson(path,{token,method,...(body?{body}:{})});await load();}
-  catch{setError(t.error);}finally{setBusy(false);}
+  try{await requestJson(path,{token,method,...(body?{body}:{})});await load();return true;}
+  catch{setError(t.error);return false;}finally{setBusy(false);}
  }
  function confirm(action:()=>void){
   Alert.alert(t.confirm,undefined,[{text:t.cancel,style:"cancel"},{text:locale==="en"?"Confirm":"تأیید",style:"destructive",onPress:action}]);
  }
  const base="/v1/shortlists/"+id;
  return <Page>
+  <BackButton onPress={()=>router.back()}/>
   <ScreenHeading title={detail?.title||t.back} subtitle={t.max}/>
+  {loading&&!detail?<LoadingCard rows={3}/>:null}
   {busy?<ActivityIndicator color={colors.primary}/>:null}
-  {error?<SectionCard><Label style={{color:colors.error}}>{error}</Label>
-   <Action label={t.refresh} kind="secondary" onPress={()=>void load()}/></SectionCard>:null}
+  {error?<StateNotice message={error} retryLabel={t.refresh} onRetry={()=>void load()}/>:null}
   {detail?<><SectionCard>
-   <Label weight="bold">{t.members} ({detail.members.length}/5)</Label>
+   <Label weight="bold">{t.members} ({formatNumber(detail.members.length,locale)}/5)</Label>
    {detail.members.map(member=><View key={member.userId} style={{gap:5}}>
-    <Label>{member.userId===detail.ownerId?(locale==="en"?"Owner":"مالک"):
-     member.displayName} · {member.status}</Label>
+    <Label>{member.userId===detail.ownerId?savedText(locale,"owner"):member.displayName}</Label>
+    <StatusBadge tone={member.status==="pending"?"warning":"success"}
+     label={member.status==="pending"?savedText(locale,"pending"):savedText(locale,"member")}/>
     {detail.isOwner&&member.userId!==detail.ownerId?
       <Action kind="secondary" label={t.remove} onPress={()=>confirm(()=>void mutate(base+"/members/"+member.userId,"DELETE"))}/>:null}
    </View>)}
    {detail.isOwner&&detail.members.length<5?<View style={{gap:8}}>
     <Label>{t.invite}</Label>
-    <TextInput accessibilityLabel={t.email} placeholder={t.email} keyboardType="email-address"
-     autoCapitalize="none" value={email} onChangeText={setEmail}
-     style={{borderWidth:1,borderColor:colors.border,borderRadius:10,minHeight:48,padding:12,color:colors.text,
-      textAlign:rtl?"right":"left",writingDirection:rtl?"rtl":"ltr"}}/>
-    <Action disabled={busy||!email.includes("@")} label={t.send} onPress={()=>
-      void mutate(base+"/invitations","POST",{email:email.trim()}).then(()=>setEmail(""))}/>
+    <AppInput accessibilityLabel={t.email} placeholder={t.email} keyboardType="email-address" inputDirection="ltr"
+     autoCapitalize="none" autoCorrect={false} editable={!busy} value={email} onChangeText={setEmail}/>
+    <Action disabled={busy||!/^\\S+@\\S+\\.\\S+$/.test(email.trim())} label={t.send} onPress={()=>
+      void mutate(base+"/invitations","POST",{email:email.trim()}).then(ok=>{if(ok)setEmail("");})}/>
    </View>:null}
   </SectionCard>
   <SectionCard>
    <Label weight="bold">{t.add}</Label>
    <Action kind="secondary" label={t.add} onPress={()=>setOpenPicker(v=>!v)}/>
-   {openPicker?favorites.filter(x=>!detail.items.some(item=>item.listingId===x.id)).map(property=>
+   {openPicker?favorites.filter(x=>x.status==="published"&&x.available!==false
+    &&!detail.items.some(item=>item.listingId===x.id)).map(property=>
     <View key={property.id} style={{gap:8}}>
      <Label>{property.data.title}</Label>
      <Action label={t.add} disabled={busy} onPress={()=>void mutate(base+"/items","POST",{listingId:property.id})}/>
@@ -93,14 +101,18 @@ export default function ShortlistDetail(){
   {detail.items.length===0?<SectionCard><Label muted>{t.empty}</Label></SectionCard>:null}
   {detail.items.map(item=><SectionCard key={item.id}>
    {item.available&&item.property?<ListingCard item={item.property}/>:<Label muted>{t.unavailable}</Label>}
-   {item.votes.map(v=><Label key={v.userId} muted>{v.userId===user?.id?
+   {item.available?<View style={{flexDirection:rtl?"row-reverse":"row",gap:8,flexWrap:"wrap"}}>
+    <StatusBadge tone="success" label={savedText(locale,"interestedCount")+": "+formatNumber(item.votes.filter(v=>v.vote==="interested").length,locale)}/>
+    <StatusBadge tone="neutral" label={savedText(locale,"passCount")+": "+formatNumber(item.votes.filter(v=>v.vote==="pass").length,locale)}/>
+   </View>:null}
+   {item.available&&item.votes.length===0?<Label muted style={{fontSize:12}}>{savedText(locale,"none")}</Label>:null}
+   {item.available?item.votes.map(v=><Label key={v.userId} muted>{v.userId===user?.id?
     (locale==="en"?"Your vote":"نظر شما"):detail.members.find(m=>m.userId===v.userId)?.displayName||"Member"}:
-    {" "+(v.vote==="interested"?t.interested:t.pass)+(v.note?" · "+v.note:"")}</Label>)}
-   {item.available?<><TextInput accessibilityLabel={t.notes} placeholder={t.notes}
+    {" "+(v.vote==="interested"?t.interested:t.pass)+(v.note?" · "+v.note:"")}</Label>):null}
+   {item.available?<><AppInput accessibilityLabel={t.notes} placeholder={t.notes}
     maxLength={500} value={notes[item.id]??item.votes.find(v=>v.userId===user?.id)?.note??""}
-    onChangeText={v=>setNotes(prev=>({...prev,[item.id]:v}))}
-    multiline style={{borderWidth:1,borderColor:colors.border,borderRadius:10,minHeight:64,padding:12,color:colors.text,
-     textAlign:rtl?"right":"left",writingDirection:rtl?"rtl":"ltr"}}/>
+    onChangeText={v=>setNotes(prev=>({...prev,[item.id]:v}))} editable={!busy}
+    multiline style={{minHeight:72,textAlignVertical:"top"}}/>
     <View style={{flexDirection:rtl?"row-reverse":"row",gap:8}}>
      <View style={{flex:1}}><Action label={t.interested} disabled={busy} onPress={()=>
       void mutate(base+"/items/"+item.id+"/vote","PUT",{vote:"interested",note:notes[item.id]??item.votes.find(v=>v.userId===user?.id)?.note??""})}/></View>
