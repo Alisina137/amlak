@@ -1,6 +1,6 @@
 import {router} from "expo-router";
 import {useCallback,useEffect,useMemo,useRef,useState} from "react";
-import {ActivityIndicator,View} from "react-native";
+import {View} from "react-native";
 import MapView,{Marker,Polygon,Polyline,type Region} from "react-native-maps";
 import {serializePolygon,parsePolygon,type GeoPoint} from "@amlaklink/contracts";
 import {colors} from "@amlaklink/design-tokens";
@@ -10,7 +10,8 @@ import {useSearchFilters} from "../src/search-context";
 import {fetchMap,queryString,type PropertyMapPoint} from "../src/discovery-client";
 import {dt} from "../src/discovery-copy";
 import {mapText} from "../src/map-copy";
-import {Label,Action,BackButton,Page,ScreenHeading,SectionCard} from "../src/ui";
+import {Label,Action,BackButton,Page,ScreenHeading,SectionCard,LoadingCard,StateNotice,StatusBadge} from "../src/ui";
+import {sx} from "../src/search-extras-copy";
 import {uiText} from "../src/ui-copy";
 const AFGHANISTAN:Region={latitude:33.9391,longitude:67.71,latitudeDelta:6,longitudeDelta:7};
 const KABUL:Region={latitude:34.5553,longitude:69.2075,latitudeDelta:0.30,longitudeDelta:0.30};
@@ -42,7 +43,7 @@ export default function SearchMap(){
   try{
    const result=await fetchMap(filters);
    if(version!==epoch.current)return;
-   setPoints(result.items);setHasMorePins(result.hasMorePins);
+   setPoints(result.items.filter(item=>Number.isFinite(item.latitude)&&Number.isFinite(item.longitude)&&item.latitude>=29&&item.latitude<=39&&item.longitude>=60&&item.longitude<=75));setHasMorePins(result.hasMorePins);
   }catch{
    if(version!==epoch.current)return;
    setPoints([]);setHasMorePins(false);setError(dt(locale,"mapProvider"));
@@ -76,21 +77,20 @@ export default function SearchMap(){
  };
  const clearArea=()=>{setFilters({viewport:undefined,polygon:undefined});cancel();goList();};
  const rowDirection=isRTL(locale)?"row-reverse":"row";
+ const selectedPrice=selected?(selected.transactionType==="sale"?selected.price.askingPrice:
+  selected.transactionType==="rent"?selected.price.monthlyRent:selected.price.refundablePrincipal):undefined;
  return <Page>
-  <ScreenHeading title={dt(locale,"map")} subtitle={mapText(locale,"select")}/>
   <BackButton onPress={()=>router.back()}/>
+  <ScreenHeading title={dt(locale,"map")} subtitle={mapText(locale,"select")}/>
   <SectionCard>
    <Label muted>{mapText(locale,"privacy")}</Label>
-   {filters.polygon||filters.viewport?<Label weight="bold" style={{color:colors.primary}}>{mapText(locale,"area")}</Label>:null}
+   {filters.polygon||filters.viewport?<StatusBadge label={mapText(locale,"area")} tone="success"/>:null}
    <Label>{mapText(locale,"matches")}: {formatNumber(points.length,locale)}{hasMorePins?"+":""}</Label>
    {hasMorePins?<Label muted>{mapText(locale,"capped")}</Label>:null}
   </SectionCard>
-  {loading?<SectionCard><ActivityIndicator color={colors.primary}/><Label>{dt(locale,"loading")}</Label></SectionCard>:null}
-  {error?<SectionCard><Label style={{color:colors.error}}>{error}</Label>
-   <Action kind="secondary" label={mapText(locale,"retry")} onPress={()=>void load()}/>
-   <Action kind="secondary" label={mapText(locale,"returnList")} onPress={goList}/>
-  </SectionCard>:null}
-  <View style={{height:390,borderRadius:18,overflow:"hidden",
+  {loading?<LoadingCard rows={2} label={dt(locale,"loading")}/>:null}
+  {error?<StateNotice message={error} retryLabel={mapText(locale,"retry")} onRetry={()=>void load()}/>:null}
+  <View style={{height:440,borderRadius:18,overflow:"hidden",
    borderWidth:1,borderColor:colors.border}}>
    <MapView style={{width:"100%",height:"100%"}} initialRegion={startCenter.current}
     onMapReady={()=>setReady(true)}
@@ -127,8 +127,12 @@ export default function SearchMap(){
   </SectionCard>}
   {!loading&&!points.length&&!error?<SectionCard><Label muted>{mapText(locale,"empty")}</Label></SectionCard>:null}
   {selected&&!drawing&&points.some(item=>item.id===selected.id)?<SectionCard>
-   <Label weight="bold">{selected.title}</Label>
+   <Label weight="bold" style={{fontSize:18}}>{selected.title}</Label>
    <Label muted>{selected.transactionType}</Label>
+   {typeof selectedPrice==="number"&&Number.isFinite(selectedPrice)?<Label weight="bold" style={{color:colors.primary,fontSize:18}}>
+    {formatNumber(selectedPrice,locale)} {selected.price.currency}
+   </Label>:null}
+   <Label muted style={{fontSize:12}}>{sx(locale,"pins")}</Label>
    <Action label={uiText(locale,"viewProperty")}
     onPress={()=>router.push({pathname:"/property/[id]",params:{id:selected.id}})}/>
   </SectionCard>:null}
