@@ -18,9 +18,9 @@ test("Phase 37: role scoped agency workspace, team member actions and lead stage
   api=read("apps/api/src/agencies.ts");
  includes(space,'snapshot.scope===scope','epoch.current===version','canManage','!!active',
   'memberRole==="owner"','workspace.canSubmitListing','/v1/agencies/','/revoke',
-  'canManage','visibleStaffSections' in {}?'':'ag(locale,"members")');
+  'canManage','ag(locale,"members")');
  includes(leads,'snapshot.scope===scope','"contacted"','"viewing"','"negotiating"',
-  'leadStageLabel(locale,item.leadStatus)','item.agencyId===id','i.side==="advertiser"'.replace('i.','i.'));
+  'leadStageLabel(locale,item.leadStatus)','item.agencyId===id','i.side==="advertiser"');
  includes(api,'requireAgencyMember(db,actor,id','VERIFIED_MEMBER_NOT_FOUND','OWNER_APPROVAL_REQUIRED');
 });
 test("Phase 38: charts are derived from server metrics; billing stays gated by server flags",()=>{
@@ -29,7 +29,7 @@ test("Phase 38: charts are derived from server metrics; billing stays gated by s
  includes(reports,'/reports','report.properties.published','report.leads.open','report.contactTaps','snapshot.scope===scope');
  includes(performance,'/performance?days=','answeredWithin24h','avgFirstResponseMinutes','report?.sampled');
  includes(billing,'plans?.illustrativePricing','plans?.billingEnabled','products.map','invoices.map',
-  'independentlyVerified' in {}?'':'selectedInvoice','ScrollView horizontal');
+  'selectedInvoice','ScrollView horizontal');
  assert.ok(!/completed sales|verified sales\s*=\s*\d/i.test(reports));
 });
 test("Phase 39: staff navigation hides routes by role; page guards remain server-side",()=>{
