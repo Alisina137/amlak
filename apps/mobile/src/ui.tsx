@@ -1,12 +1,13 @@
 import { colors, radius, spacing, typeScale } from "@amlaklink/design-tokens";
 import { isRTL, t, type Locale } from "@amlaklink/localization";
 import { type ReactNode } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type StyleProp, type TextInputProps, type TextStyle, type ViewStyle } from "react-native";
+import { ActivityIndicator, Animated, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type StyleProp, type TextInputProps, type TextStyle, type ViewStyle } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { usePreferences } from "./context";
 import { useApiStatus } from "./api";
 import {foundationText} from "./foundation-copy";
 import { uiText } from "./ui-copy";
+import {MotionReveal,MotionSkeleton,usePressScale} from "./motion";
 
 /** Common typography automatically mirrors with the application's selected language. */
 export function Label({children,style,muted=false,weight="regular"}:{children:ReactNode;style?:StyleProp<TextStyle>;muted?:boolean;weight?:"regular"|"medium"|"bold"}){
@@ -29,13 +30,13 @@ export function AppInput({style,inputDirection="auto",...props}:TextInputProps&{
   style={[styles.input,direction,style]}/>;
 }
 export function BackButton({onPress}:{onPress:()=>void}){
- const {locale}=usePreferences();
- return <Pressable accessibilityRole="button" accessibilityLabel={uiText(locale,"back")}
-  onPress={onPress} style={{minWidth:48,minHeight:48,alignSelf:isRTL(locale)?"flex-end":"flex-start",
+ const {locale}=usePreferences(),motion=usePressScale();
+ return <Animated.View style={[{alignSelf:isRTL(locale)?"flex-end":"flex-start"},motion.pressStyle]}><Pressable accessibilityRole="button" accessibilityLabel={uiText(locale,"back")}
+  onPress={onPress} onPressIn={motion.onPressIn} onPressOut={motion.onPressOut} style={{minWidth:48,minHeight:48,
    justifyContent:"center",alignItems:"center",borderColor:colors.border,borderWidth:1,
    borderRadius:12,backgroundColor:colors.surface}}>
   <Label style={{fontSize:22,textAlign:"center"}}>{isRTL(locale)?"→":"←"}</Label>
- </Pressable>;
+ </Pressable></Animated.View>;
 }
 /** One shared connection state; this banner is informational, never blocks reading offline data. */
 function ConnectionNotice(){
@@ -53,7 +54,7 @@ export function Page({children}:{children:ReactNode}){
  return <SafeAreaView style={{flex:1,backgroundColor:colors.background}} edges={["top"]}>
   <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag"
    contentContainerStyle={styles.container}>
-   <View style={styles.pageContent}><ConnectionNotice/>{children}</View>
+   <MotionReveal style={styles.pageContent}><ConnectionNotice/>{children}</MotionReveal>
   </ScrollView>
  </SafeAreaView>;
 }
@@ -61,20 +62,21 @@ export function SectionCard({children,style}:{children:ReactNode;style?:StylePro
  return <View style={[styles.card,style]}>{children}</View>;
 }
 export function Action({label,onPress,kind="primary",disabled=false}:{label:string;onPress:()=>void;kind?:"primary"|"secondary";disabled?:boolean}){
- const secondary=kind==="secondary";
- return <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{disabled}} disabled={disabled} onPress={onPress}
+ const secondary=kind==="secondary",motion=usePressScale();
+ return <Animated.View style={motion.pressStyle}><Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{disabled}} disabled={disabled} onPress={onPress} onPressIn={motion.onPressIn} onPressOut={motion.onPressOut}
   style={({pressed})=>[styles.action,{backgroundColor:secondary?colors.surface:colors.primary,
    borderColor:secondary?colors.border:colors.primary,opacity:disabled?0.45:pressed?0.82:1}]}>
   <Label weight="medium" style={{color:secondary?colors.text:colors.surface,textAlign:"center",fontSize:14,lineHeight:21}}>{label}</Label>
- </Pressable>;
+ </Pressable></Animated.View>;
 }
 export function FilterChip({label,selected=false,onPress}:{label:string;selected?:boolean;onPress:()=>void}){
- return <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{selected}} onPress={onPress}
+ const motion=usePressScale();
+ return <Animated.View style={motion.pressStyle}><Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{selected}} onPress={onPress} onPressIn={motion.onPressIn} onPressOut={motion.onPressOut}
   style={{minHeight:44,paddingHorizontal:14,justifyContent:"center",borderRadius:radius.pill,
    borderWidth:1,borderColor:selected?colors.primary:colors.border,
    backgroundColor:selected?"#E1F0E9":colors.surface}}>
   <Label weight={selected?"medium":"regular"} style={{fontSize:13,lineHeight:19,color:selected?colors.primary:colors.text}}>{label}</Label>
- </Pressable>;
+ </Pressable></Animated.View>;
 }
 export function StatusBadge({label,tone="neutral"}:{label:string;tone?:"neutral"|"success"|"warning"|"error"}){
  const color=tone==="success"?colors.success:tone==="warning"?colors.warning:tone==="error"?colors.error:colors.primary;
@@ -95,12 +97,12 @@ export function SectionHeader({title,actionLabel,onAction}:{title:string;actionL
 /** Static skeletons are lightweight on low-powered Android devices. */
 export function LoadingCard({rows=2,withImage=false,label}:{rows?:number;withImage?:boolean;label?:string}){
  const {locale}=usePreferences();
- return <SectionCard><View accessibilityRole="progressbar" accessibilityLabel={label||foundationText(locale,"loading")}
+ return <SectionCard><MotionSkeleton><View accessibilityRole="progressbar" accessibilityLabel={label||foundationText(locale,"loading")}
   style={{gap:10}}>
   {withImage?<View style={{height:155,backgroundColor:colors.border,borderRadius:radius.md}}/>:null}
   {Array.from({length:Math.max(1,Math.min(rows,5))},(_,i)=><View key={i}
    style={{height:i===0?18:13,width:i%2?"78%":"95%",backgroundColor:colors.border,borderRadius:radius.sm}}/>)}
- </View></SectionCard>;
+ </View></MotionSkeleton></SectionCard>;
 }
 export function StateNotice({message,tone="error",retryLabel,onRetry}:{message:string;tone?:"error"|"warning"|"info";
  retryLabel?:string;onRetry?:()=>void}){
