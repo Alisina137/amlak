@@ -131,15 +131,30 @@ export default function Search(){
   </SectionCard>:null}
   {visibleItems.filter(item=>!visibleFeatured.some(promoted=>promoted.id===item.id)).map(item=><ListingCard key={item.id} item={item}/>)}
   {visibleCursor?<Action disabled={more} label={more?dt(locale,"loading"):dt(locale,"showMore")} onPress={()=>void loadMore()}/>:null}
-  <FilterSheet visible={sheet} close={()=>setSheet(false)} filters={filters} apply={next=>{setFilters(next);setSheet(false);}} clear={()=>{reset();setSheet(false);}} locale={locale}/>
+  <FilterSheet visible={sheet} close={()=>setSheet(false)} filters={filters} apply={next=>{setFilters(next);setSheet(false);}} clear={()=>{clearSearch();setSheet(false);}} locale={locale}/>
  </Page>;
 }
 type Lang="fa"|"ps"|"en";
 function FilterSheet({visible,close,filters,apply,clear,locale}:{visible:boolean;close:()=>void;filters:SearchFilters;apply:(p:SearchFilters)=>void;clear:()=>void;locale:Lang}){
  const [draft,setDraft]=useState<SearchFilters>(filters),[provinceSearch,setProvinceSearch]=useState("");
- useEffect(()=>{if(visible)setDraft(filters);},[visible,filters]);
+ const [validation,setValidation]=useState("");
+ useEffect(()=>{if(visible){setDraft(filters);setValidation("");}},[visible,filters]);
+ const visibleProvinces=useMemo(()=>{
+  const all=searchProvinces(provinceSearch,locale);
+  if(provinceSearch.trim())return all;
+  const selected=all.find(p=>p.id===draft.provinceId);
+  const top=all.filter(p=>p.id!==selected?.id).slice(0,7);
+  return selected?[selected,...top]:all.slice(0,8);
+ },[provinceSearch,locale,draft.provinceId]);
+ const applyDraft=()=>{
+  const normalized=normalizeSearchNumbers({...draft,
+   ...(draft.minPrice||draft.maxPrice||draft.sort?.startsWith("price")?{currency:draft.currency||"AFN"}:{})});
+  const issue=validateSearchFilters(normalized,locale);
+  if(issue){setValidation(issue.message);return;}
+  setValidation("");apply(normalized);
+ };
  const rtl=isRTL(locale);
- const update=(p:SearchFilters)=>setDraft(v=>({...v,...p}));
+ const update=(p:SearchFilters)=>{setValidation("");setDraft(v=>patchSearchFilters(v,p));};
  const numericField=(key:keyof SearchFilters,label:string)=>{
   return <View style={{flex:1,minWidth:120,gap:6}}>
    <Label>{label}</Label>
@@ -161,16 +176,16 @@ function FilterSheet({visible,close,filters,apply,clear,locale}:{visible:boolean
   <View style={{flex:1,backgroundColor:"#0007",justifyContent:"flex-end"}}>
    <View style={{maxHeight:"92%",backgroundColor:colors.background,borderTopLeftRadius:22,borderTopRightRadius:22,padding:16,gap:10}}>
     <View style={{flexDirection:rtl?"row-reverse":"row",justifyContent:"space-between",alignItems:"center"}}>
-     <Label weight="bold" style={{fontSize:22}}>{dt(locale,"filter")}</Label>
+     <Label weight="bold" style={{fontSize:20}}>{dt(locale,"filter")} · {activeFilterKeys(draft).length}</Label>
      <Pressable accessibilityRole="button" onPress={close} style={{padding:12}}><Label>✕</Label></Pressable>
     </View>
     <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{gap:20,paddingBottom:24}}>
      {options(dt(locale,"category"),"type",[{value:"",label:dt(locale,"all")},...(["house","apartment","land","shop","office","commercial"] as const).map(type=>({value:type,label:({en:{house:"House",apartment:"Apartment",land:"Land",shop:"Shop",office:"Office",commercial:"Commercial"},fa:{house:"خانه",apartment:"آپارتمان",land:"زمین",shop:"دکان",office:"دفتر",commercial:"تجاری"},ps:{house:"کور",apartment:"اپارتمان",land:"ځمکه",shop:"دوکان",office:"دفتر",commercial:"تجارتي"}})[locale][type]}))])}
      <View style={{gap:8}}>
       <Label weight="bold">{dt(locale,"region")}</Label>
-      {options("", "provinceId",[{value:"",label:dt(locale,"all")},...searchProvinces(provinceSearch,locale).map(p=>({value:p.id,label:p.names[locale]}))])}
-      <AppInput placeholder={t(locale,"searchProvince")} accessibilityLabel={t(locale,"searchProvince")} value={provinceSearch} onChangeText={setProvinceSearch}
-       style={{minHeight:48}}/>
+      <AppInput placeholder={t(locale,"searchProvince")} accessibilityLabel={t(locale,"searchProvince")} value={provinceSearch} onChangeText={setProvinceSearch} style={{minHeight:48}}/>
+      {options("", "provinceId",[{value:"",label:dt(locale,"all")},...visibleProvinces.map(p=>({value:p.id,label:p.names[locale]}))])}
+      {!provinceSearch.trim()?<Label muted style={{fontSize:12}}>{sx(locale,"more")}</Label>:null}
       {(["city","district","neighborhood"] as const).map(key=><View key={key} style={{gap:4}}>
        <Label>{dt(locale,key)}</Label><AppInput value={draft[key]||""} onChangeText={v=>update({[key]:v||undefined})}
         style={{borderWidth:1,borderColor:colors.border,padding:10,borderRadius:10,color:colors.text}}/>
@@ -186,13 +201,10 @@ function FilterSheet({visible,close,filters,apply,clear,locale}:{visible:boolean
       <View key={key}>{options(dt(locale,key),key,[{value:"",label:dt(locale,"all")},{value:"true",label:"✓"},{value:"false",label:"✕"}])}</View>)}
      {options(dt(locale,"professional"),"advertiser",[{value:"",label:dt(locale,"all")},{value:"private",label:uiText(locale,"searchPrivate")},{value:"independent_agent",label:uiText(locale,"searchAgent")},{value:"agency",label:uiText(locale,"searchAgency")}])}
      {options(dt(locale,"verified"),"verifiedAgency",[{value:"",label:dt(locale,"all")},{value:"true",label:"✓"}])}
-     {options(dt(locale,"sort"),"sort",[
-      {value:"newest",label:dt(locale,"newest")},{value:"recent_confirmed",label:dt(locale,"recent")},
-      {value:"price_asc",label:dt(locale,"low")},{value:"price_desc",label:dt(locale,"high")}])}
     </ScrollView>
     <View style={{gap:8}}>
-     <Action label={dt(locale,"apply")} onPress={()=>apply({...draft,
-      ...(draft.minPrice||draft.maxPrice||draft.sort?.startsWith("price")?{currency:draft.currency||"AFN"}:{})})}/>
+     {validation?<Label style={{color:colors.error,fontSize:13}}>{validation}</Label>:null}
+     <Action label={dt(locale,"apply")} onPress={applyDraft}/>
      <Action kind="secondary" label={dt(locale,"reset")} onPress={clear}/>
     </View>
    </View>
