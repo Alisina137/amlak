@@ -24,7 +24,15 @@ export default function ViewingDetail(){
   try{
    const response=await fetchViewings(token);
    const entry=response.items.find(row=>row.id===id);
-   if(!entry)throw Error("NOT_FOUND");
+   if(!entry){
+    // Legacy viewing notices sometimes held the inquiry UUID. Route only if this
+    // signed-in actor is authorized to open that conversation.
+    const oldThread=await inquiry(id,token).catch(()=>null);
+    if(oldThread&&epoch.current===version&&tokenRef.current===token)
+     router.replace({pathname:"/inquiries/[id]",params:{id:oldThread.id}});
+    if(oldThread)return;
+    throw Error("NOT_FOUND");
+   }
    const conversation=await inquiry(entry.inquiryId,token);
    if(epoch.current!==version||tokenRef.current!==token)return;
    setVisit(entry);setThread(conversation);setError("");
