@@ -29,11 +29,10 @@ export default function Explore() {
  };
  const filterText = locale === "en" ? ["Property type", "Price range", "Bedrooms", "More filters"] : locale === "fa" ? ["نوع ملکیت", "محدوده قیمت", "اتاق خواب", "فیلترهای بیشتر"] : ["د ملکیت ډول", "د بیې حد", "د خوب خونې", "نور فلټرونه"];
  const searchText = locale === "en" ? "Search properties, locations or keywords" : locale === "fa" ? "جستجوی ملکیت، موقعیت یا کلمات کلیدی" : "ملکیتونه، ځایونه یا کلیمې ولټوئ";
- const { status, refresh, reconnectEpoch } = useApiStatus();
+ const { reconnectEpoch } = useApiStatus();
  const province = findProvince(provinceId);
  const rtl = isRTL(locale);
  const locationLabel = province?.names[locale] ?? t(locale, "kabul");
- const offline = status !== "connected";
  useEffect(() => {
   let active = true;
   setFeaturedLoading(true);
@@ -51,7 +50,6 @@ export default function Explore() {
  const categoryIcons = ["⌂","▥","▱","▣","▤","▦"];
  const locationAccessibility = locale === "en" ? "Change location" : locale === "fa" ? "تغییر موقعیت" : "ځای بدل کړئ";
  const notificationsLabel = locale === "en" ? "Notification settings" : locale === "fa" ? "تنظیمات اعلان‌ها" : "د خبرتیاوو تنظیمات";
- const connection = status === "unconfigured" ? t(locale, "networkUnconfigured") : t(locale, "networkOffline");
 
  return <Page>
   <View style={{ flexDirection: rtl ? "row-reverse" : "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
@@ -140,9 +138,6 @@ export default function Explore() {
   <ListingFeed provinceId={provinceId} reconnectEpoch={reconnectEpoch} />
   <HomeNextSteps />
 
-  {offline ? <Pressable accessibilityRole="button" onPress={() => void refresh()}
-   style={{ minHeight: 44, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface }}>
-   <Label muted style={{ fontSize: 13, textAlign: "center" }}>{connection} · {t(locale, "retryConnection")}</Label>
-  </Pressable> : null}
+
  </Page>;
 }

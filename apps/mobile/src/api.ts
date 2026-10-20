@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { createContext, createElement, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { AppState } from "react-native";
 type Status="checking"|"connected"|"offline"|"unconfigured";
 const API_URL=(process.env.EXPO_PUBLIC_API_URL||"").replace(/\/+$/,"");
 /** Recheck on foreground and periodically; avoid foreground/background race and leaked timers. */
-export function useApiStatus(){
+function useNetworkState(){
  const [status,setStatus]=useState<Status>(API_URL?"checking":"unconfigured");
  const epoch=useRef(0),controllerRef=useRef<AbortController|null>(null);
  const lastResult=useRef<Status>("checking");
@@ -43,4 +43,16 @@ export function useApiStatus(){
   };
  },[refresh]);
  return {status,refresh,reconnectEpoch};
+}
+
+/** A single foreground-aware heartbeat, shared by all screens without duplicate polling. */
+const NetworkContext=createContext<ReturnType<typeof useNetworkState>|null>(null);
+export function NetworkProvider({children}:{children:ReactNode}){
+ const state=useNetworkState();
+ return createElement(NetworkContext.Provider,{value:state},children);
+}
+export function useApiStatus(){
+ const state=useContext(NetworkContext);
+ if(!state)throw Error("NetworkProvider missing");
+ return state;
 }
