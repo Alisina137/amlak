@@ -31,7 +31,7 @@ test("direction is determined by in-app locale, not just translated strings",()=
  assert.match(ui,/export function AppInput/);
  assert.match(ui,/inputDirection!=="ltr"\&\&isRTL\(locale\)/);
  assert.match(ui,/accessibilityLabel=\{uiText\(locale,"back"\)\}/);
- assert.match(tabs,/rtl\?\["account","inbox","saved","search","index"\]/);
+ assert.match(tabs,/const order=rtl\?\[\.\.\.tabs\]\.reverse\(\):tabs/);
  assert.match(tabs,/initialRouteName="index"/);
 });
 test("major screen forms use locale-correct inputs and keep email/numbers LTR",()=>{
