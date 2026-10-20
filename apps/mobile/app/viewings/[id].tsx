@@ -3,7 +3,7 @@ import {useCallback,useRef,useState} from "react";
 import {Alert,Pressable,View} from "react-native";
 import {colors} from "@amlaklink/design-tokens";
 import {isRTL,formatNumber} from "@amlaklink/localization";
-import {useAuth} from "../../src/auth";
+import {useAuth,requestJson} from "../../src/auth";
 import {usePreferences} from "../../src/context";
 import {fetchViewings,inquiry,viewingDecision,displayKabul,kabulSlots,type Viewing,type InquiryDetail} from "../../src/engagement-client";
 import {et} from "../../src/engagement-copy";
@@ -28,6 +28,7 @@ export default function ViewingDetail(){
    const conversation=await inquiry(entry.inquiryId,token);
    if(epoch.current!==version||tokenRef.current!==token)return;
    setVisit(entry);setThread(conversation);setError("");
+   void requestJson("/v1/viewings/"+entry.id+"/read-notifications",{method:"POST",token}).catch(()=>{});
   }catch{
    if(epoch.current===version&&tokenRef.current===token){
     setVisit(null);setThread(null);setError(et(locale,"noAccess"));
