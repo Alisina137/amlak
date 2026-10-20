@@ -17,10 +17,11 @@ import {uiText} from "../../src/ui-copy";
 export default function Search(){
  const {locale,provinceId,setProvinceId}=usePreferences();
  const {filters,setFilters,reset,hydrated}=useSearchFilters();
- const params=useLocalSearchParams<{intent?:string}>();
+ const params=useLocalSearchParams<{intent?:string;openFilters?:string;focusSearch?:string}>();
  const [query,setQuery]=useState(filters.q||"");
  const [items,setItems]=useState<ListingDTO[]>([]),[featured,setFeatured]=useState<ListingDTO[]>([]),[cursor,setCursor]=useState<string|null>(null),[loading,setLoading]=useState(true),[more,setMore]=useState(false);
  const [error,setError]=useState(""),[cached,setCached]=useState<number|null>(null),[sheet,setSheet]=useState(false);
+ useEffect(()=>{if(params.openFilters==="1")setSheet(true);},[params.openFilters]);
  const rtl=isRTL(locale);
  const filterKey=queryString(filters);
  const filterKeyRef=useRef(filterKey),loadEpoch=useRef(0);
@@ -69,7 +70,7 @@ export default function Search(){
  const intent=filters.intent||"sale";
  return <Page>
   <ScreenHeading title={t(locale,"search")} subtitle={findProvince(filters.provinceId||"kabul")?.names[locale]||dt(locale,"all")}/>
-  <AppInput accessibilityLabel={dt(locale,"searchPlaceholder")} value={query} onChangeText={setQuery}
+  <AppInput autoFocus={params.focusSearch==="1"} accessibilityLabel={dt(locale,"searchPlaceholder")} value={query} onChangeText={setQuery}
    placeholder={dt(locale,"searchPlaceholder")} autoCorrect={false}
    style={{minHeight:50,backgroundColor:colors.surface,borderRadius:12,borderColor:colors.border,borderWidth:1,padding:12,color:colors.text,fontSize:16,writingDirection:rtl?"rtl":"ltr",textAlign:rtl?"right":"left"}}/>
   <View style={{flexDirection:rtl?"row-reverse":"row",gap:8}}>
