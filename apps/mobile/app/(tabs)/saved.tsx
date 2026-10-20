@@ -1,5 +1,5 @@
 import {router,useFocusEffect} from "expo-router";
-import {useCallback,useRef,useState} from "react";
+import {useCallback,useEffect,useRef,useState} from "react";
 import {Pressable,View} from "react-native";
 import {colors} from "@amlaklink/design-tokens";
 import {t} from "@amlaklink/localization";
@@ -18,6 +18,7 @@ export default function Saved(){
  const [selected,setSelected]=useState<string[]>([]);
  const tokenRef=useRef(token),epoch=useRef(0);
  tokenRef.current=token;
+ useEffect(()=>setSelected([]),[token]);
  const items=snapshot.token===token?snapshot.items:[];
  const load=useCallback(async()=>{
   const version=++epoch.current;
