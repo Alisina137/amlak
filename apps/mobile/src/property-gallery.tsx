@@ -31,6 +31,13 @@ export function PropertyGallery({photos,title}:{photos:Photo[];title:string}){
  const syncFullScreen=()=>{
   if(fullScreen&&current)fullRef.current?.scrollTo({x:index*width,animated:false});
  };
+ const movePhoto=(offset:number)=>{
+  const next=Math.max(0,Math.min(matching.length-1,index+offset));
+  if(matching[next]){
+   setActiveId(matching[next].id);
+   fullRef.current?.scrollTo({x:next*width,animated:true});
+  }
+ };
  const coverId=photos[0]?.id;
  return <View style={{gap:12}}>
   <View style={{flexDirection:rtl?"row-reverse":"row",alignItems:"center",justifyContent:"space-between"}}>
@@ -100,6 +107,21 @@ export function PropertyGallery({photos,title}:{photos:Photo[];title:string}){
         resizeMode="contain" style={{width:"100%",height:"100%"}}/>
       </View>)}
      </ScrollView>
+     <View style={{flexDirection:rtl?"row-reverse":"row",justifyContent:"space-between",
+      paddingHorizontal:16,gap:12,alignItems:"center"}}>
+      <Pressable accessibilityRole="button" accessibilityLabel={text.previous}
+       disabled={index===0} onPress={()=>movePhoto(-1)}
+       style={{minHeight:48,minWidth:110,borderRadius:14,borderColor:"#74817B",
+        borderWidth:1,alignItems:"center",justifyContent:"center",opacity:index===0?0.35:1}}>
+       <Label style={{color:"#fff",fontSize:14}}>{rtl?"→ ":"← "}{text.previous}</Label>
+      </Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel={text.next}
+       disabled={index>=matching.length-1} onPress={()=>movePhoto(1)}
+       style={{minHeight:48,minWidth:110,borderRadius:14,borderColor:"#74817B",
+        borderWidth:1,alignItems:"center",justifyContent:"center",opacity:index>=matching.length-1?0.35:1}}>
+       <Label style={{color:"#fff",fontSize:14}}>{text.next}{rtl?" ←":" →"}</Label>
+      </Pressable>
+     </View>
      {current?<View style={{minHeight:90,padding:16,alignItems:rtl?"flex-end":"flex-start",gap:8}}>
       <Label style={{color:"#fff",fontWeight:"700"}}>{roomName(locale,current.room)}</Label>
       {current.caption?<Label style={{color:"#fff"}}>{current.caption}</Label>:null}
