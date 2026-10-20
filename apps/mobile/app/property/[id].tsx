@@ -2,6 +2,7 @@ import {useEffect,useState} from "react";
 import {requestJson} from "../../src/auth";
 import {router,useLocalSearchParams} from "expo-router";
 import {Linking,Pressable,Share,View} from "react-native";
+import {SafeAreaView} from "react-native-safe-area-context";
 import {colors} from "@amlaklink/design-tokens";
 import {findProvince} from "@amlaklink/catalog";
 import {usePreferences} from "../../src/context";
@@ -27,8 +28,8 @@ function InfoMetric({label,value}:{label:string;value:string}){return <View styl
 export default function PropertyDetails(){
  const {id}=useLocalSearchParams<{id:string}>(),{locale}=usePreferences(),{isSaved,toggle}=useFavorites();
  const [data,setData]=useState<ListingDTO|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState(""),[busy,setBusy]=useState<"call"|"whatsapp"|null>(null),[retry,setRetry]=useState(0);
- const [authorizationReviewed,setAuthorizationReviewed]=useState(false);
- useEffect(()=>{let live=true;setLoading(true);setError("");
+ const [authorizationReviewed,setAuthorizationReviewed]=useState(false),[contactError,setContactError]=useState("");
+ useEffect(()=>{let live=true;setLoading(true);setData(null);setError("");setContactError("");
   void getPublic(id).then(v=>{if(live){setData(v);if(v.status==="published")void markRecentlyViewed(v.id).catch(()=>{});}}).catch(()=>{if(live)setError(locale==="en"?"This property is not available.":"این ملک فعلاً قابل مشاهده نیست.");})
    .finally(()=>{if(live)setLoading(false);});
   return()=>{live=false;};
@@ -39,14 +40,14 @@ export default function PropertyDetails(){
    .catch(()=>{});return()=>{active=false;};
  },[id]);
  async function contact(channel:"call"|"whatsapp"){
-  if(!data?.available||data.status!=="published")return;
-  setBusy(channel);setError("");
+  if(!data?.available||data.status!=="published"||busy)return;
+  setBusy(channel);setContactError("");
   try{
    const res=await getContact(id,channel);
    const can=await Linking.canOpenURL(res.href);
    if(!can)throw Error(channel==="call"?dt(locale,"callUnavailable"):dt(locale,"whatsappUnavailable"));
    await Linking.openURL(res.href);
-  }catch(e){setError((e as Error).message||dt(locale,"unknown"));}
+  }catch(e){setContactError((e as Error).message||dt(locale,"unknown"));}
   finally{setBusy(null);}
  }
  async function share(){
@@ -73,6 +74,7 @@ export default function PropertyDetails(){
      <Pressable accessibilityRole="button" accessibilityLabel={dt(locale,"share")} onPress={()=>void share()} style={{padding:12,minHeight:44}}><Label>↗</Label></Pressable>
     </View>
    </View>
+   {error?<StateNotice message={error}/>:null}
    <PropertyGallery photos={data.photos} title={d.title}/>
    <View style={{gap:10}}>
     <View style={{flexDirection:isRTL(locale)?"row-reverse":"row",gap:8,flexWrap:"wrap"}}>
@@ -121,15 +123,17 @@ export default function PropertyDetails(){
    </SectionCard>
    <Label muted style={{fontSize:12}}>{copy.safe}</Label>
    <Action kind="secondary" label={st(locale,"report")} onPress={()=>router.push({pathname:"/report/[listingId]",params:{listingId:id}})}/>
-   {error?<SectionCard><Label style={{color:colors.error}}>{error}</Label></SectionCard>:null}
   </Page>
-  <View style={{gap:8,backgroundColor:colors.surface,padding:12,borderTopWidth:1,borderColor:colors.border,paddingBottom:20}}>
+  <SafeAreaView edges={["bottom"]} style={{backgroundColor:colors.surface}}>
+   <View style={{gap:8,padding:12,borderTopWidth:1,borderColor:colors.border}}>
+   {contactError?<Label style={{fontSize:13,lineHeight:20,color:colors.error}}>{contactError}</Label>:null}
    <Action label={et(locale,"newInquiry")} disabled={!canContact} onPress={()=>router.push({pathname:"/inquiries/new",params:{listingId:id}})}/>
-   <Action kind="secondary" label={copy.viewing} disabled={!canContact} onPress={()=>router.push({pathname:"/viewings/new",params:{listingId:id}})}/>
+   <Action kind="secondary" label={copy.viewing} disabled={!canContact} onPress={()=>router.push({pathname:"/inquiries/new",params:{listingId:id,intent:"viewing"}})}/>
    <View style={{flexDirection:isRTL(locale)?"row-reverse":"row",gap:10}}>
    <View style={{flex:1}}><Action label={busy==="call"?"…":dt(locale,"call")} disabled={!canContact||!d.contact.allowPhone||busy!==null} onPress={()=>void contact("call")}/></View>
    <View style={{flex:1}}><Action kind="secondary" label={busy==="whatsapp"?"…":dt(locale,"whatsapp")} disabled={!canContact||!d.contact.allowWhatsApp||busy!==null} onPress={()=>void contact("whatsapp")}/></View>
    </View>
-  </View>
+   </View>
+  </SafeAreaView>
  </View>;
 }
