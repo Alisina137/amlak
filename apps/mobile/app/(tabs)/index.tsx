@@ -1,5 +1,5 @@
 import { findProvince } from "@amlaklink/catalog";
-import { colors } from "@amlaklink/design-tokens";
+import { colors, elevation } from "@amlaklink/design-tokens";
 import { isRTL, t } from "@amlaklink/localization";
 import { router } from "expo-router";
 import { Pressable, ScrollView, View } from "react-native";
@@ -12,7 +12,7 @@ import { useSearchFilters } from "../../src/search-context";
 import { usePreferences } from "../../src/context";
 import { ListingFeed } from "../../src/listing-ui";
 import { useApiStatus } from "../../src/api";
-import { Action, Label, Page, ScreenHeading, SectionCard } from "../../src/ui";
+import { Action, Label, Page, SectionCard } from "../../src/ui";
 import { uiText } from "../../src/ui-copy";
 import { BrowseProvinces, FeaturedPlaceholder, HomeNextSteps, RecentlyViewedSection, homeText } from "../../src/home-sections";
 import {MotionReveal} from "../../src/motion";
@@ -55,30 +55,41 @@ export default function Explore() {
  return <Page>
   <View style={{ flexDirection: rtl ? "row-reverse" : "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
    <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-    <Label weight="bold" style={{ fontSize: 21, color: colors.primary }}>{t(locale, "appName")}</Label>
+    <Label weight="bold" style={{ fontSize: 23,letterSpacing:-0.6,color: colors.primaryDark }}>{t(locale, "appName")}</Label>
     <Pressable accessibilityRole="button" accessibilityLabel={locationAccessibility}
      onPress={() => router.push("/locations")}
      style={{ flexDirection: rtl ? "row-reverse" : "row", alignItems: "center", alignSelf: rtl ? "flex-end" : "flex-start", gap: 5, minHeight: 44 }}>
-     <Label style={{ fontSize: 14, color: colors.muted }}>⌖ {locationLabel} ▾</Label>
+     <Label style={{ fontSize: 13, color: colors.textSecondary }}>⌖ {locationLabel} ▾</Label>
     </Pressable>
    </View>
    <Pressable accessibilityRole="button" accessibilityLabel={notificationsLabel}
     onPress={() => router.push("/notification-settings")}
-    style={{ width: 44, height: 44, borderWidth: 1, borderColor: colors.border, borderRadius: 14, backgroundColor: colors.surface, justifyContent: "center", alignItems: "center" }}>
+    style={{ width: 48, height: 48, borderWidth: 1, borderColor: colors.border, borderRadius: 16, backgroundColor: colors.surface, justifyContent: "center", alignItems: "center",...elevation.card }}>
     <Label style={{ fontSize: 22, textAlign: "center" }}>🔔</Label>
    </Pressable>
   </View>
 
-  <ScreenHeading title={t(locale, "findHome")} subtitle={t(locale, "tagline")} />
+  <MotionReveal delay={30}><View style={{backgroundColor:colors.primaryDark,borderRadius:26,
+   padding:22,gap:14,overflow:"hidden",...elevation.floating}}>
+   <View pointerEvents="none" style={{position:"absolute",width:190,height:190,borderRadius:100,
+    borderWidth:25,borderColor:"#FFFFFF10",top:-90,end:-80}}/>
+   <View style={{width:42,height:4,backgroundColor:colors.secondary,borderRadius:4}}/>
+   <Label weight="bold" style={{fontSize:27,lineHeight:37,letterSpacing:-0.6,color:"#FFFFFF"}}>{t(locale,"findHome")}</Label>
+   <Label style={{fontSize:14,lineHeight:23,color:"#D6E8DE"}}>{t(locale,"tagline")}</Label>
+   <MotionReveal delay={45}><Pressable accessibilityRole="button" accessibilityLabel={searchText}
+    onPress={() => openSearch()}
+    style={{ flexDirection: rtl ? "row-reverse" : "row", alignItems: "center",
+     gap: 12, minHeight: 56, borderWidth: 1, borderColor: "#FFFFFF9A",
+     backgroundColor: colors.surface, borderRadius: 16, paddingHorizontal: 12,...elevation.card }}>
+    <View style={{height:35,width:35,borderRadius:11,backgroundColor:colors.primarySoft,alignItems:"center",justifyContent:"center"}}>
+     <Label style={{ fontSize: 23,textAlign:"center",color: colors.primary }}>⌕</Label>
+    </View>
+    <Label muted style={{ fontSize: 14, flex: 1 }}>{searchText}</Label>
+    <Label style={{color:colors.primary,fontSize:18}}>{rtl?"‹":"›"}</Label>
+   </Pressable></MotionReveal>
+  </View></MotionReveal>
 
-  <MotionReveal delay={45}><Pressable accessibilityRole="button" accessibilityLabel={searchText}
-   onPress={() => openSearch()}
-   style={{ flexDirection: rtl ? "row-reverse" : "row", alignItems: "center", gap: 10, minHeight: 52, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, borderRadius: 14, paddingHorizontal: 14 }}>
-   <Label style={{ fontSize: 21, color: colors.primary }}>⌕</Label>
-   <Label muted style={{ fontSize: 14, flex: 1 }}>{searchText}</Label>
-  </Pressable></MotionReveal>
-
-  <SectionCard>
+  <SectionCard style={{padding:12,backgroundColor:colors.surfaceMuted}}>
    <View style={{ flexDirection: rtl ? "row-reverse" : "row", gap: 8 }}>
     {(["buy", "rent", "gharawi"] as const).map(intent => <View key={intent} style={{ flex: 1, minWidth: 0 }}>
      <Action label={t(locale, intent)} kind={filters.intent === (intent === "buy" ? "sale" : intent) ? "primary" : "secondary"}
@@ -93,7 +104,7 @@ export default function Explore() {
      setFilters({ provinceId });
      router.push({ pathname: "/(tabs)/search", params: { openFilters: "1" } });
     }}
-    style={{ minHeight: 44, paddingHorizontal: 14, borderRadius: 22, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, justifyContent: "center" }}>
+    style={{ minHeight: 44, paddingHorizontal: 14, borderRadius: 22, borderWidth: 1, borderColor: colors.borderStrong, backgroundColor: colors.surface, justifyContent: "center" }}>
     <Label style={{ fontSize: 13 }}>{label} ▾</Label>
    </Pressable>)}
   </ScrollView>
@@ -103,9 +114,13 @@ export default function Explore() {
    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{flexDirection:rtl?"row-reverse":"row",gap:10}}>
     {categories.map((type,index)=><Pressable key={type} accessibilityRole="button" accessibilityLabel={categoryNames[locale][index]}
      onPress={()=>{setFilters({provinceId,type});router.push("/(tabs)/search");}}
-     style={{width:104,minHeight:94,alignItems:"center",justifyContent:"center",gap:6,padding:10,borderWidth:1,borderColor:colors.border,borderRadius:16,backgroundColor:colors.surface}}>
-     <Label style={{fontSize:27,color:colors.primary,textAlign:"center"}}>{categoryIcons[index]}</Label>
-     <Label weight="medium" style={{fontSize:12,textAlign:"center"}}>{categoryNames[locale][index]}</Label>
+     style={{width:112,minHeight:106,alignItems:"center",justifyContent:"center",gap:8,padding:12,
+      borderWidth:1,borderColor:colors.border,borderRadius:20,backgroundColor:colors.surface,...elevation.card}}>
+     <View style={{width:45,height:45,borderRadius:15,backgroundColor:index%2?colors.accentSoft:colors.primarySoft,
+       justifyContent:"center",alignItems:"center"}}>
+       <Label style={{fontSize:26,color:colors.primary,textAlign:"center"}}>{categoryIcons[index]}</Label>
+      </View>
+     <Label weight="medium" style={{fontSize:13,textAlign:"center"}}>{categoryNames[locale][index]}</Label>
     </Pressable>)}
    </ScrollView>
   </View></MotionReveal>
@@ -122,8 +137,8 @@ export default function Explore() {
     <Action kind="secondary" label={homeText(locale,"browseAll")} onPress={()=>router.push("/(tabs)/search")}/>
    </SectionCard>:null}
    {!featuredLoading&&!featuredError&&featured.length>0?<ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{flexDirection:rtl?"row-reverse":"row",gap:12}}>
-    {featured.map(item=><View key={item.id} style={{width:258}}>
-     <Label muted style={{fontSize:12}}>{locale==="en"?"Sponsored":locale==="fa"?"تبلیغاتی":"تمویل شوی"}</Label>
+    {featured.map(item=><View key={item.id} style={{width:276}}>
+     <Label muted style={{fontSize:11,color:colors.accent,fontWeight:"700"}}>{locale==="en"?"Sponsored":locale==="fa"?"تبلیغاتی":"تمویل شوی"}</Label>
      <ListingCard item={item}/>
     </View>)}
    </ScrollView>:null}
