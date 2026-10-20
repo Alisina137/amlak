@@ -119,7 +119,7 @@ export function PropertyGallery({photos,title}:{photos:Photo[];title:string}){
       borderColor:photo.id===current?.id?colors.primary:colors.border}}>
       <GalleryImage photo={photo} title={title}/>
      </View>
-     <Label muted style={{fontSize:11,textAlign:"center"}} numberOfLines={1}>
+     <Label muted style={{fontSize:11,textAlign:"center"}}>
       {photo.id===photos[0]?.id?copy.cover:roomName(locale,photo.room)}
      </Label>
     </Pressable>)}
