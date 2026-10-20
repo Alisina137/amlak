@@ -7,6 +7,7 @@ import {SearchProvider} from "../src/search-context";
 import {FavoriteProvider} from "../src/favorites";
 import {NetworkProvider} from "../src/api";
 import {PushBridge} from "../src/push-bridge";
+import {MotionProvider} from "../src/motion";
 
 function NavigationShell(){
  const {locale}=usePreferences();
@@ -35,7 +36,7 @@ function NavigationShell(){
  </Stack>;
 }
 export default function RootLayout(){
- return <SafeAreaProvider><PreferencesProvider><AuthProvider><FavoriteProvider><SearchProvider>
+ return <SafeAreaProvider><MotionProvider><PreferencesProvider><AuthProvider><FavoriteProvider><SearchProvider>
   <NetworkProvider><PushBridge/><NavigationShell/></NetworkProvider>
- </SearchProvider></FavoriteProvider></AuthProvider></PreferencesProvider></SafeAreaProvider>;
+ </SearchProvider></FavoriteProvider></AuthProvider></PreferencesProvider></MotionProvider></SafeAreaProvider>;
 }
