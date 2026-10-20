@@ -29,7 +29,7 @@
     "ops:media:audit": "pnpm --filter @amlaklink/api ops:media:audit",
     "pilot:smoke": "node scripts/pilot-smoke.mjs",
     "qa:phase8": "node --test scripts/test-phase8-release-gate.mjs && node scripts/phase8-release-gate.mjs --ci",
-    "qa:ui": "node --test scripts/test-final-rtl-ui.mjs scripts/test-group-a-foundation.mjs scripts/test-group-b-discovery.mjs scripts/test-group-c-property.mjs scripts/test-group-d-saved.mjs scripts/test-group-e-inbox.mjs",
+    "qa:ui": "node --test scripts/test-final-rtl-ui.mjs scripts/test-group-a-foundation.mjs scripts/test-group-b-discovery.mjs scripts/test-group-c-property.mjs scripts/test-group-d-saved.mjs scripts/test-group-e-inbox.mjs scripts/test-group-f-account.mjs",
     "qa:network": "node --test scripts/test-final-network.mjs",
     "qa:renewals": "node --test scripts/test-final-subscriptions.mjs",
     "qa:billing": "node --test scripts/test-final-billing.mjs",
