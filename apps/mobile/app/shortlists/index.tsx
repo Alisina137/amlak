@@ -1,6 +1,7 @@
 import {router,useFocusEffect} from "expo-router";
 import {useCallback,useRef,useState} from "react";
 import {ActivityIndicator,View} from "react-native";
+import {colors} from "@amlaklink/design-tokens";
 import {useAuth,requestJson} from "../../src/auth";
 import {usePreferences} from "../../src/context";
 import {Action,AppInput,BackButton,Label,Page,ScreenHeading,SectionCard,LoadingCard,StateNotice,StatusBadge} from "../../src/ui";
