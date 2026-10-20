@@ -1,11 +1,11 @@
 import {router,useFocusEffect} from "expo-router";
-import {useCallback,useState} from "react";
-import {ActivityIndicator,TextInput,View} from "react-native";
+import {useCallback,useRef,useState} from "react";
+import {ActivityIndicator,View} from "react-native";
 import {colors} from "@amlaklink/design-tokens";
-import {isRTL} from "@amlaklink/localization";
 import {useAuth,requestJson} from "../../src/auth";
 import {usePreferences} from "../../src/context";
-import {Action,Label,Page,ScreenHeading,SectionCard} from "../../src/ui";
+import {Action,AppInput,BackButton,Label,Page,ScreenHeading,SectionCard,LoadingCard,StateNotice,StatusBadge} from "../../src/ui";
+import {savedText} from "../../src/saved-copy";
 type List={id:string;title:string;role:"owner"|"member";membershipStatus:"pending"|"active"};
 const copy={
  en:{title:"Shared shortlists",subtitle:"Private property collections for up to five invited people.",
@@ -22,14 +22,23 @@ const copy={
  error:"فهرست بدل نه شو.",retry:"بیا تازه کړه",members:"غړي"}
 };
 export default function Shortlists(){
- const {locale}=usePreferences(),t=copy[locale],rtl=isRTL(locale),{token}=useAuth();
- const [items,setItems]=useState<List[]>([]),[title,setTitle]=useState(""),[busy,setBusy]=useState(false),[error,setError]=useState("");
+ const {locale}=usePreferences(),t=copy[locale],{token}=useAuth();
+ const [snapshot,setSnapshot]=useState<{token:string|null;items:List[]}>({token:null,items:[]});
+ const [title,setTitle]=useState(""),[busy,setBusy]=useState(false),[loading,setLoading]=useState(true),[error,setError]=useState("");
+ const epoch=useRef(0),tokenRef=useRef(token);tokenRef.current=token;
+ const items=snapshot.token===token?snapshot.items:[];
  const refresh=useCallback(async()=>{
-  if(!token){setItems([]);setError("");return;}
-  try{const res=await requestJson<{items:List[]}>("/v1/shortlists",{token});setItems(res.items);setError("");}
-  catch{setError(t.error);}
+  const version=++epoch.current;
+  if(!token){setSnapshot({token:null,items:[]});setError("");setLoading(false);return;}
+  setLoading(true);
+  try{
+   const res=await requestJson<{items:List[]}>("/v1/shortlists",{token});
+   if(version!==epoch.current||tokenRef.current!==token)return;
+   setSnapshot({token,items:res.items});setError("");
+  }catch{if(version===epoch.current&&tokenRef.current===token)setError(t.error);}
+  finally{if(version===epoch.current&&tokenRef.current===token)setLoading(false);}
  },[token,t.error]);
- useFocusEffect(useCallback(()=>{void refresh();},[refresh]));
+ useFocusEffect(useCallback(()=>{void refresh();return()=>{epoch.current++;};},[refresh]));
  async function create(){
   if(!token||busy||title.trim().length<2)return;setBusy(true);setError("");
   try{const list=await requestJson<List>("/v1/shortlists",{token,method:"POST",body:{title:title.trim()}});
@@ -41,27 +50,28 @@ export default function Shortlists(){
   try{await requestJson("/v1/shortlists/"+id+"/accept",{token,method:"POST"});await refresh();}
   catch{setError(t.error);}finally{setBusy(false);}
  }
- return <Page><ScreenHeading title={t.title} subtitle={t.subtitle}/>
+ return <Page><BackButton onPress={()=>router.back()}/><ScreenHeading title={t.title} subtitle={t.subtitle}/>
   {!token?<SectionCard><Label>{t.signin}</Label>
    <Action label={locale==="en"?"Sign in":"ورود"} onPress={()=>router.push({pathname:"/auth/[action]",params:{action:"login"}})}/>
   </SectionCard>:<><SectionCard>
    <Label weight="bold">{t.create}</Label><Label>{t.name}</Label>
-   <TextInput accessibilityLabel={t.name} value={title} onChangeText={setTitle}
-    placeholder={t.placeholder} maxLength={100} style={{minHeight:48,padding:12,borderWidth:1,borderColor:colors.border,
-     borderRadius:12,textAlign:rtl?"right":"left",writingDirection:rtl?"rtl":"ltr",color:colors.text}}/>
+   <AppInput accessibilityLabel={t.name} value={title} onChangeText={setTitle} editable={!busy}
+    placeholder={t.placeholder} maxLength={100}/>
    <Action label={t.create} disabled={busy||title.trim().length<2} onPress={()=>void create()}/>
   </SectionCard>
-  {!items.length?<SectionCard><Label muted>{t.empty}</Label></SectionCard>:null}
+  {loading?<LoadingCard rows={3}/>:null}
+  {!loading&&!items.length?<SectionCard><Label muted>{t.empty}</Label></SectionCard>:null}
   {items.map(item=><SectionCard key={item.id}>
    <Label weight="bold">{item.title}</Label>
-   <Label muted>{item.role==="owner"?locale==="en"?"Owner":"مالک":t.members} · {item.membershipStatus}</Label>
+   <StatusBadge tone={item.membershipStatus==="pending"?"warning":"success"}
+    label={savedText(locale,item.membershipStatus==="pending"?"pending":item.role==="owner"?"owner":"member")}/>
    {item.membershipStatus==="pending"?
     <Action disabled={busy} label={t.accept} onPress={()=>void accept(item.id)}/>:
     <Action kind="secondary" label={t.open}
      onPress={()=>router.push({pathname:"/shortlists/[id]",params:{id:item.id}})}/>}
   </SectionCard>)}</>}
   {busy?<ActivityIndicator color={colors.primary}/>:null}
-  {error?<SectionCard><Label style={{color:colors.error}}>{error}</Label></SectionCard>:null}
+  {error?<StateNotice message={error} retryLabel={t.retry} onRetry={()=>void refresh()}/>:null}
   <Action kind="secondary" label={t.retry} onPress={()=>void refresh()}/>
  </Page>;
 }
