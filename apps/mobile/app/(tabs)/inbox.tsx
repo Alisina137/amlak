@@ -124,6 +124,7 @@ export default function Inbox(){
      <StatusBadge label={inquiryStatus(locale,i.status)} tone={i.status==="closed"?"warning":"neutral"}/>
      <Label muted style={{fontSize:12}}>{i.side==="seeker"?ix(locale,"sent"):ix(locale,"received")}</Label>
     </View>
+    {i.lastMessagePreview?<Label muted style={{fontSize:13,lineHeight:20}}>{i.lastMessagePreview}</Label>:null}
     <Label muted style={{fontSize:12}}>{ix(locale,"lastActivity")}: {displayKabul(i.lastMessageAt,locale)}</Label>
    </SectionCard>
   </Pressable>)}
