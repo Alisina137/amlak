@@ -23,7 +23,7 @@ const en={
  error:"Request failed; check your connection and try again.",logIn:"Sign in to continue.",
  submitted:"Sent for review",createLocked:"Verify your email and enable advertiser tools or obtain professional approval before listing.",
  withdrawn:"Changes withdrawn",refresh:"Refresh",
- notice:"Safety reports are not proof of wrongdoing. Staff investigate decisions.",eligibility:"Only the owner or authorized agency member can view safety cases."
+ notice:"Safety reports are not proof of wrongdoing. Staff investigate decisions.",note:"Any revised listing must be reviewed by staff. The last approved public version remains visible until new approval.",eligibility:"Only the owner or authorized agency member can view safety cases."
 };
 type Key=keyof typeof en;
 const fa:Record<Key,string>={
@@ -50,7 +50,7 @@ const fa:Record<Key,string>={
  error:"درخواست انجام نشد؛ اتصال را بررسی و دوباره تلاش کنید.",logIn:"برای ادامه وارد شوید.",
  submitted:"برای بررسی ارسال شد",createLocked:"برای ثبت ملک، ایمیل را تأیید و حساب آگهی‌دهنده را فعال کنید یا تأیید حرفه‌ای بگیرید.",
  withdrawn:"تغییرات پس گرفته شد",refresh:"تازه‌سازی",
- notice:"گزارش ایمنی اثبات تخلف نیست؛ کارمندان آن را بررسی می‌کنند.",eligibility:"فقط صاحب ملک یا عضو مجاز دفتر پرونده‌ها را می‌بیند."
+ notice:"گزارش ایمنی اثبات تخلف نیست؛ کارمندان آن را بررسی می‌کنند.",note:"تغییرات آگهی نیازمند بررسی کارمندان است؛ تا تأیید نسخه جدید، نسخه عمومی قبلی باقی می‌ماند.",eligibility:"فقط صاحب ملک یا عضو مجاز دفتر پرونده‌ها را می‌بیند."
 };
 const ps:Record<Key,string>={
  safety:"خوندیتوب او اعتراض",myReports:"زما راپورونه",ownerCases:"زما د ملکیتونو د خوندیتوب پرېکړې",reportsEmpty:"تر اوسه راپور نشته.",casesEmpty:"دې ملکیت ته قضیه نشته.",
@@ -76,7 +76,7 @@ const ps:Record<Key,string>={
  error:"غوښتنه ناکامه شوه؛ اړیکه وګورئ او بیا هڅه وکړئ.",logIn:"د دوام لپاره ننوځئ.",
  submitted:"کتنې ته لېږل شوی",createLocked:"ایمیل تایید او د اعلان حساب فعال یا مسلکي تایید ترلاسه کړئ.",
  withdrawn:"بدلونونه بېرته واخیستل شول",refresh:"تازه کول",
- notice:"د خوندیتوب راپور د سرغړونې ثبوت نه دی؛ کارکوونکي یې څېړي.",eligibility:"یوازې څښتن یا د دفتر مجاز غړی قضیې لیدلی شي."
+ notice:"د خوندیتوب راپور د سرغړونې ثبوت نه دی؛ کارکوونکي یې څېړي.",note:"د اعلان سمون د کارکوونکو کتنې ته اړتیا لري؛ تر تایید پورې پخوانی خپور اعلان پاتې کېږي.",eligibility:"یوازې څښتن یا د دفتر مجاز غړی قضیې لیدلی شي."
 };
 export const ox=(locale:Locale,key:Key)=>({en,fa,ps})[locale][key];
 export const listingStatus=(locale:Locale,status:string)=>status in en?ox(locale,status as Key):status;
